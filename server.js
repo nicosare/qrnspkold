@@ -1,6 +1,8 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,6 +11,8 @@ const app = express();
 const port = process.env.PORT || 3000;
 const upstreamTimeoutMs = Number(process.env.UPSTREAM_TIMEOUT_MS || 15000);
 const browserTimeoutMs = Number(process.env.PAYTAG_BROWSER_TIMEOUT_MS || 25000);
+const execFileAsync = promisify(execFile);
+let playwrightInstallPromise = null;
 
 app.use(express.json({ limit: '100kb' }));
 
@@ -58,14 +62,45 @@ function normalizePaytagPayload(payload = {}) {
 async function fetchPaytagViaHeadlessBrowser(paytagid) {
   const targetUrl = `https://qr.bilet.nspk.ru/?paytagid=${encodeURIComponent(paytagid)}&s=qr&m=t`;
   let browser;
+  const { chromium } = await import('playwright');
 
-  try {
-    const { chromium } = await import('playwright');
-
-    browser = await chromium.launch({
+  async function launchBrowser() {
+    return chromium.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
+  }
+
+  async function ensureChromiumInstalled() {
+    if (!playwrightInstallPromise) {
+      playwrightInstallPromise = execFileAsync('npx', ['playwright', 'install', 'chromium'], {
+        env: {
+          ...process.env,
+          PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0'
+        }
+      })
+        .finally(() => {
+          playwrightInstallPromise = null;
+        });
+    }
+
+    await playwrightInstallPromise;
+  }
+
+  try {
+    try {
+      browser = await launchBrowser();
+    } catch (launchError) {
+      const launchMessage = String(launchError?.message || launchError);
+      const browserMissing = launchMessage.includes("Executable doesn't exist");
+
+      if (!browserMissing) {
+        throw launchError;
+      }
+
+      await ensureChromiumInstalled();
+      browser = await launchBrowser();
+    }
 
     const context = await browser.newContext({
       userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',

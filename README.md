@@ -193,3 +193,5 @@ curl -X POST https://qrnspk.onrender.com/api/paytag \
 ```
 
 Если получаете ошибку по браузеру на Render, перезапустите деплой после успешного `npm install` (в `postinstall` уже добавлен `playwright install chromium`).
+
+Дополнительно backend теперь пытается автоматически выполнить `npx playwright install chromium`, если при старте headless-сессии обнаружит, что executable браузера отсутствует. Это снижает вероятность 502 на `/api/paytag` после обновлений Playwright или очистки кэша окружения.
