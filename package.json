@@ -1,17 +1,17 @@
 {
   "name": "qrnspk",
   "version": "1.0.0",
-  "description": "QR Parser for NSPK via Puppeteer",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "puppeteer": "^22.0.0",
+    "puppeteer": "^22.15.0",
+    "axios": "^1.7.2",
     "cors": "^2.8.5"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   }
 }
