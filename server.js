@@ -1,0 +1,191 @@
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
+const port = process.env.PORT || 3000;
+const upstreamTimeoutMs = Number(process.env.UPSTREAM_TIMEOUT_MS || 15000);
+const browserTimeoutMs = Number(process.env.PAYTAG_BROWSER_TIMEOUT_MS || 25000);
+
+app.use(express.json({ limit: '100kb' }));
+
+function isAllowedUrl(raw) {
+  try {
+    const parsed = new URL(raw);
+    return parsed.protocol === 'https:' && parsed.hostname === 'qr.bilet.nspk.ru';
+  } catch {
+    return false;
+  }
+}
+
+function normalizePaytagPayload(payload = {}) {
+  const candidates = [
+    payload?.transportType,
+    payload?.vehicleType,
+    payload?.transport_name,
+    payload?.transport,
+    payload?.type
+  ];
+
+  const routeCandidates = [
+    payload?.routeNumber,
+    payload?.route,
+    payload?.line,
+    payload?.lineNumber,
+    payload?.route_no
+  ];
+
+  const vehicleCandidates = [
+    payload?.vehicleNumber,
+    payload?.vehicle_no,
+    payload?.transportNumber,
+    payload?.ts,
+    payload?.carNumber
+  ];
+
+  const pick = (items) => items.find(value => typeof value === 'string' && value.trim().length > 0)?.trim() || '';
+
+  return {
+    transportType: pick(candidates),
+    routeNumber: pick(routeCandidates),
+    vehicleNumber: pick(vehicleCandidates)
+  };
+}
+
+async function fetchPaytagViaHeadlessBrowser(paytagid) {
+  const targetUrl = `https://qr.bilet.nspk.ru/?paytagid=${encodeURIComponent(paytagid)}&s=qr&m=t`;
+  let browser;
+
+  try {
+    const { chromium } = await import('playwright');
+
+    browser = await chromium.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+
+    const context = await browser.newContext({
+      userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+      locale: 'ru-RU'
+    });
+
+    const page = await context.newPage();
+    let capturedJson = null;
+
+    page.on('response', async (response) => {
+      try {
+        const responseUrl = response.url();
+        if (!responseUrl.includes('/api/paytag') || !responseUrl.includes(`paytagid=${paytagid}`)) {
+          return;
+        }
+
+        const contentType = (response.headers()['content-type'] || '').toLowerCase();
+        if (!contentType.includes('application/json')) {
+          return;
+        }
+
+        const json = await response.json();
+        capturedJson = json;
+      } catch {
+        // ignore broken/partial responses
+      }
+    });
+
+    await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: browserTimeoutMs });
+
+    const deadline = Date.now() + browserTimeoutMs;
+    while (!capturedJson && Date.now() < deadline) {
+      await page.waitForTimeout(200);
+    }
+
+    if (!capturedJson) {
+      throw new Error('Не удалось перехватить JSON ответа /api/paytag в headless-браузере');
+    }
+
+    const normalized = normalizePaytagPayload(capturedJson);
+    if (!normalized.transportType || !normalized.routeNumber || !normalized.vehicleNumber) {
+      throw new Error('JSON перехвачен, но нужные поля не найдены');
+    }
+
+    return normalized;
+  } catch (error) {
+    throw new Error(`Headless paytag fetch failed: ${error?.message || error}`);
+  } finally {
+    if (browser) {
+      await browser.close().catch(() => {});
+    }
+  }
+}
+
+app.get('/health', (_req, res) => {
+  res.json({ ok: true });
+});
+
+app.post('/api/paytag', async (req, res) => {
+  const paytagid = String(req.body?.paytagid || '').trim();
+
+  if (!paytagid || !/^[0-9]{6,20}$/.test(paytagid)) {
+    return res.status(400).json({ error: 'Invalid paytagid' });
+  }
+
+  try {
+    const data = await fetchPaytagViaHeadlessBrowser(paytagid);
+    return res.json({ ok: true, data });
+  } catch (error) {
+    return res.status(502).json({ error: error?.message || String(error) });
+  }
+});
+
+app.get('/proxy', async (req, res) => {
+  const rawUrl = req.query.url;
+
+  if (!rawUrl || typeof rawUrl !== 'string') {
+    return res.status(400).json({ error: 'Missing url query parameter' });
+  }
+
+  if (!isAllowedUrl(rawUrl)) {
+    return res.status(400).json({ error: 'Only https://qr.bilet.nspk.ru URLs are allowed' });
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), upstreamTimeoutMs);
+
+    const upstream = await fetch(rawUrl, {
+      method: 'GET',
+      redirect: 'follow',
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/json;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+        Referer: 'https://qr.bilet.nspk.ru/'
+      }
+    });
+
+    clearTimeout(timeoutId);
+
+    const contentType = upstream.headers.get('content-type') || 'text/html; charset=utf-8';
+    const body = await upstream.text();
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(upstream.status).send(body);
+  } catch (error) {
+    const details = error?.name === 'AbortError' ? `timeout ${upstreamTimeoutMs}ms` : (error?.message || String(error));
+    return res.status(502).json({ error: `Proxy request failed: ${details}` });
+  }
+});
+
+app.use(express.static(__dirname));
+
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.listen(port, () => {
+  console.log(`Proxy server listening on port ${port}`);
+});
