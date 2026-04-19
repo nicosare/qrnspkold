@@ -12,7 +12,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // 🔁 Функция запроса к НСПК с прокси и ретраями
 async function fetchNSPK(payTagId, s, m, attempt = 1) {
-  const url = `https://qr.bilet.nspk.ru/api/v1/pay-tags/tariff`;
+  const url = 'https://qr.bilet.nspk.ru/api/v1/pay-tags/tariff';
   
   const config = {
     params: { payTagId, s: s || 'qr', m: m || 't' },
@@ -35,21 +35,21 @@ async function fetchNSPK(payTagId, s, m, attempt = 1) {
   // 🇷🇺 Если задан прокси — используем его
   if (process.env.PROXY_URL) {
     config.httpsAgent = new HttpsProxyAgent(process.env.PROXY_URL);
-    console.log(`[qrnspk] 🔄 Using proxy: ${process.env.PROXY_URL.replace(/:[^:@]+@/, ':***@')}`);
+    console.log('[qrnspk] Using proxy');
   }
 
   try {
     const response = await axios.get(url, config);
     
     if (response.status >= 400) {
-      throw new Error(`NSPK API returned ${response.status}: ${JSON.stringify(response.data).slice(0, 100)}`);
+      throw new Error('NSPK API returned ' + response.status);
     }
     
     return response.data;
   } catch (error) {
-    // 🔄 Повторные попытки при таймауте/сетевой ошибке    if (attempt < 3 && (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED' || error.code === 'ECONNRESET')) {
+    // 🔄 Повторные попытки при таймауте    if (attempt < 3 && (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED' || error.code === 'ECONNRESET')) {
       const delay = attempt * 2000;
-      console.log(`[qrnspk] ⏳ Retry ${attempt}/3 after ${delay}ms...`);
+      console.log('[qrnspk] Retry ' + attempt + '/3 after ' + delay + 'ms');
       await new Promise(r => setTimeout(r, delay));
       return fetchNSPK(payTagId, s, m, attempt + 1);
     }
@@ -64,53 +64,42 @@ app.get('/api/proxy', async (req, res) => {
     return res.status(400).json({ error: 'payTagId is required' });
   }
 
-  console.log(`[qrnspk] 📡 Request: payTagId=${payTagId}, proxy=${!!process.env.PROXY_URL}`);
+  console.log('[qrnspk] Request: payTagId=' + payTagId);
 
   try {
     const data = await fetchNSPK(payTagId, s, m);
     
-    if (data?.responseStatus !== 'OK') {
-      throw new Error(`Invalid response: ${data?.responseStatus}`);
+    if (!data || data.responseStatus !== 'OK') {
+      throw new Error('Invalid response from NSPK');
     }
     
     res.json(data);
   } catch (error) {
-    console.error('[qrnspk] ❌ Error:', {
-      code: error.code,
-      message: error.message,
-      proxy: !!process.env.PROXY_URL
-    });
+    console.error('[qrnspk] Error:', error.code, error.message);
     
-    // Понятные сообщения об ошибках
     let userMsg = 'Ошибка соединения с НСПК';
     if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
       userMsg = !process.env.PROXY_URL 
-        ? '⏱️ Таймаут. Возможно, НСПК блокирует иностранные IP. Добавьте российский прокси.' 
-        : '⏱️ Таймаут даже через прокси. Проверьте, работает ли прокси.';
+        ? 'Таймаут. Возможно, НСПК блокирует иностранные IP. Добавьте российский прокси.' 
+        : 'Таймаут даже через прокси. Проверьте прокси.';
     } else if (error.code === 'ECONNREFUSED') {
-      userMsg = '🚫 Соединение отклонено. Проверьте прокси или попробуйте позже.';
-    } else if (error.message?.includes('403') || error.message?.includes('401')) {
-      userMsg = '🔐 Доступ запрещён. Возможно, требуется авторизация или сессия.';
+      userMsg = 'Соединение отклонено. Проверьте прокси или попробуйте позже.';
     }
     
     res.status(502).json({ 
       error: userMsg,
       debug: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });  }
+    });
+  }
 });
 
 app.get('/api/status', (req, res) => {
   res.json({
     service: 'qrnspk',
-    proxy: process.env.PROXY_URL ? 'configured' : 'none',
-    node_env: process.env.NODE_ENV || 'production',
-    uptime: process.uptime()
+    proxy: process.env.PROXY_URL ? 'configured' : 'none',    uptime: process.uptime()
   });
 });
 
 app.listen(PORT, () => {
-  console.log(`🚌 qrnspk listening on port ${PORT}`);
-  if (process.env.PROXY_URL) {
-    console.log(`🇷🇺 Using Russian proxy for NSPK requests`);
-  }
+  console.log('🚌 qrnspk listening on port ' + PORT);
 });
