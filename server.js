@@ -55,7 +55,6 @@ async function fetchNSPK(payTagId, s, m, attempt = 1) {
     }
     throw error;
   }
-}
 
 app.get('/api/proxy', async (req, res) => {
   const { payTagId, s, m } = req.query;
