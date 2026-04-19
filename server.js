@@ -14,7 +14,8 @@ const upstreamTimeoutMs = Number(process.env.UPSTREAM_TIMEOUT_MS || 15000);
 const browserTimeoutMs = Number(process.env.PAYTAG_BROWSER_TIMEOUT_MS || 25000);
 const execFileAsync = promisify(execFile);
 const require = createRequire(import.meta.url);
-const playwrightCliPath = require.resolve('playwright/cli');
+const playwrightPackageJsonPath = require.resolve('playwright/package.json');
+const playwrightCliPath = path.join(path.dirname(playwrightPackageJsonPath), 'cli.js');
 let playwrightInstallPromise = null;
 
 function shortErrorText(error) {
@@ -92,6 +93,56 @@ function normalizePaytagPayload(payload = {}) {
   };
 }
 
+function normalizeTransportType(value = '') {
+  const cleaned = String(value).trim().toLowerCase();
+  const dictionary = {
+    'трамвай': 'Трамвай',
+    'автобус': 'Автобус',
+    'троллейбус': 'Троллейбус',
+    'электробус': 'Электробус',
+    'маршрутка': 'Маршрутка',
+    'метро': 'Метро'
+  };
+
+  return dictionary[cleaned] || String(value).trim();
+}
+
+function extractTransportFromPageText(text = '') {
+  const source = String(text).replace(/\s+/g, ' ');
+  const match = (patterns) => {
+    for (const pattern of patterns) {
+      const found = source.match(pattern);
+      if (found?.[1]) {
+        return found[1].trim();
+      }
+    }
+    return '';
+  };
+
+  const typeRaw = match([
+    /\b(Трамвай|Автобус|Троллейбус|Электробус|Маршрутка|Метро)\b/i,
+    /(?:тип\s*транспорта|вид\s*транспорта)\s*[:№]?\s*([А-Яа-яA-Za-z-]{3,30})/i
+  ]);
+
+  const routeNumber = match([
+    /маршрут[^№\d]{0,20}№\s*([0-9A-Za-zА-Яа-я-]{1,8})/i,
+    /(?:номер\s*маршрута|маршрут)\s*[:№]?\s*([0-9A-Za-zА-Яа-я-]{1,8})/i,
+    /№\s*([0-9A-Za-zА-Яа-я-]{1,8})/
+  ]);
+
+  const vehicleNumber = match([
+    /Т\s*\/\s*С\s*[:№]?\s*([0-9A-Za-zА-Яа-я-]{1,12})/i,
+    /ТС\s*[:№]?\s*([0-9A-Za-zА-Яа-я-]{1,12})/i,
+    /(?:борт(?:овой)?\s*номер|номер\s*тс)\s*[:№]?\s*([0-9A-Za-zА-Яа-я-]{1,12})/i
+  ]);
+
+  return {
+    transportType: normalizeTransportType(typeRaw),
+    routeNumber,
+    vehicleNumber
+  };
+}
+
 async function fetchPaytagViaHeadlessBrowser(paytagid) {
   const targetUrl = `https://qr.bilet.nspk.ru/?paytagid=${encodeURIComponent(paytagid)}&s=qr&m=t`;
   let browser;
@@ -158,22 +209,27 @@ async function fetchPaytagViaHeadlessBrowser(paytagid) {
     });
 
     await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: browserTimeoutMs });
+    await page.waitForLoadState('networkidle', { timeout: Math.max(5000, Math.min(browserTimeoutMs, 15000)) }).catch(() => {});
 
     const deadline = Date.now() + browserTimeoutMs;
     while (!capturedJson && Date.now() < deadline) {
       await page.waitForTimeout(200);
     }
 
-    if (!capturedJson) {
-      throw new Error('Не удалось перехватить JSON ответа /api/paytag в headless-браузере');
+    if (capturedJson) {
+      const normalized = normalizePaytagPayload(capturedJson);
+      if (normalized.transportType && normalized.routeNumber && normalized.vehicleNumber) {
+        return normalized;
+      }
     }
 
-    const normalized = normalizePaytagPayload(capturedJson);
-    if (!normalized.transportType || !normalized.routeNumber || !normalized.vehicleNumber) {
-      throw new Error('JSON перехвачен, но нужные поля не найдены');
+    const pageText = await page.evaluate(() => document.body?.innerText || '');
+    const extractedFromPage = extractTransportFromPageText(pageText);
+    if (extractedFromPage.transportType && extractedFromPage.routeNumber && extractedFromPage.vehicleNumber) {
+      return extractedFromPage;
     }
 
-    return normalized;
+    throw new Error('Не удалось извлечь транспортные данные из внутреннего браузера (ни из API, ни из страницы)');
   } catch (error) {
     throw new Error(`Headless paytag fetch failed: ${error?.message || error}`);
   } finally {
@@ -190,7 +246,7 @@ app.get('/health', (_req, res) => {
 app.post('/api/paytag', async (req, res) => {
   const paytagid = String(req.body?.paytagid || '').trim();
 
-  if (!paytagid || !/^[0-9]{6,20}$/.test(paytagid)) {
+  if (!paytagid || !/^[0-9A-Za-z_-]{6,64}$/.test(paytagid)) {
     return res.status(400).json({ error: 'Invalid paytagid' });
   }
 
