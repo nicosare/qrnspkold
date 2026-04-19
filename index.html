@@ -386,6 +386,14 @@
             text-align: center;
         }
 
+        .scanner-status {
+            margin-top: 8px;
+            min-height: 20px;
+            color: #8d1f1f;
+            font-size: 14px;
+            text-align: center;
+        }
+
 
         .scanner-controls {
             margin-top: 12px;
@@ -495,6 +503,7 @@
         </div>
         <div id="qr-reader"></div>
         <div class="scanner-hint">Наведите камеру на QR-код с сайта НСПК.</div>
+        <div class="scanner-status" id="scanner-status" aria-live="polite"></div>
 
         <div class="scanner-controls">
             <button class="scanner-btn" id="scanner-flash-btn" type="button">Включить вспышку</button>
@@ -522,6 +531,7 @@
     const scannerFlashButton = document.getElementById('scanner-flash-btn');
     const scannerManualInput = document.getElementById('scanner-manual-input');
     const scannerManualSubmit = document.getElementById('scanner-manual-submit');
+    const scannerStatusElement = document.getElementById('scanner-status');
 
     let timerInterval = null;
     let startTime = null;
@@ -745,6 +755,10 @@
     let scannerIsRunning = false;
     let scannerIsOpening = false;
     let flashEnabled = false;
+
+    function setScannerStatus(message = '') {
+        scannerStatusElement.textContent = message;
+    }
 
     function resetPaymentTimer() {
         const now = new Date();
@@ -1134,6 +1148,7 @@
         scannerFlashButton.textContent = 'Включить вспышку';
         scannerFlashButton.disabled = false;
         scannerManualSubmit.disabled = false;
+        setScannerStatus('');
     }
 
     async function stopScanner() {
@@ -1168,11 +1183,35 @@
             return;
         }
 
+        if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+            alert('Камера работает только в защищённом контексте (HTTPS). Откройте сайт по https://');
+            return;
+        }
+
         if (scannerIsOpening || scannerIsRunning) {
             return;
         }
 
+        async function ensureScannerInstance() {
+            if (!qrScanner) {
+                qrScanner = new Html5Qrcode('qr-reader');
+            }
+        }
+
+        async function resetScannerEngine() {
+            try {
+                if (qrScanner) {
+                    await qrScanner.stop().catch(() => {});
+                    await qrScanner.clear().catch(() => {});
+                }
+            } finally {
+                scannerIsRunning = false;
+                qrScanner = null;
+            }
+        }
+
         async function startScannerWithConfig(cameraConfig) {
+            await ensureScannerInstance();
             scannerIsRunning = true;
             await qrScanner.start(
                 cameraConfig,
@@ -1187,46 +1226,88 @@
             );
         }
 
-        async function getFallbackCameraConfig() {
+        async function requestPermissionAndReleaseCamera() {
             try {
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const camera = devices.find(device => device.kind === 'videoinput');
-                if (camera?.deviceId) {
-                    return { deviceId: { exact: camera.deviceId } };
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                stream.getTracks().forEach(track => track.stop());
+            } catch (error) {
+                // если доступ не дали — это обработается в общем catch ниже
+                throw error;
+            }
+        }
+
+        async function getCameraCandidates() {
+            const candidates = [{ facingMode: { ideal: 'environment' } }, { facingMode: 'environment' }, { facingMode: 'user' }];
+
+            try {
+                const cameras = await Html5Qrcode.getCameras();
+                if (Array.isArray(cameras) && cameras.length > 0) {
+                    const rearCamera = cameras.find(camera => /back|rear|environment|зад/i.test(camera.label || ''));
+                    if (rearCamera?.id) {
+                        candidates.unshift(rearCamera.id);
+                    }
+                    if (cameras[0]?.id) {
+                        candidates.push(cameras[0].id);
+                    }
                 }
             } catch (error) {
                 console.warn('Не удалось перечислить камеры:', error);
             }
-            return null;
+
+            return candidates;
         }
 
         scannerModal.classList.add('active');
         scannerModal.setAttribute('aria-hidden', 'false');
         resetScannerControls();
 
-        if (!qrScanner) {
-            qrScanner = new Html5Qrcode('qr-reader');
-        }
-
         scannerIsOpening = true;
 
         try {
-            try {
-                await startScannerWithConfig({ facingMode: { ideal: 'environment' } });
-            } catch (initialError) {
-                scannerIsRunning = false;
-                const fallbackConfig = await getFallbackCameraConfig();
+            setScannerStatus('Запрашиваем доступ к камере...');
+            await requestPermissionAndReleaseCamera();
 
-                if (!fallbackConfig) {
-                    throw initialError;
+            const cameraCandidates = await getCameraCandidates();
+            let lastStartError = null;
+
+            for (const candidate of cameraCandidates) {
+                try {
+                    setScannerStatus('Запускаем камеру...');
+                    await resetScannerEngine();
+                    await startScannerWithConfig(candidate);
+                    lastStartError = null;
+                    break;
+                } catch (error) {
+                    lastStartError = error;
+                    scannerIsRunning = false;
+                    console.warn('Не удалось запустить камеру с конфигурацией:', candidate, error);
                 }
-
-                await startScannerWithConfig(fallbackConfig);
             }
+
+            if (lastStartError) {
+                throw lastStartError;
+            }
+
+            setScannerStatus('');
         } catch (error) {
             scannerIsRunning = false;
             console.error(error);
-            alert('Не удалось запустить сканер. Разрешите доступ к камере и повторите попытку.');
+            const rawMessage = String(error?.message || error || '');
+            const normalized = rawMessage.toLowerCase();
+            let userMessage = 'Не удалось запустить сканер. Проверьте доступ к камере и перезапустите страницу.';
+
+            if (normalized.includes('notallowederror') || normalized.includes('permission')) {
+                userMessage = 'Доступ к камере отклонён браузером. Разрешите камеру в настройках сайта и повторите.';
+            } else if (normalized.includes('notfounderror') || normalized.includes('no camera')) {
+                userMessage = 'Камера не найдена. Проверьте, что устройство имеет рабочую камеру.';
+            } else if (normalized.includes('notreadableerror') || normalized.includes('trackstarterror') || normalized.includes('could not start')) {
+                userMessage = 'Камера занята другим приложением/вкладкой. Закройте их и попробуйте снова.';
+            } else if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+                userMessage = 'Откройте страницу по HTTPS: без защищённого контекста камера не запускается.';
+            }
+
+            setScannerStatus(userMessage);
+            alert(userMessage);
             await closeScanner();
         } finally {
             scannerIsOpening = false;
