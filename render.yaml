@@ -5,3 +5,8 @@ services:
     plan: free
     buildCommand: npm install
     startCommand: npm start
+    envVars:
+      - key: PLAYWRIGHT_BROWSERS_PATH
+        value: "0"
+      - key: PAYTAG_BROWSER_TIMEOUT_MS
+        value: "30000"
