@@ -116,6 +116,9 @@
 3. Убедитесь, что Render использует:
    - Build Command: `npm install`
    - Start Command: `npm start`
+   - Environment Variables:
+     - `PLAYWRIGHT_BROWSERS_PATH=0` (браузер Chromium хранится внутри сервиса и доступен рантайму)
+     - `PAYTAG_BROWSER_TIMEOUT_MS=30000` (рекомендуется для стабильности при медленном ответе НСПК)
 4. После деплоя откройте `https://<ваш-домен>.onrender.com`.
 5. Проверьте `https://<ваш-домен>.onrender.com/health` — должен вернуть `{ "ok": true }`.
 
@@ -176,24 +179,24 @@ location.reload();
 1. `https://qrnspk.onrender.com/health` должен вернуть `{"ok":true}`.
 2. На странице после нажатия «Применить» запрос должен идти в `https://qrnspk.onrender.com/proxy?...`.
 
-## Новый backend endpoint для paytag
+## Backend proxy endpoint
 
-Добавлен endpoint:
-- `POST /api/paytag`
-- body: `{ "paytagid": "100000405446" }`
+Основной endpoint для фронтенда:
+- `GET /api/transport?payTagId=100000403158`
 
-Этот endpoint на сервере открывает страницу НСПК в headless Chromium (Playwright), перехватывает сетевой ответ `.../api/paytag...` и возвращает только транспортные поля (`transportType`, `routeNumber`, `vehicleNumber`).
+Что делает:
+1. Проверяет, что `payTagId` передан.
+2. Выполняет HTTP-запрос к:
+   `https://qr.bilet.nspk.ru/api/v1/pay-tags/tariff?payTagId=<...>&s=qr&m=t`
+3. Возвращает только:
+   - `vehicleTypeName`
+   - `routeNumber`
+   - `vehicleNumber`
+
+Если внешний API недоступен или возвращает ошибку, backend возвращает `502`.
 
 ### Быстрая проверка
 
 ```bash
-curl -X POST https://qrnspk.onrender.com/api/paytag \
-  -H 'Content-Type: application/json' \
-  -d '{"paytagid":"100000405446"}'
+curl "https://qrnspk.onrender.com/api/transport?payTagId=100000403158"
 ```
-
-Если получаете ошибку по браузеру на Render, перезапустите деплой после успешного `npm install` (в `postinstall` уже добавлен `playwright install chromium`).
-
-Дополнительно backend теперь пытается автоматически доустановить Chromium через Playwright CLI, если при старте headless-сессии обнаружит, что executable браузера отсутствует. Это снижает вероятность 502 на `/api/paytag` после обновлений Playwright или очистки кэша окружения.
-
-Если сканер QR открывается, но камера иногда не стартует: frontend теперь сначала пробует `facingMode: environment`, а затем автоматически переключается на первый доступный `videoinput` как fallback.

@@ -386,6 +386,14 @@
             text-align: center;
         }
 
+        .scanner-status {
+            margin-top: 8px;
+            min-height: 20px;
+            color: #8d1f1f;
+            font-size: 14px;
+            text-align: center;
+        }
+
 
         .scanner-controls {
             margin-top: 12px;
@@ -495,6 +503,7 @@
         </div>
         <div id="qr-reader"></div>
         <div class="scanner-hint">Наведите камеру на QR-код с сайта НСПК.</div>
+        <div class="scanner-status" id="scanner-status" aria-live="polite"></div>
 
         <div class="scanner-controls">
             <button class="scanner-btn" id="scanner-flash-btn" type="button">Включить вспышку</button>
@@ -522,6 +531,7 @@
     const scannerFlashButton = document.getElementById('scanner-flash-btn');
     const scannerManualInput = document.getElementById('scanner-manual-input');
     const scannerManualSubmit = document.getElementById('scanner-manual-submit');
+    const scannerStatusElement = document.getElementById('scanner-status');
 
     let timerInterval = null;
     let startTime = null;
@@ -746,6 +756,10 @@
     let scannerIsOpening = false;
     let flashEnabled = false;
 
+    function setScannerStatus(message = '') {
+        scannerStatusElement.textContent = message;
+    }
+
     function resetPaymentTimer() {
         const now = new Date();
         startTime = now;
@@ -812,256 +826,41 @@
     function isValidNspkQrUrl(rawValue) {
         try {
             const parsed = new URL(rawValue);
-            return parsed.protocol === 'https:' && parsed.hostname === 'qr.bilet.nspk.ru' && parsed.searchParams.has('paytagid');
+            return parsed.protocol === 'https:' && parsed.hostname === 'qr.bilet.nspk.ru' && (parsed.searchParams.has('paytagid') || parsed.searchParams.has('payTagId'));
         } catch (error) {
             return false;
         }
     }
 
-    function getPaytagId(urlString) {
+    function getPaytagParams(urlString) {
         try {
             const parsed = new URL(urlString);
-            return parsed.searchParams.get('paytagid') || '';
+            const paytagid = parsed.searchParams.get('paytagid') || parsed.searchParams.get('payTagId') || '';
+            return { paytagid };
         } catch (error) {
-            return '';
+            return { paytagid: '' };
         }
     }
 
-    async function fetchPaytagFromBackend(paytagid) {
-        const response = await fetch('/api/paytag', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paytagid })
+    async function fetchTransportFromBackend(paytagid) {
+        const response = await fetch(`/api/transport?payTagId=${encodeURIComponent(paytagid)}`, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
         });
 
         if (!response.ok) {
             const errorBody = await response.text();
-            throw new Error(`/api/paytag -> HTTP ${response.status}${errorBody ? ` (${errorBody})` : ''}`);
+            throw new Error(`/api/transport -> HTTP ${response.status}${errorBody ? ` (${errorBody})` : ''}`);
         }
 
         const payload = await response.json();
-        const data = payload?.data || {};
 
         return {
-            vehicleType: normalizeTransportType(data.transportType || data.vehicleType || ''),
-            routeNumber: cleanCapturedValue(data.routeNumber || ''),
-            vehicleNumber: cleanCapturedValue(data.vehicleNumber || '')
+            vehicleType: normalizeTransportType(payload.vehicleTypeName || ''),
+            routeNumber: cleanCapturedValue(payload.routeNumber || ''),
+            vehicleNumber: cleanCapturedValue(payload.vehicleNumber || '')
         };
     }
-
-    function getConfiguredProxyOrigins() {
-        const defaults = [window.location.origin];
-        const fromGlobal = (window.QR_PROXY_ORIGIN || '').trim();
-        const fromStorage = (localStorage.getItem('qrProxyOrigin') || '').trim();
-
-        return Array.from(new Set([...(fromGlobal ? [fromGlobal] : []), ...(fromStorage ? [fromStorage] : []), ...defaults]));
-    }
-
-    function buildProxyUrls(url) {
-        const sameOrConfiguredProxyUrls = getConfiguredProxyOrigins().map(origin => `${origin.replace(/\/$/, '')}/proxy?url=${encodeURIComponent(url)}`);
-
-        return [
-            ...sameOrConfiguredProxyUrls,
-            `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-            `https://corsproxy.io/?${encodeURIComponent(url)}`,
-            `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
-            `https://thingproxy.freeboard.io/fetch/${url}`,
-            `https://r.jina.ai/http://${url.replace(/^https?:\/\//, '')}`
-        ];
-    }
-
-    function extractDataFromUnknownJson(payload) {
-        const raw = JSON.stringify(payload);
-        const typeMatch = tryRegexPatterns(raw, [
-            /"(?:vehicleType|transportType|transport_name|type|vehicle_type|transport_type)"\s*:\s*"([^"\n]{3,30})"/i,
-            /"(?:vehicle|transport)"\s*:\s*"(трамвай|автобус|троллейбус|электробус|маршрутка|метро)"/i
-        ]);
-
-        const routeMatch = tryRegexPatterns(raw, [
-            /"(?:routeNumber|route_no|route|line|lineNumber|route_number|line_number)"\s*:\s*"?([0-9A-Za-zА-Яа-я-]{1,8})"?/i
-        ]);
-
-        const vehicleMatch = tryRegexPatterns(raw, [
-            /"(?:vehicleNumber|vehicle_no|transportNumber|carNumber|ts|vehicle_number)"\s*:\s*"?([0-9A-Za-zА-Яа-я-]{1,12})"?/i
-        ]);
-
-        return {
-            vehicleType: normalizeTransportType(typeMatch),
-            routeNumber: routeMatch,
-            vehicleNumber: vehicleMatch
-        };
-    }
-
-    async function tryFetchJsonByApiEndpoints(decodedText) {
-        let parsedUrl;
-        try {
-            parsedUrl = new URL(decodedText);
-        } catch (error) {
-            return null;
-        }
-
-        const paytagid = parsedUrl.searchParams.get('paytagid');
-        if (!paytagid) {
-            return null;
-        }
-
-        const apiCandidates = [
-            `https://qr.bilet.nspk.ru/api/paytag/${paytagid}`,
-            `https://qr.bilet.nspk.ru/api/v1/paytag/${paytagid}`,
-            `https://qr.bilet.nspk.ru/api/v1/paytag?paytagid=${encodeURIComponent(paytagid)}`,
-            `https://qr.bilet.nspk.ru/api/ticket?paytagid=${encodeURIComponent(paytagid)}`,
-            `https://qr.bilet.nspk.ru/api/v1/ticket?paytagid=${encodeURIComponent(paytagid)}`
-        ];
-
-        for (const apiUrl of apiCandidates) {
-            try {
-                const response = await fetchWithTimeout(apiUrl, { method: 'GET', credentials: 'omit' }, 15000);
-                if (!response.ok) {
-                    continue;
-                }
-
-                const contentType = response.headers.get('content-type') || '';
-                if (!contentType.toLowerCase().includes('application/json')) {
-                    continue;
-                }
-
-                const jsonPayload = await response.json();
-                const extracted = extractDataFromUnknownJson(jsonPayload);
-                if (extracted.vehicleType && extracted.routeNumber && extracted.vehicleNumber) {
-                    return extracted;
-                }
-            } catch (error) {
-                // Идем к следующему API-эндпоинту
-            }
-        }
-
-        return null;
-    }
-
-    async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-        try {
-            const response = await fetch(url, { ...options, signal: controller.signal });
-            return response;
-        } finally {
-            clearTimeout(timeoutId);
-        }
-    }
-
-    function tryRegexPatterns(source, patterns) {
-        for (const pattern of patterns) {
-            const match = source.match(pattern);
-            if (match && match[1]) {
-                return cleanCapturedValue(match[1]);
-            }
-        }
-        return '';
-    }
-
-    function extractTransportDataFromHtml(htmlText) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlText, 'text/html');
-        const pageText = (doc.body?.innerText || htmlText || '').replace(/\s+/g, ' ');
-        const scriptText = Array.from(doc.querySelectorAll('script'))
-            .map(script => script.textContent || '')
-            .join(' ');
-
-        const combined = `${pageText} ${scriptText}`;
-
-        // 1) Прямой поиск по словам: Трамвай/Автобус/Троллейбус
-        let vehicleType = '';
-        const knownTypes = ['Трамвай', 'Автобус', 'Троллейбус'];
-        for (const type of knownTypes) {
-            if (new RegExp(`\\b${type}\\b`, 'i').test(combined)) {
-                vehicleType = type;
-                break;
-            }
-        }
-
-        // 2) Прямой поиск номера маршрута рядом с символом №
-        let routeNumber = tryRegexPatterns(combined, [
-            /маршрут[^№\d]{0,15}№\s*([0-9A-Za-zА-Яа-я-]{1,8})/i,
-            /№\s*([0-9A-Za-zА-Яа-я-]{1,8})/i
-        ]);
-
-        // 3) Прямой поиск Т/С
-        let vehicleNumber = tryRegexPatterns(combined, [
-            /Т\s*\/\s*С\s*[:№]?\s*([0-9A-Za-zА-Яа-я-]{1,12})/i,
-            /ТС\s*[:№]?\s*([0-9A-Za-zА-Яа-я-]{1,12})/i
-        ]);
-
-        // Фоллбек, если что-то не найдено простым поиском
-        if (!vehicleType) {
-            const typeMatch = tryRegexPatterns(combined, [
-                /\b(Трамвай|Автобус|Троллейбус|Электробус|Маршрутка|Метро)\b/i,
-                /(?:тип\s*транспорта|вид\s*транспорта|transportType|vehicleType|transport_name)"?\s*[:=]\s*"([^"\n]{3,30})"/i
-            ]);
-            vehicleType = normalizeTransportType(typeMatch);
-        }
-
-        if (!routeNumber) {
-            routeNumber = tryRegexPatterns(combined, [
-                /(?:маршрут(?:а)?|номер\s*маршрута|№\s*маршрута|routeNumber|route_no|lineNumber|line|route)"?\s*[:=]?\s*"?([0-9A-Za-zА-Яа-я-]{1,8})"?/i,
-                /(?:маршрут|route)[^0-9A-Za-zА-Яа-я]{0,10}([0-9A-Za-zА-Яа-я-]{1,8})/i
-            ]);
-        }
-
-        if (!vehicleNumber) {
-            vehicleNumber = tryRegexPatterns(combined, [
-                /(?:Т\s*\/\s*С|ТС|транспортн(?:ое|ого)\s*средств[ао]|vehicleNumber|vehicle_no|transportNumber|carNumber|ts)"?\s*[:=]?\s*"?([0-9A-Za-zА-Яа-я-]{1,12})"?/i,
-                /(?:Т\s*\/\s*С|ТС|vehicle)[^0-9A-Za-zА-Яа-я]{0,10}([0-9A-Za-zА-Яа-я-]{1,12})/i
-            ]);
-        }
-
-        return {
-            vehicleType,
-            routeNumber,
-            vehicleNumber
-        };
-    }
-
-    async function fetchTicketPageHtml(url) {
-        const directResponse = await fetchWithTimeout(url, { method: 'GET', credentials: 'omit' });
-        if (!directResponse.ok) {
-            throw new Error(`HTTP ${directResponse.status}`);
-        }
-        return directResponse.text();
-    }
-
-    async function fetchTicketPageHtmlWithFallback(url) {
-        const errors = [];
-
-        try {
-            return await fetchTicketPageHtml(url);
-        } catch (directError) {
-            errors.push(`direct: ${directError.message || directError}`);
-        }
-
-        const proxyUrls = buildProxyUrls(url);
-
-        for (const proxyUrl of proxyUrls) {
-            try {
-                const proxyResponse = await fetchWithTimeout(proxyUrl, { method: 'GET' });
-                if (!proxyResponse.ok) {
-                    errors.push(`${proxyUrl} -> HTTP ${proxyResponse.status}`);
-                    continue;
-                }
-
-                const proxyHtml = await proxyResponse.text();
-                if (proxyHtml && proxyHtml.trim().length > 100) {
-                    return proxyHtml;
-                }
-
-                errors.push(`${proxyUrl} -> пустой/короткий ответ`);
-            } catch (proxyError) {
-                errors.push(`${proxyUrl} -> ${proxyError.message || proxyError}`);
-            }
-        }
-
-        throw new Error(errors.join(' | '));
-    }
-
 
     function normalizeScannedInput(rawValue = '') {
         return String(rawValue).replace(/\s+/g, '').trim();
@@ -1076,38 +875,22 @@
         }
 
         try {
-            const paytagid = getPaytagId(normalizedText);
+            const { paytagid } = getPaytagParams(normalizedText);
             if (!paytagid) {
                 throw new Error('paytagid не найден в ссылке');
             }
 
-            // 1) Основной путь: наш backend с headless browser и перехватом API
-            const backendData = await fetchPaytagFromBackend(paytagid);
+            // Основной и единственный путь: backend-proxy endpoint /api/transport
+            const backendData = await fetchTransportFromBackend(paytagid);
             if (backendData.vehicleType && backendData.routeNumber && backendData.vehicleNumber) {
                 applyTransportData(backendData);
                 return true;
             }
-
-            // 2) Fallback: прямые API-попытки (если backend временно недоступен)
-            const apiData = await tryFetchJsonByApiEndpoints(normalizedText);
-            if (apiData) {
-                applyTransportData(apiData);
-                return true;
-            }
-
-            // 3) Последний fallback: HTML/proxy
-            const htmlText = await fetchTicketPageHtmlWithFallback(normalizedText);
-            const data = extractTransportDataFromHtml(htmlText);
-
-            if (!data.vehicleType || !data.routeNumber || !data.vehicleNumber) {
-                throw new Error('Данные транспорта не найдены в загруженной странице и API');
-            }
-
-            applyTransportData(data);
-            return true;
+            
+            throw new Error('Backend вернул неполные данные транспорта');
         } catch (error) {
             console.error('Ошибка извлечения:', error);
-            alert(`Не удалось извлечь данные автоматически. Техническая причина: ${error.message || error}.\n\nПроверьте, что backend доступен на этом же домене: /health отвечает {"ok":true}, а POST /api/paytag работает. Если backend недоступен, fallback через внешние прокси может быть заблокирован.`);
+            alert(`Не удалось извлечь данные автоматически. Техническая причина: ${error.message || error}.\n\nПроверьте, что backend доступен на этом же домене: /health отвечает {"ok":true}, а GET /api/transport?payTagId=... работает.`);
             return false;
         }
     }
@@ -1134,6 +917,7 @@
         scannerFlashButton.textContent = 'Включить вспышку';
         scannerFlashButton.disabled = false;
         scannerManualSubmit.disabled = false;
+        setScannerStatus('');
     }
 
     async function stopScanner() {
@@ -1168,11 +952,35 @@
             return;
         }
 
+        if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+            alert('Камера работает только в защищённом контексте (HTTPS). Откройте сайт по https://');
+            return;
+        }
+
         if (scannerIsOpening || scannerIsRunning) {
             return;
         }
 
+        async function ensureScannerInstance() {
+            if (!qrScanner) {
+                qrScanner = new Html5Qrcode('qr-reader');
+            }
+        }
+
+        async function resetScannerEngine() {
+            try {
+                if (qrScanner) {
+                    await qrScanner.stop().catch(() => {});
+                    await qrScanner.clear().catch(() => {});
+                }
+            } finally {
+                scannerIsRunning = false;
+                qrScanner = null;
+            }
+        }
+
         async function startScannerWithConfig(cameraConfig) {
+            await ensureScannerInstance();
             scannerIsRunning = true;
             await qrScanner.start(
                 cameraConfig,
@@ -1187,46 +995,88 @@
             );
         }
 
-        async function getFallbackCameraConfig() {
+        async function requestPermissionAndReleaseCamera() {
             try {
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const camera = devices.find(device => device.kind === 'videoinput');
-                if (camera?.deviceId) {
-                    return { deviceId: { exact: camera.deviceId } };
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                stream.getTracks().forEach(track => track.stop());
+            } catch (error) {
+                // если доступ не дали — это обработается в общем catch ниже
+                throw error;
+            }
+        }
+
+        async function getCameraCandidates() {
+            const candidates = [{ facingMode: { ideal: 'environment' } }, { facingMode: 'environment' }, { facingMode: 'user' }];
+
+            try {
+                const cameras = await Html5Qrcode.getCameras();
+                if (Array.isArray(cameras) && cameras.length > 0) {
+                    const rearCamera = cameras.find(camera => /back|rear|environment|зад/i.test(camera.label || ''));
+                    if (rearCamera?.id) {
+                        candidates.unshift(rearCamera.id);
+                    }
+                    if (cameras[0]?.id) {
+                        candidates.push(cameras[0].id);
+                    }
                 }
             } catch (error) {
                 console.warn('Не удалось перечислить камеры:', error);
             }
-            return null;
+
+            return candidates;
         }
 
         scannerModal.classList.add('active');
         scannerModal.setAttribute('aria-hidden', 'false');
         resetScannerControls();
 
-        if (!qrScanner) {
-            qrScanner = new Html5Qrcode('qr-reader');
-        }
-
         scannerIsOpening = true;
 
         try {
-            try {
-                await startScannerWithConfig({ facingMode: { ideal: 'environment' } });
-            } catch (initialError) {
-                scannerIsRunning = false;
-                const fallbackConfig = await getFallbackCameraConfig();
+            setScannerStatus('Запрашиваем доступ к камере...');
+            await requestPermissionAndReleaseCamera();
 
-                if (!fallbackConfig) {
-                    throw initialError;
+            const cameraCandidates = await getCameraCandidates();
+            let lastStartError = null;
+
+            for (const candidate of cameraCandidates) {
+                try {
+                    setScannerStatus('Запускаем камеру...');
+                    await resetScannerEngine();
+                    await startScannerWithConfig(candidate);
+                    lastStartError = null;
+                    break;
+                } catch (error) {
+                    lastStartError = error;
+                    scannerIsRunning = false;
+                    console.warn('Не удалось запустить камеру с конфигурацией:', candidate, error);
                 }
-
-                await startScannerWithConfig(fallbackConfig);
             }
+
+            if (lastStartError) {
+                throw lastStartError;
+            }
+
+            setScannerStatus('');
         } catch (error) {
             scannerIsRunning = false;
             console.error(error);
-            alert('Не удалось запустить сканер. Разрешите доступ к камере и повторите попытку.');
+            const rawMessage = String(error?.message || error || '');
+            const normalized = rawMessage.toLowerCase();
+            let userMessage = 'Не удалось запустить сканер. Проверьте доступ к камере и перезапустите страницу.';
+
+            if (normalized.includes('notallowederror') || normalized.includes('permission')) {
+                userMessage = 'Доступ к камере отклонён браузером. Разрешите камеру в настройках сайта и повторите.';
+            } else if (normalized.includes('notfounderror') || normalized.includes('no camera')) {
+                userMessage = 'Камера не найдена. Проверьте, что устройство имеет рабочую камеру.';
+            } else if (normalized.includes('notreadableerror') || normalized.includes('trackstarterror') || normalized.includes('could not start')) {
+                userMessage = 'Камера занята другим приложением/вкладкой. Закройте их и попробуйте снова.';
+            } else if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+                userMessage = 'Откройте страницу по HTTPS: без защищённого контекста камера не запускается.';
+            }
+
+            setScannerStatus(userMessage);
+            alert(userMessage);
             await closeScanner();
         } finally {
             scannerIsOpening = false;
