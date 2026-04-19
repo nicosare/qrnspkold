@@ -98,3 +98,80 @@
 Мы поддерживаем легальную оплату проезда и соблюдение законодательства. Всегда оплачивайте проезд через официальные каналы — это защищает ваши права как пассажира и поддерживает работу общественного транспорта.
 
 *Последнее обновление: 18 декабря 2025 года*
+
+## 🚀 Деплой proxy-сервера для обхода CORS
+
+Для автозаполнения данных по ссылкам `https://qr.bilet.nspk.ru/?paytagid=...` фронтенду нужен серверный прокси на **том же домене**.
+
+### Вариант 1: Render.com (Free)
+
+В проект добавлены:
+- `server.js` — Node/Express сервер со статикой и endpoint `GET /proxy?url=...`
+- `package.json` — зависимости и `npm start`
+- `render.yaml` — базовый конфиг для Render
+
+Шаги:
+1. Залейте репозиторий на GitHub.
+2. В Render создайте **Web Service** из репозитория.
+3. Убедитесь, что Render использует:
+   - Build Command: `npm install`
+   - Start Command: `npm start`
+4. После деплоя откройте `https://<ваш-домен>.onrender.com`.
+5. Проверьте `https://<ваш-домен>.onrender.com/health` — должен вернуть `{ "ok": true }`.
+
+### Вариант 2 (бесплатный аналог): Cloudflare Workers
+
+Если Render не подходит, можно поднять proxy endpoint на Cloudflare Workers (есть бесплатный план).
+
+
+### Вариант 3: Docker (исправление ошибки `Dockerfile: no such file or directory`)
+
+Если вы деплоите как Docker-сервис (или локально через Docker), используйте добавленный в репозиторий `Dockerfile`.
+
+Локальная проверка:
+1. `docker build -t qrnspk-proxy .`
+2. `docker run --rm -p 3000:3000 qrnspk-proxy`
+3. Откройте `http://localhost:3000/health`
+
+Если в CI/провайдере была ошибка `failed to read dockerfile: open Dockerfile: no such file or directory`, после обновления репозитория она должна исчезнуть (файл теперь есть в корне проекта).
+
+### Проверка работы
+
+Если сервер поднят корректно, фронтенд будет пытаться сначала сходить в:
+- `/proxy?url=<...>`
+- `https://<ваш-домен>/proxy?url=<...>`
+
+и только потом в публичные прокси.
+
+## Какой домен использовать и где открывать сайт
+
+Если ваш proxy уже поднят на `https://qrnspk.onrender.com`, то:
+
+1. **Ваш серверный домен (backend/proxy):** `qrnspk.onrender.com`.
+2. **Рекомендуемый вариант запуска сайта:** открывать страницу тоже на `https://qrnspk.onrender.com` (чтобы frontend и `/proxy` были на одном домене).
+3. Если открываете frontend на GitHub Pages (`https://nicosare.github.io/qrnspk`), то это **другой домен**. В таком случае запросы к `/proxy` на GitHub Pages не работают как серверный endpoint, и автоподстановка может не сработать.
+
+### Пошаговая проверка (быстрый чек-лист)
+
+1. Откройте `https://qrnspk.onrender.com/health` — должен быть JSON `{"ok":true}`.
+2. Откройте сам сайт на `https://qrnspk.onrender.com`.
+3. Нажмите «Скачать билет» → вставьте ссылку НСПК в поле → «Применить».
+4. Если не сработало, откройте DevTools (`F12`) → Console и проверьте ошибки `fetch`/CORS.
+
+Примечание: код умеет использовать настроенный proxy-домен как явный fallback даже если страница открыта на другом домене.
+
+
+### Если домен изменился (например, `qrnspk.onrender.com`)
+
+Код больше не использует жёстко прошитый `qrnspk.onrender.com`: по умолчанию берётся текущий домен страницы (`window.location.origin`).
+
+Если нужно принудительно указать proxy-домен, можно в DevTools Console выполнить:
+
+```js
+localStorage.setItem('qrProxyOrigin', 'https://qrnspk.onrender.com');
+location.reload();
+```
+
+Проверка:
+1. `https://qrnspk.onrender.com/health` должен вернуть `{"ok":true}`.
+2. На странице после нажатия «Применить» запрос должен идти в `https://qrnspk.onrender.com/proxy?...`.
