@@ -1,13 +1,8 @@
 const express = require('express');
-const cors = require('cors');
-const puppeteer = require('puppeteer');
 const axios = require('axios');
+const cors = require('cors');
+const { HttpsProxyAgent } = require('https-proxy-agent');
 const path = require('path');
-
-// 🔒 Ограничиваем память Node.js (важно для Render free tier)
-if (process.env.NODE_OPTIONS?.includes('max-old-space-size') === false) {
-  process.env.NODE_OPTIONS = '--max-old-space-size=380';
-}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,120 +10,107 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
-let isProcessing = false;
-let browser = null;
-
-async function getBrowser() {
-  if (!browser || !browser.isConnected()) {
-    console.log('[qrnspk] 🌐 Launching Chromium...');
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-gpu',
-        '--disable-dev-shm-usage',
-        '--single-process',
-        '--no-zygote',
-        '--disable-web-security',
-        '--disable-features=VizDisplayCompositor',
-        '--js-flags=--max-old-space-size=128' // Ограничиваем память JS-движка Chrome
-      ],
-      timeout: 30000,
-      pipe: true // Стабильнее на ограниченных серверах
-    });
-  }
-  return browser;
-}
-
-// 🔹 Лёгкий fallback-запрос (если Puppeteer недоступен)
-async function fetchViaAxios(payTagId, s, m) {
-  const url = `https://qr.bilet.nspk.ru/api/v1/pay-tags/tariff?payTagId=${payTagId}&s=${s||'qr'}&m=${m||'t'}`;
-  const res = await axios.get(url, {
+// 🔁 Функция запроса к НСПК с прокси и ретраями
+async function fetchNSPK(payTagId, s, m, attempt = 1) {
+  const url = `https://qr.bilet.nspk.ru/api/v1/pay-tags/tariff`;
+  
+  const config = {
+    params: { payTagId, s: s || 'qr', m: m || 't' },
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'application/json, text/plain, */*',      'Accept-Language': 'ru-RU,ru;q=0.9',
+      'Accept': 'application/json, text/plain, */*',
+      'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Connection': 'keep-alive',
       'Referer': 'https://qr.bilet.nspk.ru/',
+      'Origin': 'https://qr.bilet.nspk.ru',
       'Sec-Fetch-Dest': 'empty',
       'Sec-Fetch-Mode': 'cors',
       'Sec-Fetch-Site': 'same-origin'
     },
-    timeout: 10000,
+    timeout: 15000,
     validateStatus: () => true
-  });
-  
-  if (res.status >= 400) throw new Error(`Axios fallback: HTTP ${res.status}`);
-  return res.data;
+  };
+
+  // 🇷🇺 Если задан прокси — используем его
+  if (process.env.PROXY_URL) {
+    config.httpsAgent = new HttpsProxyAgent(process.env.PROXY_URL);
+    console.log(`[qrnspk] 🔄 Using proxy: ${process.env.PROXY_URL.replace(/:[^:@]+@/, ':***@')}`);
+  }
+
+  try {
+    const response = await axios.get(url, config);
+    
+    if (response.status >= 400) {
+      throw new Error(`NSPK API returned ${response.status}: ${JSON.stringify(response.data).slice(0, 100)}`);
+    }
+    
+    return response.data;
+  } catch (error) {
+    // 🔄 Повторные попытки при таймауте/сетевой ошибке    if (attempt < 3 && (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED' || error.code === 'ECONNRESET')) {
+      const delay = attempt * 2000;
+      console.log(`[qrnspk] ⏳ Retry ${attempt}/3 after ${delay}ms...`);
+      await new Promise(r => setTimeout(r, delay));
+      return fetchNSPK(payTagId, s, m, attempt + 1);
+    }
+    throw error;
+  }
 }
 
 app.get('/api/proxy', async (req, res) => {
   const { payTagId, s, m } = req.query;
-  if (!payTagId) return res.status(400).json({ error: 'payTagId is required' });
-
-  if (isProcessing) {
-    return res.status(429).json({ error: '⏳ Сервер занят. Подождите 2-3 сек.' });
+  
+  if (!payTagId) {
+    return res.status(400).json({ error: 'payTagId is required' });
   }
-  isProcessing = true;
 
-  console.log(`[qrnspk] 📡 Запрос: payTagId=${payTagId}`);
+  console.log(`[qrnspk] 📡 Request: payTagId=${payTagId}, proxy=${!!process.env.PROXY_URL}`);
 
   try {
-    let data;
+    const data = await fetchNSPK(payTagId, s, m);
     
-    // Попытка 1: Puppeteer
-    try {
-      const br = await getBrowser();
-      const page = await br.newPage();
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-      await page.setExtraHTTPHeaders({ 'Accept-Language': 'ru-RU,ru;q=0.9' });
-      
-      const response = await page.goto(
-        `https://qr.bilet.nspk.ru/api/v1/pay-tags/tariff?payTagId=${payTagId}&s=${s||'qr'}&m=${m||'t'}`,
-        { waitUntil: 'load', timeout: 15000 }
-      );
-      
-      if (!response?.ok()) throw new Error(`NSPK returned ${response.status()}`);
-      data = await response.json();
-      await page.close();
-      console.log('[qrnspk] ✅ Puppeteer OK');
-    } catch (puppeteerErr) {
-      console.warn('[qrnspk] ⚠️ Puppeteer failed, switching to Axios fallback:', puppeteerErr.message);
-      // Попытка 2: Лёгкий HTTP-запрос
-      data = await fetchViaAxios(payTagId, s, m);
-      console.log('[qrnspk] ✅ Axios fallback OK');
+    if (data?.responseStatus !== 'OK') {
+      throw new Error(`Invalid response: ${data?.responseStatus}`);
     }
-    if (!data?.responseStatus || data.responseStatus !== 'OK') {
-      throw new Error('NSPK returned invalid response');
-    }
-
+    
     res.json(data);
   } catch (error) {
-    console.error('[qrnspk] ❌ FINAL ERROR:', {
-      name: error.name,
+    console.error('[qrnspk] ❌ Error:', {
+      code: error.code,
       message: error.message,
-      stack: error.stack?.split('\n').slice(0, 3).join('\n')
+      proxy: !!process.env.PROXY_URL
     });
+    
+    // Понятные сообщения об ошибках
+    let userMsg = 'Ошибка соединения с НСПК';
+    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+      userMsg = !process.env.PROXY_URL 
+        ? '⏱️ Таймаут. Возможно, НСПК блокирует иностранные IP. Добавьте российский прокси.' 
+        : '⏱️ Таймаут даже через прокси. Проверьте, работает ли прокси.';
+    } else if (error.code === 'ECONNREFUSED') {
+      userMsg = '🚫 Соединение отклонено. Проверьте прокси или попробуйте позже.';
+    } else if (error.message?.includes('403') || error.message?.includes('401')) {
+      userMsg = '🔐 Доступ запрещён. Возможно, требуется авторизация или сессия.';
+    }
+    
     res.status(502).json({ 
-      error: 'Browser request failed', 
-      debug: error.message.slice(0, 150) 
-    });
-  } finally {
-    isProcessing = false;
-  }
+      error: userMsg,
+      debug: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });  }
 });
 
 app.get('/api/status', (req, res) => {
   res.json({
     service: 'qrnspk',
-    puppeteer: browser ? (browser.isConnected() ? 'ready' : 'disconnected') : 'not started',
-    memory: process.memoryUsage().heapUsed / 1024 / 1024,
+    proxy: process.env.PROXY_URL ? 'configured' : 'none',
+    node_env: process.env.NODE_ENV || 'production',
     uptime: process.uptime()
   });
 });
 
-process.on('SIGTERM', async () => {
-  if (browser) await browser.close();
-  process.exit(0);
+app.listen(PORT, () => {
+  console.log(`🚌 qrnspk listening on port ${PORT}`);
+  if (process.env.PROXY_URL) {
+    console.log(`🇷🇺 Using Russian proxy for NSPK requests`);
+  }
 });
-
-app.listen(PORT, () => console.log(`🚌 qrnspk listening on :${PORT}`));
