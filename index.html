@@ -743,6 +743,7 @@
 
     let qrScanner = null;
     let scannerIsRunning = false;
+    let scannerIsOpening = false;
     let flashEnabled = false;
 
     function resetPaymentTimer() {
@@ -1162,18 +1163,19 @@
             return;
         }
 
-        scannerModal.classList.add('active');
-        scannerModal.setAttribute('aria-hidden', 'false');
-        resetScannerControls();
-
-        if (!qrScanner) {
-            qrScanner = new Html5Qrcode('qr-reader');
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert('Камера недоступна: браузер не поддерживает доступ к mediaDevices.');
+            return;
         }
 
-        try {
+        if (scannerIsOpening || scannerIsRunning) {
+            return;
+        }
+
+        async function startScannerWithConfig(cameraConfig) {
             scannerIsRunning = true;
             await qrScanner.start(
-                { facingMode: 'environment' },
+                cameraConfig,
                 { fps: 10, qrbox: { width: 220, height: 220 } },
                 async (decodedText) => {
                     const isSuccess = await handleScannedText(decodedText);
@@ -1183,11 +1185,51 @@
                 },
                 () => {}
             );
+        }
+
+        async function getFallbackCameraConfig() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const camera = devices.find(device => device.kind === 'videoinput');
+                if (camera?.deviceId) {
+                    return { deviceId: { exact: camera.deviceId } };
+                }
+            } catch (error) {
+                console.warn('Не удалось перечислить камеры:', error);
+            }
+            return null;
+        }
+
+        scannerModal.classList.add('active');
+        scannerModal.setAttribute('aria-hidden', 'false');
+        resetScannerControls();
+
+        if (!qrScanner) {
+            qrScanner = new Html5Qrcode('qr-reader');
+        }
+
+        scannerIsOpening = true;
+
+        try {
+            try {
+                await startScannerWithConfig({ facingMode: { ideal: 'environment' } });
+            } catch (initialError) {
+                scannerIsRunning = false;
+                const fallbackConfig = await getFallbackCameraConfig();
+
+                if (!fallbackConfig) {
+                    throw initialError;
+                }
+
+                await startScannerWithConfig(fallbackConfig);
+            }
         } catch (error) {
             scannerIsRunning = false;
             console.error(error);
             alert('Не удалось запустить сканер. Разрешите доступ к камере и повторите попытку.');
             await closeScanner();
+        } finally {
+            scannerIsOpening = false;
         }
     }
 

@@ -1,6 +1,9 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import { createRequire } from 'module';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,6 +12,40 @@ const app = express();
 const port = process.env.PORT || 3000;
 const upstreamTimeoutMs = Number(process.env.UPSTREAM_TIMEOUT_MS || 15000);
 const browserTimeoutMs = Number(process.env.PAYTAG_BROWSER_TIMEOUT_MS || 25000);
+const execFileAsync = promisify(execFile);
+const require = createRequire(import.meta.url);
+const playwrightCliPath = require.resolve('playwright/cli');
+let playwrightInstallPromise = null;
+
+function shortErrorText(error) {
+  const stderr = String(error?.stderr || '').trim();
+  const stdout = String(error?.stdout || '').trim();
+  const message = String(error?.message || error || '').trim();
+  return stderr || stdout || message;
+}
+
+async function runPlaywrightInstall() {
+  const attempts = [
+    { args: ['install', 'chromium'], env: {} },
+    { args: ['install', 'chromium'], env: { PLAYWRIGHT_BROWSERS_PATH: '0' } }
+  ];
+  const errors = [];
+
+  for (const attempt of attempts) {
+    try {
+      await execFileAsync(process.execPath, [playwrightCliPath, ...attempt.args], {
+        env: { ...process.env, ...attempt.env },
+        timeout: 180000,
+        maxBuffer: 1024 * 1024 * 10
+      });
+      return;
+    } catch (error) {
+      errors.push(`playwright ${attempt.args.join(' ')}: ${shortErrorText(error)}`);
+    }
+  }
+
+  throw new Error(errors.join(' | '));
+}
 
 app.use(express.json({ limit: '100kb' }));
 
@@ -58,14 +95,40 @@ function normalizePaytagPayload(payload = {}) {
 async function fetchPaytagViaHeadlessBrowser(paytagid) {
   const targetUrl = `https://qr.bilet.nspk.ru/?paytagid=${encodeURIComponent(paytagid)}&s=qr&m=t`;
   let browser;
+  const { chromium } = await import('playwright');
 
-  try {
-    const { chromium } = await import('playwright');
-
-    browser = await chromium.launch({
+  async function launchBrowser() {
+    return chromium.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
+  }
+
+  async function ensureChromiumInstalled() {
+    if (!playwrightInstallPromise) {
+      playwrightInstallPromise = runPlaywrightInstall()
+        .finally(() => {
+          playwrightInstallPromise = null;
+        });
+    }
+
+    await playwrightInstallPromise;
+  }
+
+  try {
+    try {
+      browser = await launchBrowser();
+    } catch (launchError) {
+      const launchMessage = String(launchError?.message || launchError);
+      const browserMissing = launchMessage.includes("Executable doesn't exist");
+
+      if (!browserMissing) {
+        throw launchError;
+      }
+
+      await ensureChromiumInstalled();
+      browser = await launchBrowser();
+    }
 
     const context = await browser.newContext({
       userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
