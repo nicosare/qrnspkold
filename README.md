@@ -116,6 +116,9 @@
 3. Убедитесь, что Render использует:
    - Build Command: `npm install`
    - Start Command: `npm start`
+   - Environment Variables:
+     - `PLAYWRIGHT_BROWSERS_PATH=0` (браузер Chromium хранится внутри сервиса и доступен рантайму)
+     - `PAYTAG_BROWSER_TIMEOUT_MS=30000` (рекомендуется для стабильности при медленном ответе НСПК)
 4. После деплоя откройте `https://<ваш-домен>.onrender.com`.
 5. Проверьте `https://<ваш-домен>.onrender.com/health` — должен вернуть `{ "ok": true }`.
 
@@ -182,7 +185,22 @@ location.reload();
 - `POST /api/paytag`
 - body: `{ "paytagid": "100000405446" }`
 
-Этот endpoint на сервере открывает страницу НСПК в headless Chromium (Playwright), перехватывает сетевой ответ `.../api/paytag...` и возвращает только транспортные поля (`transportType`, `routeNumber`, `vehicleNumber`).
+Также добавлен упрощенный proxy-endpoint для фронтенда:
+- `GET /api/transport?payTagId=100000403158`
+- возвращает только:
+  - `vehicleTypeName`
+  - `routeNumber`
+  - `vehicleNumber`
+
+Этот endpoint на сервере открывает страницу НСПК во встроенном внутреннем headless Chromium (Playwright), затем:
+1. Сначала пробует получить данные напрямую через API НСПК:
+   `https://qr.bilet.nspk.ru/api/v1/pay-tags/tariff?payTagId=<...>&s=qr&m=t`
+   и забирает поля `vehicleTypeName`, `routeNumber`, `vehicleNumber`.
+2. Если API недоступен/неполный, открывает страницу во встроенном внутреннем headless Chromium (Playwright), перехватывает `.../api/paytag...`.
+3. Если и там JSON неполный, парсит уже загруженную HTML-страницу в браузере.
+4. Возвращает транспортные поля (`transportType`, `routeNumber`, `vehicleNumber`) для автоподстановки на страницу.
+
+Дополнительно `paytagid` на backend нормализуется (убираются пробелы и лишние символы), поэтому строки вроде `paytagid =100000405446` больше не ломают обработку.
 
 ### Быстрая проверка
 
