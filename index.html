@@ -386,6 +386,14 @@
             text-align: center;
         }
 
+        .scanner-status {
+            margin-top: 8px;
+            min-height: 20px;
+            color: #8d1f1f;
+            font-size: 14px;
+            text-align: center;
+        }
+
 
         .scanner-controls {
             margin-top: 12px;
@@ -495,6 +503,7 @@
         </div>
         <div id="qr-reader"></div>
         <div class="scanner-hint">Наведите камеру на QR-код с сайта НСПК.</div>
+        <div class="scanner-status" id="scanner-status" aria-live="polite"></div>
 
         <div class="scanner-controls">
             <button class="scanner-btn" id="scanner-flash-btn" type="button">Включить вспышку</button>
@@ -522,6 +531,7 @@
     const scannerFlashButton = document.getElementById('scanner-flash-btn');
     const scannerManualInput = document.getElementById('scanner-manual-input');
     const scannerManualSubmit = document.getElementById('scanner-manual-submit');
+    const scannerStatusElement = document.getElementById('scanner-status');
 
     let timerInterval = null;
     let startTime = null;
@@ -745,6 +755,10 @@
     let scannerIsRunning = false;
     let scannerIsOpening = false;
     let flashEnabled = false;
+
+    function setScannerStatus(message = '') {
+        scannerStatusElement.textContent = message;
+    }
 
     function resetPaymentTimer() {
         const now = new Date();
@@ -1134,6 +1148,7 @@
         scannerFlashButton.textContent = 'Включить вспышку';
         scannerFlashButton.disabled = false;
         scannerManualSubmit.disabled = false;
+        setScannerStatus('');
     }
 
     async function stopScanner() {
@@ -1168,6 +1183,11 @@
             return;
         }
 
+        if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+            alert('Камера работает только в защищённом контексте (HTTPS). Откройте сайт по https://');
+            return;
+        }
+
         if (scannerIsOpening || scannerIsRunning) {
             return;
         }
@@ -1189,10 +1209,10 @@
 
         async function getFallbackCameraConfig() {
             try {
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const camera = devices.find(device => device.kind === 'videoinput');
-                if (camera?.deviceId) {
-                    return { deviceId: { exact: camera.deviceId } };
+                const cameras = await Html5Qrcode.getCameras();
+                if (Array.isArray(cameras) && cameras.length > 0) {
+                    const rearCamera = cameras.find(camera => /back|rear|environment|зад/i.test(camera.label || ''));
+                    return (rearCamera || cameras[0]).id;
                 }
             } catch (error) {
                 console.warn('Не удалось перечислить камеры:', error);
@@ -1211,8 +1231,10 @@
         scannerIsOpening = true;
 
         try {
+            setScannerStatus('Запрашиваем доступ к камере...');
             try {
                 await startScannerWithConfig({ facingMode: { ideal: 'environment' } });
+                setScannerStatus('');
             } catch (initialError) {
                 scannerIsRunning = false;
                 const fallbackConfig = await getFallbackCameraConfig();
@@ -1222,11 +1244,27 @@
                 }
 
                 await startScannerWithConfig(fallbackConfig);
+                setScannerStatus('');
             }
         } catch (error) {
             scannerIsRunning = false;
             console.error(error);
-            alert('Не удалось запустить сканер. Разрешите доступ к камере и повторите попытку.');
+            const rawMessage = String(error?.message || error || '');
+            const normalized = rawMessage.toLowerCase();
+            let userMessage = 'Не удалось запустить сканер. Проверьте доступ к камере и перезапустите страницу.';
+
+            if (normalized.includes('notallowederror') || normalized.includes('permission')) {
+                userMessage = 'Доступ к камере отклонён браузером. Разрешите камеру в настройках сайта и повторите.';
+            } else if (normalized.includes('notfounderror') || normalized.includes('no camera')) {
+                userMessage = 'Камера не найдена. Проверьте, что устройство имеет рабочую камеру.';
+            } else if (normalized.includes('notreadableerror') || normalized.includes('trackstarterror') || normalized.includes('could not start')) {
+                userMessage = 'Камера занята другим приложением/вкладкой. Закройте их и попробуйте снова.';
+            } else if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+                userMessage = 'Откройте страницу по HTTPS: без защищённого контекста камера не запускается.';
+            }
+
+            setScannerStatus(userMessage);
+            alert(userMessage);
             await closeScanner();
         } finally {
             scannerIsOpening = false;
