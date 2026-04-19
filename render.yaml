@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: qrnspk-proxy
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
