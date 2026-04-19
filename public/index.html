@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🚌 qrnspk — Парсер транспортных QR</title>
+  <style>
+    :root { --primary: #2563eb; --primary-hover: #1d4ed8; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --text-muted: #64748b; --border: #e2e8f0; --success: #22c55e; --error: #ef4444; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; padding: 20px; min-height: 100vh; }
+    .container { max-width: 700px; margin: 0 auto; }
+    header { text-align: center; padding: 24px 0; }
+    header h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    header p { color: var(--text-muted); font-size: 0.95rem; }
+    .card { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 16px; border: 1px solid var(--border); }
+    .input-group { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+    input[type="text"] { flex: 1; min-width: 200px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; outline: none; }
+    input[type="text"]:focus { border-color: var(--primary); }
+    button { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; }
+    button:hover { background: var(--primary-hover); }
+    button:disabled { background: var(--text-muted); cursor: not-allowed; }
+    .status { font-size: 0.9rem; padding: 10px 14px; border-radius: 8px; margin: 12px 0; display: none; }
+    .status.show { display: block; }
+    .status.loading { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+    .status.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .status.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 8px; }
+    .result-item { background: #f1f5f9; padding: 14px; border-radius: 8px; border-left: 4px solid var(--primary); }
+    .result-item label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+    .result-item .value { font-weight: 600; font-size: 1.1rem; word-break: break-word; }
+    .raw-json { margin-top: 16px; border-top: 1px dashed var(--border); padding-top: 16px; }
+    .raw-json summary { cursor: pointer; color: var(--primary); font-weight: 500; }
+    .raw-json pre { background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 0.85rem; margin-top: 10px; max-height: 300px; }
+    .footer { text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 20px 0; }
+    @media (max-width: 600px) { .input-group { flex-direction: column; } button { width: 100%; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🚌 qrnspk</h1>
+      <p>Парсер QR-кодов НСПК для получения данных о транспорте</p>
+    </header>
+
+    <div class="card">
+      <div class="input-group">
+        <input type="text" id="qrInput" placeholder="https://qr.bilet.nspk.ru/?paytagid=...&s=qr&m=t" value="https://qr.bilet.nspk.ru/?paytagid=100000403158&s=qr&m=t"/>
+        <button id="parseBtn" onclick="parseQR()">🔍 Получить данные</button>
+      </div>
+      <div id="status" class="status"></div>
+
+      <div id="result" style="display:none">
+        <div class="result-grid">
+          <div class="result-item">
+            <label>Тип транспорта</label>
+            <div class="value" id="vehicleType">—</div>
+          </div>
+          <div class="result-item">
+            <label>Номер маршрута</label>
+            <div class="value" id="routeNumber">—</div>
+          </div>
+          <div class="result-item">
+            <label>Номер ТС</label>
+            <div class="value" id="vehicleNumber">—</div>
+          </div>
+          <div class="result-item">
+            <label>Стоимость</label>
+            <div class="value" id="price">—</div>
+          </div>
+        </div>
+
+        <details class="raw-json">
+          <summary>📄 Полный ответ API</summary>
+          <pre id="rawOutput"></pre>
+        </details>
+      </div>
+    </div>
+
+    <div class="footer">
+      <strong>qrnspk</strong> • <span id="serverInfo"></span>
+    </div>
+  </div>
+
+  <script>
+    // 🔧 Настройка: оставьте пустым для работы на том же домене
+    const PROXY_BASE_URL = ''; 
+    const API_ENDPOINT = `${PROXY_BASE_URL}/api/proxy`;
+
+    function parsePayTagId(url) {
+      try {
+        const urlObj = new URL(url);
+        return urlObj.searchParams.get('paytagid') || urlObj.searchParams.get('payTagId');
+      } catch { return null; }
+    }
+
+    function showStatus(message, type = 'loading') {
+      const el = document.getElementById('status');
+      el.textContent = message;
+      el.className = `status show ${type}`;    }
+
+    function clearResult() {
+      document.getElementById('result').style.display = 'none';
+      ['vehicleType', 'routeNumber', 'vehicleNumber', 'price'].forEach(id => {
+        document.getElementById(id).textContent = '—';
+      });
+      document.getElementById('rawOutput').textContent = '';
+    }
+
+    async function parseQR() {
+      const input = document.getElementById('qrInput').value.trim();
+      const btn = document.getElementById('parseBtn');
+      
+      if (!input) { showStatus('⚠️ Введите ссылку из QR-кода', 'error'); return; }
+
+      const payTagId = parsePayTagId(input);
+      if (!payTagId) { showStatus('❌ Не найден paytagid в ссылке', 'error'); return; }
+
+      btn.disabled = true;
+      btn.textContent = '⏳ Загрузка...';
+      clearResult();
+      showStatus('🔄 Запрос к серверу...', 'loading');
+
+      const url = new URL(input);
+      const params = new URLSearchParams({
+        payTagId: payTagId,
+        s: url.searchParams.get('s') || 'qr',
+        m: url.searchParams.get('m') || 't'
+      });
+
+      try {
+        const response = await fetch(`${API_ENDPOINT}?${params}`);
+        
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error || `HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.responseStatus !== 'OK') {
+          throw new Error(`API error: ${data.responseStatus}`);
+        }
+
+        const result = data.result?.[0];
+        if (!result) { throw new Error('Пустой результат'); }
+
+        document.getElementById('vehicleType').textContent = result.vehicleTypeName || '—';
+        document.getElementById('routeNumber').textContent = result.routeNumber || '—';        document.getElementById('vehicleNumber').textContent = result.vehicleNumber || '—';
+        document.getElementById('price').textContent = result.price ? `${result.price} ₽` : '—';
+        document.getElementById('rawOutput').textContent = JSON.stringify(data, null, 2);
+
+        document.getElementById('result').style.display = 'block';
+        showStatus('✅ Данные получены!', 'success');
+
+      } catch (error) {
+        console.error('[qrnspk] Error:', error);
+        showStatus(`❌ ${error.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔍 Получить данные';
+      }
+    }
+
+    document.getElementById('qrInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') parseQR();
+    });
+
+    // Инфо о сервере в футере
+    document.getElementById('serverInfo').textContent = 
+      `Домен: ${window.location.hostname}`;
+  </script>
+</body>
+</html>
