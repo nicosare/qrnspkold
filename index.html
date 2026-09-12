@@ -6,7 +6,6 @@
     <title>Уведомление об оплате</title>
     <!-- Подключаем библиотеку для QR -->
     <script src="https://cdn.jsdelivr.net/npm/easyqrcodejs@4.5.0/dist/easy.qrcode.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode" defer></script>
     <style>
         @font-face {
             font-family: 'Circe';
@@ -25,177 +24,252 @@
             padding: 0;
         }
 
+        html, body {
+            height: auto;
+            min-height: 100%;
+        }
+
         body {
             font-family: 'Circe', sans-serif;
-            background-color: #f5f1e8;
-            color: #1F2240;
+            background-color: #f2f3f4;
+            color: #424142;
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
         }
 
-        header {
+        /* HEADER - как на оригинале */
+        .wrapper {
             width: 100%;
-            height: 56px;
-            text-align: center;
-            background-color: #1d1346;
-            color: white;
-            display: flex;
-            text-align: center;
-            justify-content: center;
-            padding: 12px 0;
-            font-weight: bold;
-            font-size: 20px;
+            height: auto;
+            display: block;
+            position: relative;
         }
 
-        main {
+        header {
+            height: 120px;
+            background-color: #209fff;
+            display: flex;
+            position: relative;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header h1 {
+            color: #fff;
+            position: relative;
+            z-index: 5;
+            padding: 0 23px;
+            font-weight: 400;
+            font-size: 20px;
+            line-height: 1.25;
+            margin: 0;
+        }
+
+        header h1::before,
+        header h1::after {
+            content: '';
+            display: block;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 1px;
+            background: #fff;
+        }
+
+        header h1::before {
+            left: 0;
+        }
+
+        header h1::after {
+            right: 0;
+        }
+
+        header::before {
+            content: '';
+            display: block;
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 60px;
+            background-image: url('media/header-top-part.svg');
+            background-position: right top;
+            background-repeat: no-repeat;
+            z-index: 1;
+        }
+
+        header::after {
+    content: '';
+    display: block;
+    position: absolute;
+    inset: 0; /* растягивает элемент на всю площадь хэдера */
+    top: auto; /* отменяет привязку к верху, оставляя только снизу */
+    height: auto;
+    aspect-ratio: 32/4;
+    /* Слева направо накладываем SVG-волну, а под неё — градиент, который делит фон на прозрачный и серый */
+    background: url('media/header-bottom-part.svg') no-repeat bottom/100% auto,
+                linear-gradient(to bottom, transparent 50%, #f2f3f4 50%);
+    z-index: 1;
+}
+ z-index: 1;
+        }
+
+        /* MAIN CONTENT */
+        .content {
             width: 100%;
             max-width: 480px;
-            padding: 20px;
+            padding: 20px 16px;
             text-align: center;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
 
-        .logo {
-            width: 176px;
-            margin-bottom: 18px;
-        }
-
-        .success-message {
-            color: #1d1346;
+        .text-block {
             font-size: 18px;
-            font-weight: 500;
-            line-height: 24px;  
+            line-height: 24px;
+            color: #424142;
+            margin: 0;
         }
 
-        .transport-info {
-            font-size: 20px;
-            color: #1d1346;
-            margin-top: 36px;
-            font-weight: 600;
-        }
-        
-        .transport-number {
-            color: #1d1346;
+        .text-block_text-align_center {
+            text-align: center;
         }
 
-        .price-container {
+        .text-block_margin-bottom_35 {
+            margin-bottom: 40px;
+        }
+
+        /* TICKET */
+        .ticket {
+            width: 100%;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            margin-top: -6px;
-            margin-bottom: 10px;
         }
 
-        .price {
+        .payment-info-details {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .payment-info-details__vehicle-type {
+            font-size: 21px;
+            line-height: 24px;
+            font-weight: 700;
+            color: #424142;
+            margin-bottom: 8px;
+        }
+
+        .payment-info-details__price {
             font-size: 48px;
-            font-weight: bold;
-            color: #1d1346;
+            font-weight: 700;
+            color: #424142;
+            margin-bottom: 8px;
             cursor: pointer;
-            position: relative;
             display: inline-block;
         }
 
-        .price:hover::after {
-            content: '✎';
-            position: absolute;
-            right: -20px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 18px;
-            color: #b5b5b5;
-        }
-        
-        .ruble-sign {
-            font-family: 'Circe', sans-serif;
-            font-weight: 500;
+        .payment-info-details__rouble {
+            font-family: sans-serif;
+            font-weight: 400;
+            line-height: 54px;
             font-size: 48px;
-            margin-left: 5px;
+            margin-left: 2px;
         }
 
-        .datetime {
-            color: #1d1346;
+        .route-number-symbol {
+            font-family: sans-serif;
+            font-weight: 700;
+            font-size: 20px;
+            line-height: 24px;
+        }
+
+        .payment-info-details__date {
             font-size: 18px;
+            line-height: 20px;
+            font-weight: 400;
+            color: #424142;
+            margin-bottom: 8px;
         }
 
-        .tech-info {
-            color: #b5b5b5;
+        .payment-info-details__vehicle-number {
             font-size: 16px;
-            margin-bottom: 30px;
+            color: #a4a2a4;
+            margin-bottom: 35px;
         }
 
-        .timer-label {
-            color: #1d1346;
+        .payment-info-details__vehicle-number span {
+            color: #424142;
+        }
+
+        .ticket__payment-timer {
+            text-align: center;
+            margin-bottom: 14px;
+        }
+
+        .ticket__payment-timer p {
             font-size: 18px;
-            margin-bottom: -9px;
+            line-height: 24px;
+            color: #424142;
+            margin: 0;
         }
 
-        .timer-value {
+        .ticket__payment-timer strong {
             font-size: 32px;
-            font-weight: bold;
-            color: #1d1346;
-            margin-bottom: 24px;
+            font-weight: 700;
+            color: #424142;
             letter-spacing: 1px;
+            line-height: 40px;
             cursor: pointer;
             user-select: none;
             transition: opacity 0.2s;
         }
 
-        .timer-value:active {
+        .ticket__payment-timer strong:active {
             opacity: 0.7;
         }
 
-        .qr-code-container {
+        .ticket__qrcode {
             margin-bottom: 25px;
             display: flex;
             justify-content: center;
             align-items: center;
         }
-        
-        .qr-code-container canvas, .qr-code-container img {
+
+        .ticket__qrcode canvas, .ticket__qrcode img {
             max-width: 100%;
         }
 
+        /* TICKET DETAILS */
         .ticket-details {
             font-size: 18px;
-            color: #1d1346;
+            color: #424142;
             line-height: 1.5;
             margin-bottom: 25px;
         }
 
         .ticket-details strong {
-            color: #1d1346;
+            color: #424142;
             font-weight: bold;
         }
 
         .instructions {
             font-size: 18px;
-            color: #1d1346;
+            color: #424142;
             margin-bottom: 25px;
             line-height: 1.4;
         }
 
-        .btn-download {
-            background-color: #78b72a;
-            color: white;
-            border: none;
-            width: 100%;
-            padding: 14px;
-            border-radius: 6px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            font-family: 'Circe', sans-serif;
-        }
-
-        .btn-download:hover {
-            background-color: #78b72a;
-        }
-
+        /* DROPDOWN */
         .dropdown {
             position: relative;
             display: inline-block;
@@ -253,9 +327,9 @@
             font-family: 'Circe', sans-serif;
             font-size: 20px;
             font-weight: 600;
-            color: #1d1346;
+            color: #424142;
             background: transparent;
-            border: 1px solid #1d1346;
+            border: 1px solid #424142;
             border-radius: 3px;
             padding: 2px 5px;
             text-align: center;
@@ -266,9 +340,9 @@
         .edit-input-small {
             font-family: 'Circe', sans-serif;
             font-size: 16px;
-            color: #b5b5b5;
+            color: #424142;
             background: transparent;
-            border: 1px solid #b5b5b5;
+            border: 1px solid #424142;
             border-radius: 3px;
             padding: 1px 3px;
             text-align: center;
@@ -280,9 +354,9 @@
             font-family: 'Circe', sans-serif;
             font-size: 48px;
             font-weight: bold;
-            color: #1d1346;
+            color: #424142;
             background: transparent;
-            border: 1px solid #1d1346;
+            border: 1px solid #424142;
             border-radius: 3px;
             padding: 2px 5px;
             text-align: center;
@@ -290,221 +364,111 @@
             outline: none;
         }
 
-        /* Замените существующие стили для .legal-footer и .legal-notice на эти */
-
-.legal-footer {
-    width: 100%;
-    max-width: 480px; /* Ограничиваем ширину, как у основного блока */
-    margin: 30px auto 0; /* Отступ сверху и центрирование */
-    padding: 20px;
-    background-color: #f5f1e8;
-    border-top: 2px dashed #d9d1c0; /* Изменён стиль границы для наглядности */
-    font-family: 'Circe', sans-serif;
-    box-sizing: border-box; /* Учитываем padding в ширине */
-}
-
-.legal-notice {
-    text-align: center;
-    font-size: 14px;
-    line-height: 1.5;
-    color: #1F2240;
-}
-
-.legal-notice strong {
-    color: #1d1346;
-}
-
-.readme-link {
-    display: inline-block; /* Ссылка теперь в строку с текстом */
-    margin-top: 5px;
-    color: #78b72a;
-    text-decoration: none;
-    font-weight: bold;
-    transition: color 0.2s;
-}
-
-.readme-link:hover {
-    color: #5a8a20;
-    text-decoration: underline;
-}
-
-
-        .scanner-modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.65);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            padding: 16px;
-        }
-
-        .scanner-modal.active {
-            display: flex;
-        }
-
-        .scanner-content {
+        /* LEGAL FOOTER */
+        .legal-footer {
             width: 100%;
-            max-width: 420px;
-            background: #f5f1e8;
-            border-radius: 10px;
-            padding: 16px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+            max-width: 480px;
+            margin: 30px auto 0;
+            padding: 20px;
+            background-color: #f2f3f4;
+            font-family: 'Circe', sans-serif;
+            box-sizing: border-box;
         }
 
-        .scanner-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            color: #1d1346;
-            font-weight: bold;
-            font-size: 18px;
-        }
-
-        .scanner-close {
-            border: none;
-            background: transparent;
-            color: #1d1346;
-            font-size: 28px;
-            line-height: 1;
-            cursor: pointer;
-            padding: 0 4px;
-        }
-
-        #qr-reader {
-            width: 100%;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .scanner-hint {
-            margin-top: 10px;
-            color: #1d1346;
-            font-size: 15px;
+        .legal-notice {
             text-align: center;
-        }
-
-
-        .scanner-controls {
-            margin-top: 12px;
-            display: grid;
-            gap: 8px;
-        }
-
-        .scanner-manual-row {
-            display: flex;
-            gap: 8px;
-        }
-
-        .scanner-input {
-            flex: 1;
-            border: 1px solid #d2cbbd;
-            border-radius: 6px;
-            padding: 10px;
             font-size: 14px;
-            font-family: 'Circe', sans-serif;
-            color: #1d1346;
-            background: #fff;
+            line-height: 1.5;
+            color: #424142;
         }
 
-        .scanner-btn {
-            border: none;
-            border-radius: 6px;
-            background: #1d1346;
-            color: #fff;
-            padding: 10px 12px;
-            cursor: pointer;
-            font-size: 14px;
-            font-family: 'Circe', sans-serif;
-            white-space: nowrap;
+        .legal-notice strong {
+            color: #424142;
         }
 
-        .scanner-btn:disabled {
-            opacity: 0.6;
-            cursor: default;
+        .readme-link {
+            display: inline-block;
+            margin-top: 5px;
+            color: #0063b0;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.2s;
+        }
+
+        .readme-link:hover {
+            color: #003d7a;
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-<header>
-    Уведомление об оплате
-</header>
+<div class="wrapper">
+    <header>
+        <h1>Уведомление об оплате</h1>
+    </header>
+</div>
 
-<main>
-    <img src="logo.svg" alt="СБП" class="logo">
-
-    <div class="success-message">
-        Ваш проезд успешно оплачен!
+<div class="content">
+    <div class="text-block text-block_text-align_center text-block_margin-bottom_35">
+        <p>Ваш проезд успешно оплачен!</p>
     </div>
 
-    <div class="transport-info">
-        <span class="dropdown" id="vehicle-type-dropdown">
-            <span class="editable" id="vehicle-type">Трамвай</span>
-            <div class="dropdown-content">
-                <span data-value="Трамвай">Трамвай</span>
-                <span data-value="Автобус">Автобус</span>
-                <span data-value="Троллейбус">Троллейбус</span>
+    <div class="ticket">
+        <div class="payment-info-details">
+            <div class="payment-info-details__vehicle-type">
+                <span class="dropdown" id="vehicle-type-dropdown">
+                    <span class="editable" id="vehicle-type">Трамвай</span>
+                    <div class="dropdown-content">
+                        <span data-value="Трамвай">Трамвай</span>
+                        <span data-value="Автобус">Автобус</span>
+                        <span data-value="Троллейбус">Троллейбус</span>
+                    </div>
+                </span>: 
+                <span class="editable" id="route-number"><span class="route-number-symbol">№</span>15</span>
             </div>
-        </span>: 
-        <span class="editable" id="route-number">№15</span>
-    </div>
 
-    <div class="price-container">
-        <span class="price" id="price-value">33</span>
-        <span class="ruble-sign">₽</span>
-    </div>
+            <div class="payment-info-details__price">
+                <span class="editable" id="price-value">42</span>
+                <span class="payment-info-details__rouble">₽</span>
+            </div>
 
-    <div class="datetime" id="datetime-display">
-        17.12.2025 19:25
-    </div>
+            <div class="payment-info-details__date" id="datetime-display">
+                11.09.2026 09:11
+            </div>
 
-    <div class="tech-info">
-        Т/С: <span class="editable" id="vehicle-number">557</span>
-    </div>
-
-    <div class="timer-label">
-        С момента оплаты прошло:
-    </div>
-    
-    <div class="timer-value" id="timer-display">
-        02:04:25
-    </div>
-
-    <div id="qrcode" class="qr-code-container"></div>
-
-    <div class="ticket-details">
-        <div>Серия билета: <strong id="ticket-series">QR200938000294</strong></div>
-        <div>Номер билета: <strong id="ticket-number">20251217142520099</strong></div>
-    </div>
-
-    <div class="instructions">
-        Предъявите контролеру QR-код.<br>
-        Чтобы сохранить реквизиты билета, нажмите кнопку «Скачать»
-    </div>
-
-    <button class="btn-download">Скачать билет</button>
-</main>
-
-<div class="scanner-modal" id="scanner-modal" aria-hidden="true">
-    <div class="scanner-content">
-        <div class="scanner-header">
-            <span>Сканирование QR</span>
-            <button class="scanner-close" id="scanner-close" aria-label="Закрыть">×</button>
+            <div class="payment-info-details__vehicle-number">
+                <span>Т/С: </span>
+                <span class="editable" id="vehicle-number">541</span>
+            </div>
         </div>
-        <div id="qr-reader"></div>
-        <div class="scanner-hint">Наведите камеру на QR-код с сайта НСПК.</div>
 
-        <div class="scanner-controls">
-            <button class="scanner-btn" id="scanner-flash-btn" type="button">Включить вспышку</button>
-            <div class="scanner-manual-row">
-                <input id="scanner-manual-input" class="scanner-input" type="url" placeholder="Вставьте ссылку с qr.bilet.nspk.ru для теста">
-                <button class="scanner-btn" id="scanner-manual-submit" type="button">Применить</button>
-            </div>
+        <div class="ticket__payment-timer">
+            <p>
+                С момента оплаты прошло:<br>
+                <strong id="timer-display">37:10:30</strong>
+            </p>
+        </div>
+
+        <div id="qrcode" class="ticket__qrcode"></div>
+
+        <div class="ticket-details">
+            <div>Серия билета: <strong id="ticket-series">QR200938000294</strong></div>
+            <div>Номер билета: <strong id="ticket-number">20251217142520099</strong></div>
+        </div>
+
+        <div class="instructions">
+            Предъявите контролеру QR-код.<br>
+            Чтобы сохранить реквизиты билета, нажмите кнопку «Скачать»
         </div>
     </div>
 </div>
+
+<footer class="legal-footer">
+    <div class="legal-notice">
+        <strong>ВНИМАНИЕ:</strong> Данная страница является <strong>исключительно демонстрационной и тестовой</strong>. Она создана в образовательных целях для демонстрации навыков вёрстки и программирования и <strong>не предназначена для реальной оплаты проезда</strong>.
+        <a href="README.md" target="_blank" class="readme-link">Подробнее о целях проекта и юридических ограничениях</a>
+    </div>
+</footer>
 
 
 <script>
@@ -517,16 +481,18 @@
     const ticketSeriesElement = document.getElementById('ticket-series');
     const ticketNumberElement = document.getElementById('ticket-number');
     const priceElement = document.getElementById('price-value');
-    const scannerModal = document.getElementById('scanner-modal');
-    const scannerCloseButton = document.getElementById('scanner-close');
-    const scannerFlashButton = document.getElementById('scanner-flash-btn');
-    const scannerManualInput = document.getElementById('scanner-manual-input');
-    const scannerManualSubmit = document.getElementById('scanner-manual-submit');
 
     let timerInterval = null;
     let startTime = null;
     let ticketSeries = ticketSeriesElement.textContent;
     let ticketNumber = ticketNumberElement.textContent;
+
+    function formatRouteNumber(route) {
+        if (route && route.startsWith('№')) {
+            return `<span class="route-number-symbol">№</span>${route.substring(1)}`;
+        }
+        return route || '';
+    }
 
     function pad(num) {
         return num.toString().padStart(2, '0');
@@ -563,7 +529,12 @@
         const hours = Math.floor(diffInSeconds / 3600);
         const minutes = Math.floor((diffInSeconds % 3600) / 60);
         const seconds = diffInSeconds % 60;
-        timerElement.textContent = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+        
+        if (hours > 0) {
+            timerElement.textContent = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+        } else {
+            timerElement.textContent = `${pad(minutes)}:${pad(seconds)}`;
+        }
     }
 
     function generateQR() {
@@ -612,7 +583,7 @@
         
         let displayValue = originalText;
         if (element.id === 'route-number') {
-            displayValue = originalText.replace('№', '');
+            displayValue = originalText.replace('№', '').trim();
         }
         
         input.value = displayValue;
@@ -637,7 +608,11 @@
                 newValue = '№' + newValue;
             }
             
-            element.textContent = newValue;
+            if (element.id === 'route-number') {
+                element.innerHTML = formatRouteNumber(newValue);
+            } else {
+                element.textContent = newValue;
+            }
             
             // Сохраняем в localStorage
             if (element.id === 'price-value') {
@@ -727,7 +702,7 @@
         
         const savedRouteNumber = localStorage.getItem('routeNumber');
         if (savedRouteNumber) {
-            routeNumberElement.textContent = savedRouteNumber;
+            routeNumberElement.innerHTML = formatRouteNumber(savedRouteNumber);
         }
         
         const savedVehicleNumber = localStorage.getItem('vehicleNumber');
@@ -772,7 +747,7 @@
 
         if (data.routeNumber) {
             const normalizedRoute = data.routeNumber.startsWith('№') ? data.routeNumber : `№${data.routeNumber}`;
-            routeNumberElement.textContent = normalizedRoute;
+            routeNumberElement.innerHTML = formatRouteNumber(normalizedRoute);
             localStorage.setItem('routeNumber', normalizedRoute);
         }
 
@@ -819,12 +794,11 @@
 
     function buildProxyUrls(url) {
         return [
-            `/proxy?url=${encodeURIComponent(url)}`,
-            `${window.location.origin}/proxy?url=${encodeURIComponent(url)}`,
             `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
             `https://corsproxy.io/?${encodeURIComponent(url)}`,
             `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
             `https://thingproxy.freeboard.io/fetch/${url}`,
+            `https://cors-anywhere.herokuapp.com/${url}`,
             `https://r.jina.ai/http://${url.replace(/^https?:\/\//, '')}`
         ];
     }
@@ -874,7 +848,22 @@
 
         for (const apiUrl of apiCandidates) {
             try {
-                const response = await fetchWithTimeout(apiUrl, { method: 'GET', credentials: 'omit' }, 15000);
+                // Сначала пробуем напрямую (может сработать в некоторых браузерах/сетях)
+                let response = await fetchWithTimeout(apiUrl, { method: 'GET', credentials: 'omit' }, 10000);
+                
+                // Если прямой запрос не удался, пробуем через CORS-прокси
+                if (!response.ok) {
+                    const proxyUrls = buildProxyUrls(apiUrl);
+                    for (const proxyUrl of proxyUrls) {
+                        try {
+                            response = await fetchWithTimeout(proxyUrl, { method: 'GET', credentials: 'omit' }, 10000);
+                            if (response.ok) break;
+                        } catch (proxyError) {
+                            continue;
+                        }
+                    }
+                }
+
                 if (!response.ok) {
                     continue;
                 }
@@ -1045,7 +1034,7 @@
             return true;
         } catch (error) {
             console.error('Ошибка извлечения:', error);
-            alert(`Не удалось извлечь данные автоматически. Техническая причина: ${error.message || error}.\n\nЧастая причина: браузер блокирует кросс-доменные запросы (CORS) и внешние прокси. Для стабильной работы нужен ваш серверный прокси /proxy?url=... на том же домене.`);
+            alert(`Не удалось извлечь данные автоматически. Техническая причина: ${error.message || error}.\n\nВозможные решения:\n1. Вставьте ссылку вручную в поле под сканером\n2. Используйте сайт на HTTPS (CORS-прокси могут блокировать HTTP)\n3. Проверьте, что ссылка содержит параметр paytagid`);
             return false;
         }
     }
@@ -1165,48 +1154,6 @@
             resetPaymentTimer();
             generateQR();
         });
-
-        // Обработчик для кнопки скачивания (открытие QR-сканера)
-        document.querySelector('.btn-download').addEventListener('click', function() {
-            openScanner();
-        });
-
-        scannerCloseButton.addEventListener('click', () => {
-            closeScanner();
-        });
-
-        scannerModal.addEventListener('click', (event) => {
-            if (event.target === scannerModal) {
-                closeScanner();
-            }
-        });
-
-        scannerFlashButton.addEventListener('click', async () => {
-            await toggleFlash();
-        });
-
-        scannerManualSubmit.addEventListener('click', async () => {
-            const manualUrl = scannerManualInput.value.trim();
-            if (!manualUrl) {
-                alert('Введите ссылку для теста.');
-                return;
-            }
-
-            scannerManualSubmit.disabled = true;
-            const isSuccess = await handleScannedText(manualUrl);
-            scannerManualSubmit.disabled = false;
-
-            if (isSuccess) {
-                await closeScanner();
-            }
-        });
-
-        scannerManualInput.addEventListener('keypress', async (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                scannerManualSubmit.click();
-            }
-        });
         
         // Генерируем QR-код после загрузки всех данных
         generateQR();
@@ -1216,10 +1163,4 @@
     window.addEventListener('DOMContentLoaded', initializePage);
 </script>
 </body>
-<footer class="legal-footer">
-    <div class="legal-notice">
-        <strong>ВНИМАНИЕ:</strong> Данная страница является <strong>исключительно демонстрационной и тестовой</strong>. Она создана в образовательных целях для демонстрации навыков вёрстки и программирования и <strong>не предназначена для реальной оплаты проезда</strong>.
-        <a href="README.md" target="_blank" class="readme-link">Подробнее о целях проекта и юридических ограничениях</a>
-    </div>
-</footer>
 </html>
