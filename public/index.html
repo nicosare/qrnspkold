@@ -2,8 +2,18 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>🚌 qrnspk — Парсер транспортных QR</title>
+  <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+  <script>
+    // Инициализация VK Mini Apps. Вне VK сайт продолжает работать как обычная страница.
+    (function () {
+      if (!window.vkBridge || typeof window.vkBridge.send !== "function") return;
+      window.vkBridge.send("VKWebAppInit").catch(function (error) {
+        console.warn("[qrnspk] VK Bridge initialization failed:", error);
+      });
+    })();
+  </script>
   <style>
     :root { --primary: #2563eb; --primary-hover: #1d4ed8; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --text-muted: #64748b; --border: #e2e8f0; --success: #22c55e; --error: #ef4444; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
