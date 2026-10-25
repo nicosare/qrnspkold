@@ -404,7 +404,8 @@ app.post('/api/session', (req, res) => {
       scanBalance,
       subscriptionUntil,
       subscriptionActive,
-      unlimited
+      unlimited,
+      eventsToken: makeLiveToken(userId)
     });
   } catch (error) {
     return res.status(401).json({ error: 'VK authentication failed' });
