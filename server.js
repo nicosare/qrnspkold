@@ -17,6 +17,25 @@ const paytagDirectTimeoutMs = Math.max(3000, Number(process.env.PAYTAG_DIRECT_TI
 const paytagFetchesInFlight = new Map();
 const liveStreams = new Map();
 const liveTokens = new Map();
+function makeLiveToken(userId) {
+  const token = crypto.randomBytes(32).toString('hex');
+  liveTokens.set(token, { userId: String(userId), expiresAt: Date.now() + 86400000 });
+  return token;
+}
+function getLiveEntitlement(userId) {
+  const row = getUserEntitlements.get(String(userId));
+  return {
+    scanBalance: row && row.scan_balance !== null ? Number(row.scan_balance) : null,
+    subscriptionUntil: row?.subscription_until || null,
+    subscriptionActive: Boolean(row?.subscription_until && Date.parse(row.subscription_until) > Date.now()),
+    unlimited: Number(row?.unlimited || 0) === 1
+  };
+}
+function sendLiveEntitlement(userId) {
+  const stream = liveStreams.get(String(userId));
+  if (stream) stream.write('event: entitlement\ndata: ' + JSON.stringify(getLiveEntitlement(userId)) + '\n\n');
+}
+
 
 if (!appSecret) console.warn('VK_APP_SECRET is not configured: VK-authenticated endpoints will reject requests.');
 if (!adminVkId) console.warn('ADMIN_VK_ID is not configured: admin users page will remain locked.');
