@@ -59,7 +59,9 @@ db.exec(`
     visit_count INTEGER NOT NULL DEFAULT 1,
     scan_balance INTEGER DEFAULT NULL,
     subscription_until TEXT DEFAULT NULL,
-    unlimited INTEGER NOT NULL DEFAULT 0
+    unlimited INTEGER NOT NULL DEFAULT 0,
+    last_scan_at TEXT DEFAULT NULL,
+    last_transport_number TEXT DEFAULT NULL
   );
 `);
 
@@ -76,6 +78,12 @@ if (!userColumns.some(column => column.name === 'subscription_until')) {
 if (!userColumns.some(column => column.name === 'unlimited')) {
   db.exec('ALTER TABLE users ADD COLUMN unlimited INTEGER NOT NULL DEFAULT 0');
 }
+if (!userColumns.some(column => column.name === 'last_scan_at')) {
+  db.exec('ALTER TABLE users ADD COLUMN last_scan_at TEXT DEFAULT NULL');
+}
+if (!userColumns.some(column => column.name === 'last_transport_number')) {
+  db.exec('ALTER TABLE users ADD COLUMN last_transport_number TEXT DEFAULT NULL');
+}
 
 const upsertUser = db.prepare(`
   INSERT INTO users (vk_id, first_name, last_name, photo_url, first_seen, last_seen, visit_count)
@@ -89,7 +97,7 @@ const upsertUser = db.prepare(`
 `);
 const listUsers = db.prepare(`
   SELECT vk_id, first_name, last_name, photo_url, first_seen, last_seen, visit_count,
-         scan_balance, subscription_until, unlimited
+         scan_balance, subscription_until, unlimited, last_scan_at, last_transport_number
   FROM users
   ORDER BY last_seen DESC
 `);
@@ -364,6 +372,9 @@ app.post('/api/paytag', async (req, res) => {
       scanBalance = Number(getUserScanBalance.get(userId).scan_balance);
       sendLiveEntitlement(userId);
     }
+
+    db.prepare('UPDATE users SET last_scan_at = ?, last_transport_number = ? WHERE vk_id = ?')
+      .run(new Date().toISOString(), String(data.vehicleNumber || '').trim() || null, userId);
 
     return res.json({
       ok: true,
