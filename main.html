@@ -339,36 +339,148 @@
             text-decoration: underline;
         }
 
-        .scan-balance-status {
-            margin-top: 10px;
-            color: #626873;
-            font-size: 14px;
-            line-height: 1.4;
-            text-align: center;
-        }
-        .scan-balance-status.empty {
-            color: #b42318;
-            font-weight: 700;
+        body.start-overlay-open {
+            overflow: hidden;
         }
 
-            .scan-again-button {
-            display: inline-flex;
-            align-items: center;
+        .start-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: flex;
             justify-content: center;
-            min-height: 48px;
-            margin: 12px auto 0;
-            padding: 12px 20px;
-            border: 0;
-            border-radius: 12px;
+            align-items: stretch;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            padding: calc(22px + env(safe-area-inset-top)) 18px calc(22px + env(safe-area-inset-bottom));
+            background: #f2f3f4;
+            color: #30343a;
+        }
+
+        .start-overlay[hidden] { display: none; }
+
+        .start-screen {
+            width: 100%;
+            max-width: 460px;
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .start-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 38px;
+        }
+
+        .start-brand-icon {
+            display: grid;
+            place-items: center;
+            width: 48px;
+            height: 48px;
+            flex: 0 0 48px;
+            border-radius: 15px;
             background: #2787f5;
             color: #fff;
+            box-shadow: 0 8px 18px #2787f52b;
+        }
+
+        .start-brand-name { font-size: 21px; font-weight: 700; letter-spacing: -.3px; }
+        .start-brand-caption { margin-top: 1px; color: #727983; font-size: 13px; }
+
+        .start-intro { margin-bottom: 24px; }
+        .start-intro h2 {
+            margin: 0 0 10px;
+            color: #232a33;
+            font-size: clamp(30px, 7.8vw, 36px);
+            line-height: 1.12;
+            letter-spacing: -.6px;
+            font-weight: 700;
+        }
+        .start-intro p { max-width: 360px; color: #727983; font-size: 16px; line-height: 1.5; }
+
+        .start-balance-card {
+            margin-bottom: 14px;
+            padding: 21px 22px;
+            border-radius: 22px;
+            background: linear-gradient(130deg, #2787f5 0%, #1269ca 100%);
+            color: #fff;
+            box-shadow: 0 14px 30px #176dcc28;
+        }
+        .start-card-eyebrow {
+            margin-bottom: 9px;
+            color: #dcecff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+        }
+        .scan-balance-status { font-size: 28px; font-weight: 700; line-height: 1.2; color: #fff; }
+        .scan-balance-status.empty { font-size: 22px; color: #fff; }
+        .scan-balance-status.unassigned { font-size: 19px; color: #fff; }
+
+        .start-offers-card {
+            margin-bottom: 24px;
+            padding: 19px 20px;
+            border: 1px solid #e3e7ec;
+            border-radius: 20px;
+            background: #fff;
+        }
+        .start-offers-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 8px;
+            font-size: 17px;
+            font-weight: 700;
+        }
+        .start-coming-soon {
+            padding: 5px 9px;
+            border-radius: 999px;
+            background: #f0f4f9;
+            color: #727983;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .start-offers-card p { color: #727983; font-size: 14px; line-height: 1.5; }
+
+        .start-actions { display: flex; flex-direction: column; gap: 11px; margin-top: auto; }
+        .start-button {
+            width: 100%;
+            min-height: 54px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 17px;
+            border: 0;
+            border-radius: 15px;
             font: inherit;
             font-size: 16px;
             font-weight: 700;
             cursor: pointer;
+            transition: background .15s, transform .15s, opacity .15s;
         }
-        .scan-again-button:active { background: #176dcc; }
-        .scan-again-button:disabled { opacity: .6; cursor: default; }
+        .start-button:active:not(:disabled) { transform: translateY(1px); }
+        .start-button-primary {
+            background: #2787f5;
+            color: #fff;
+            box-shadow: 0 7px 15px #2787f52b;
+        }
+        .start-button-primary:active:not(:disabled) { background: #176dcc; }
+        .start-button-secondary { border: 1px solid #d9e0e8; background: #fff; color: #30343a; }
+        .start-button:disabled { opacity: .42; cursor: not-allowed; box-shadow: none; }
+        .start-status { min-height: 20px; color: #727983; font-size: 14px; line-height: 1.45; text-align: center; }
+        .start-status:empty { min-height: 0; }
+        .start-footer { padding-top: 21px; color: #8a919b; font-size: 12px; line-height: 1.4; text-align: center; }
+
+        @media (max-height: 700px) {
+            .start-brand { margin-bottom: 24px; }
+            .start-intro h2 { font-size: 29px; }
+            .start-balance-card { padding: 17px 19px; }
+            .start-offers-card { padding: 15px 17px; margin-bottom: 18px; }
+        }
 
 </style>
 </head>
@@ -423,9 +535,7 @@
         <div class="instructions">
             Предъявите контролеру QR-код.
         </div>
-        <button class="scan-again-button" id="scan-again-button" type="button" disabled>Сканировать QR-код</button>
-        <div id="scan-balance-status" class="scan-balance-status" role="status" aria-live="polite" hidden></div>
-        <div id="scan-status" role="status" aria-live="polite" style="min-height:20px;margin-top:10px;color:#626873;font-size:14px;line-height:1.4;text-align:center"></div>
+        
     </div>
 </div>
 
@@ -440,6 +550,60 @@
     <button class="admin-tools__button" id="admin-users-button" type="button">Пользователи</button>
 </div>
 
+<section class="start-overlay" id="start-overlay" role="dialog" aria-modal="true" aria-labelledby="start-title">
+    <div class="start-screen">
+        <div class="start-brand">
+            <div class="start-brand-icon" aria-hidden="true">
+                <svg width="27" height="27" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 10V4a1 1 0 0 1 1-1h6M18 3h6a1 1 0 0 1 1 1v6M25 18v6a1 1 0 0 1-1 1h-6M10 25H4a1 1 0 0 1-1-1v-6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+                    <rect x="8" y="8" width="4" height="4" rx=".6" fill="currentColor"/>
+                    <rect x="16" y="8" width="4" height="4" rx=".6" fill="currentColor"/>
+                    <rect x="8" y="16" width="4" height="4" rx=".6" fill="currentColor"/>
+                    <path d="M16 16h2v2h-2zM19 19h2v2h-2zM18 20v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div>
+                <div class="start-brand-name">Roadnote</div>
+                <div class="start-brand-caption">Транспортные данные в одном месте</div>
+            </div>
+        </div>
+
+        <div class="start-intro">
+            <h2 id="start-title">С чего начнём?</h2>
+            <p>Вернись к текущему билету или отсканируй новый QR-код НСПК.</p>
+        </div>
+
+        <div class="start-balance-card">
+            <div class="start-card-eyebrow">ТВОЙ БАЛАНС</div>
+            <div id="scan-balance-status" class="scan-balance-status" role="status" aria-live="polite">Проверяем баланс…</div>
+        </div>
+
+        <div class="start-offers-card">
+            <div class="start-offers-heading">
+                <span>Предложения</span>
+                <span class="start-coming-soon">Скоро</span>
+            </div>
+            <p>Здесь появятся специальные предложения и способы пополнения баланса сканов.</p>
+        </div>
+
+        <div class="start-actions">
+            <button class="start-button start-button-primary" id="start-scan-new" type="button" disabled>
+                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 8V4a1 1 0 0 1 1-1h4M16 3h4a1 1 0 0 1 1 1v4M21 16v4a1 1 0 0 1-1 1h-4M8 21H4a1 1 0 0 1-1-1v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <rect x="8" y="8" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Сканировать новый QR-код
+            </button>
+            <button class="start-button start-button-secondary" id="continue-current-scan" type="button">
+                Вернуться к текущему скану
+            </button>
+            <div id="scan-status" class="start-status" role="status" aria-live="polite"></div>
+        </div>
+
+        <div class="start-footer">Текущий билет сохраняется на этом устройстве.</div>
+    </div>
+</section>
+
 
 <script>
     const timerElement = document.getElementById('timer-display');
@@ -453,7 +617,10 @@
     const priceElement = document.getElementById('price-value');
     const scannerStatusElement = document.getElementById('scan-status');
     const scanBalanceElement = document.getElementById('scan-balance-status');
-    const scanAgainButton = document.getElementById('scan-again-button');
+    const startOverlayElement = document.getElementById('start-overlay');
+    const startScanButton = document.getElementById('start-scan-new');
+    const continueCurrentScanButton = document.getElementById('continue-current-scan');
+    const pageBody = document.body;
 
     let timerInterval = null;
     let startTime = null;
@@ -626,30 +793,35 @@
 
     function refreshScanButton() {
         const balanceIsEmpty = scanBalanceAssigned && currentScanBalance <= 0;
-        scanAgainButton.disabled = !scanSessionReady || scanProcessing || balanceIsEmpty;
+        startScanButton.disabled = !scanSessionReady || scanProcessing || balanceIsEmpty;
     }
 
     function updateScanBalance(balance) {
         if (balance === null || balance === undefined || balance === '') {
             scanBalanceAssigned = false;
             currentScanBalance = null;
-            scanBalanceElement.hidden = true;
+            scanBalanceElement.hidden = false;
             scanBalanceElement.classList.remove('empty');
+            scanBalanceElement.classList.add('unassigned');
+            scanBalanceElement.textContent = 'Баланс пока не назначен';
         } else {
             const numericBalance = Number(balance);
             if (!Number.isSafeInteger(numericBalance)) {
                 scanBalanceAssigned = false;
                 currentScanBalance = null;
-                scanBalanceElement.hidden = true;
+                scanBalanceElement.hidden = false;
                 scanBalanceElement.classList.remove('empty');
+                scanBalanceElement.classList.add('unassigned');
+                scanBalanceElement.textContent = 'Баланс пока не назначен';
             } else {
                 scanBalanceAssigned = true;
                 currentScanBalance = Math.max(0, numericBalance);
                 scanBalanceElement.hidden = false;
+                scanBalanceElement.classList.remove('unassigned');
                 scanBalanceElement.classList.toggle('empty', currentScanBalance <= 0);
                 scanBalanceElement.textContent = currentScanBalance <= 0
-                    ? 'Баланс сканов: 0. Сканирование недоступно.'
-                    : 'Осталось сканов: ' + currentScanBalance;
+                    ? '0 сканов'
+                    : currentScanBalance + (currentScanBalance === 1 ? ' скан' : currentScanBalance < 5 ? ' скана' : ' сканов');
             }
         }
         refreshScanButton();
@@ -1046,7 +1218,8 @@
         try {
             const success = await handleScannedText(code);
             if (success) {
-                setScannerStatus('Данные загружены. Основная страница обновлена.');
+                closeStartOverlay();
+                setScannerStatus('');
             }
         } catch (error) {
             console.error('Не удалось обработать результат сканирования:', error);
@@ -1056,6 +1229,25 @@
             refreshScanButton();
         }
     }
+
+    function closeStartOverlay() {
+        if (startOverlayElement.hidden) return;
+        startOverlayElement.hidden = true;
+        pageBody.classList.remove('start-overlay-open');
+        window.history.pushState({ roadnoteScreen: 'ticket' }, '', window.location.href);
+    }
+
+    function showStartOverlay() {
+        startOverlayElement.hidden = false;
+        pageBody.classList.add('start-overlay-open');
+        refreshScanButton();
+    }
+
+    window.addEventListener('popstate', function (event) {
+        if (event.state && event.state.roadnoteScreen === 'start') {
+            showStartOverlay();
+        }
+    });
 
     async function scanWithVkBridge() {
         if (scanProcessing) return;
@@ -1069,7 +1261,8 @@
             const code = await window.roadnoteScanQr();
             const success = await handleScannedText(code);
             if (success) {
-                setScannerStatus('Данные загружены. Основная страница обновлена.');
+                closeStartOverlay();
+                setScannerStatus('');
             }
         } catch (error) {
             console.warn('VK Bridge QR scanner failed:', error);
@@ -1084,10 +1277,16 @@
         loadFromLocalStorage();
         loadTimer();
 
-        scanAgainButton.addEventListener('click', scanWithVkBridge);
+        startScanButton.addEventListener('click', scanWithVkBridge);
+        continueCurrentScanButton.addEventListener('click', closeStartOverlay);
         refreshScanButton();
 
-        // If the start page handed off a native VK QR result, process it here.
+        // The start overlay is shown on launch. Returning to the ticket puts
+        // a start-state entry in history so the device Back action reopens it.
+        pageBody.classList.add('start-overlay-open');
+        window.history.replaceState({ roadnoteScreen: 'start' }, '', window.location.href);
+
+        // If a legacy handoff URL is received, process it here.
         const launchUrl = new URL(window.location.href);
         const scannedCode = launchUrl.searchParams.get('scanned');
         if (scannedCode) {
