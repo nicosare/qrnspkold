@@ -1,0 +1,15 @@
+services:
+  roadnote-app:
+    build: .
+    container_name: roadnote-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_PATH: /data/roadnote.sqlite
+    ports:
+      - "127.0.0.1:3003:3000"
+    volumes:
+      - ./data:/data
