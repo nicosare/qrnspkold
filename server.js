@@ -4,7 +4,6 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import Database from 'better-sqlite3';
-import { chromium } from 'playwright';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,7 +13,7 @@ const appId = String(process.env.VK_APP_ID || '54843054');
 const appSecret = process.env.VK_APP_SECRET || '';
 const adminVkId = String(process.env.ADMIN_VK_ID || '');
 const databasePath = process.env.DATABASE_PATH || '/data/roadnote.sqlite';
-const paytagBrowserTimeoutMs = Math.max(8000, Number(process.env.PAYTAG_BROWSER_TIMEOUT_MS || 25000));
+const paytagDirectTimeoutMs = Math.max(3000, Number(process.env.PAYTAG_DIRECT_TIMEOUT_MS || 12000));
 const paytagFetchesInFlight = new Map();
 
 if (!appSecret) console.warn('VK_APP_SECRET is not configured: VK-authenticated endpoints will reject requests.');
@@ -162,9 +161,10 @@ function normalizePaytagPayload(payload = {}) {
   };
 
   let transportType = pick([
-    'transportType', 'vehicleType', 'transport_name', 'vehicle_type',
-    'transport_type', 'transportName', 'transport'
+    'transportType', 'vehicleTypeName', 'vehicleType', 'transport_name',
+    'vehicle_type', 'transport_type', 'transportName', 'transport'
   ]);
+
   if (!transportType) {
     const genericType = pick(['type']);
     if (/^(трамвай|автобус|троллейбус|электробус|маршрутка|метро)$/i.test(genericType)) {
@@ -179,105 +179,55 @@ function normalizePaytagPayload(payload = {}) {
   };
 }
 
-function extractTransportFromPageText(text = '') {
-  const source = String(text).replace(/\s+/g, ' ');
-  const match = (patterns) => {
-    for (const pattern of patterns) {
-      const found = source.match(pattern);
-      if (found?.[1]) return found[1].trim();
-    }
-    return '';
-  };
+async function fetchPaytagViaDirectApi(paytagid) {
+  const target = new URL('https://qr.bilet.nspk.ru/api/v1/pay-tags/tariff');
+  target.searchParams.set('payTagId', paytagid);
+  target.searchParams.set('s', 'qr');
+  target.searchParams.set('m', 't');
 
-  const transportType = normalizeTransportType(match([
-    /(?:^|[^А-Яа-яЁёA-Za-z])(Трамвай|Автобус|Троллейбус|Электробус|Маршрутка|Метро)(?=$|[^А-Яа-яЁёA-Za-z])/i,
-    /(?:тип\s*транспорта|вид\s*транспорта)\s*[:№]?\s*([А-Яа-яA-Za-z-]{3,30})/i
-  ]));
-  const routeNumber = match([
-    /маршрут[^№\d]{0,20}№\s*([0-9A-Za-zА-Яа-я-]{1,8})/i,
-    /(?:номер\s*маршрута|маршрут)\s*[:№]?\s*([0-9A-Za-zА-Яа-я-]{1,8})/i,
-    /№\s*([0-9A-Za-zА-Яа-я-]{1,8})/
-  ]);
-  const vehicleNumber = match([
-    /Т\s*\/\s*С\s*[:№]?\s*([0-9A-Za-zА-Яа-я-]{1,12})/i,
-    /ТС\s*[:№]?\s*([0-9A-Za-zА-Яа-я-]{1,12})/i,
-    /(?:борт(?:овой)?\s*номер|номер\s*тс)\s*[:№]?\s*([0-9A-Za-zА-Яа-я-]{1,12})/i
-  ]);
-
-  return { transportType, routeNumber, vehicleNumber };
-}
-async function fetchPaytagViaHeadlessBrowser(paytagid) {
-  const targetUrl = `https://qr.bilet.nspk.ru/?paytagid=${encodeURIComponent(paytagid)}&s=qr&m=t`;
-  let browser;
-  let capturedData = null;
-  let lastJsonPayload = null;
-  const startedAt = Date.now();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), paytagDirectTimeoutMs);
 
   try {
-    browser = await chromium.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    });
-    const context = await browser.newContext({
-      locale: 'ru-RU'
-    });
-    const page = await context.newPage();
-
-    page.on('response', async (response) => {
-      try {
-        if (!response.ok()) return;
-        const responseUrl = new URL(response.url());
-        if (responseUrl.hostname !== 'nspk.ru' && !responseUrl.hostname.endsWith('.nspk.ru')) return;
-        const contentType = String(response.headers()['content-type'] || '').toLowerCase();
-        if (!contentType.includes('json')) return;
-
-        const payload = await response.json();
-        lastJsonPayload = payload;
-        const normalized = normalizePaytagPayload(payload);
-        if (normalized.transportType && normalized.routeNumber && normalized.vehicleNumber) {
-          capturedData = normalized;
-        }
-      } catch {
-        // Другие JSON-ответы страницы не являются данными билета — пропускаем.
+    const response = await fetch(target, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+        Accept: 'application/json,text/plain,*/*',
+        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+        Referer: 'https://qr.bilet.nspk.ru/'
       }
     });
 
-    await page.goto(targetUrl, {
-      waitUntil: 'domcontentloaded',
-      timeout: Math.min(paytagBrowserTimeoutMs, 15000)
-    });
-
-    while (!capturedData && Date.now() - startedAt < paytagBrowserTimeoutMs) {
-      const pageText = await page.locator('body').innerText({ timeout: 1000 }).catch(() => '');
-      const pageData = extractTransportFromPageText(pageText);
-      if (pageData.transportType && pageData.routeNumber && pageData.vehicleNumber) {
-        capturedData = pageData;
-        break;
-      }
-
-      if (lastJsonPayload) {
-        const jsonData = normalizePaytagPayload(lastJsonPayload);
-        if (jsonData.transportType && jsonData.routeNumber && jsonData.vehicleNumber) {
-          capturedData = jsonData;
-          break;
-        }
-      }
-      await page.waitForTimeout(250);
+    const responseText = await response.text();
+    let payload;
+    try {
+      payload = JSON.parse(responseText);
+    } catch {
+      throw new Error('НСПК вернул не JSON (HTTP ' + response.status + ').');
     }
 
-    if (capturedData) return capturedData;
-
-    const finalText = await page.locator('body').innerText({ timeout: 2000 }).catch(() => '');
-    const extracted = extractTransportFromPageText(finalText);
-    if (extracted.transportType && extracted.routeNumber && extracted.vehicleNumber) {
-      return extracted;
+    if (!response.ok) {
+      throw new Error('НСПК вернул HTTP ' + response.status + '.');
+    }
+    if (payload?.responseStatus && payload.responseStatus !== 'OK') {
+      throw new Error('НСПК сообщил статус: ' + payload.responseStatus + '.');
     }
 
-    throw new Error('Страница НСПК открылась, но тип транспорта, маршрут и номер Т/С не удалось извлечь. Проверьте доступность QR и повторите сканирование.');
+    const data = normalizePaytagPayload(payload);
+    if (!data.transportType || !data.routeNumber || !data.vehicleNumber) {
+      throw new Error('Ответ НСПК получен, но в нём нет типа транспорта, маршрута или номера Т/С.');
+    }
+
+    return data;
   } catch (error) {
-    throw new Error(`Не удалось обработать QR на сервере: ${error?.message || error}`);
+    if (error?.name === 'AbortError') {
+      throw new Error('НСПК не ответил за ' + paytagDirectTimeoutMs + ' мс.');
+    }
+    throw error;
   } finally {
-    if (browser) await browser.close().catch(() => {});
+    clearTimeout(timeoutId);
   }
 }
 
@@ -294,11 +244,11 @@ app.post('/api/paytag', async (req, res) => {
   }
 
   let task = paytagFetchesInFlight.get(paytagid);
-  if (!task && paytagFetchesInFlight.size >= 2) {
+  if (!task && paytagFetchesInFlight.size >= 5) {
     return res.status(429).json({ error: 'Сервер уже обрабатывает другие QR-коды. Повторите попытку через несколько секунд.' });
   }
   if (!task) {
-    task = fetchPaytagViaHeadlessBrowser(paytagid);
+    task = fetchPaytagViaDirectApi(paytagid);
     paytagFetchesInFlight.set(paytagid, task);
     task.finally(() => {
       if (paytagFetchesInFlight.get(paytagid) === task) paytagFetchesInFlight.delete(paytagid);
@@ -308,10 +258,10 @@ app.post('/api/paytag', async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   try {
     const data = await task;
-    return res.json({ ok: true, data });
+    return res.json({ ok: true, data, source: 'direct-api' });
   } catch (error) {
-    console.error(`[api/paytag] ${paytagid}: ${error?.message || error}`);
-    return res.status(502).json({ error: error?.message || 'Не удалось получить данные QR-кода с сервера.' });
+    console.error('[api/paytag] ' + paytagid + ': ' + (error?.message || error));
+    return res.status(502).json({ error: error?.message || 'Не удалось получить данные QR-кода с НСПК.' });
   }
 });
 
