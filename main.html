@@ -995,6 +995,7 @@
     function buildProxyUrls(url) {
         const localProxy = new URL('proxy', window.location.href);
         localProxy.searchParams.set('url', url);
+        const jinaPath = url.replace('https://', '').replace('http://', '');
         return [
             localProxy.toString(),
             `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
@@ -1002,7 +1003,7 @@
             `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
             `https://thingproxy.freeboard.io/fetch/${url}`,
             `https://cors-anywhere.herokuapp.com/${encodeURIComponent(url)}`,
-            `https://r.jina.ai/http://${url.replace(/^https?:\\/\\//, '')}`
+            `https://r.jina.ai/http://${jinaPath}`
         ];
     }
 
