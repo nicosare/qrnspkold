@@ -69,7 +69,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 <script>
 (() => {
  const query = window.location.search.slice(1);
- const auth = 'VK ' + btoa(unescape(encodeURIComponent(query))).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');
+ const auth = 'VK ' + btoa(unescape(encodeURIComponent(query))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
  const status = document.getElementById('status');
  const cards = document.getElementById('cards');
  const count = document.getElementById('count');
