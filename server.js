@@ -412,6 +412,20 @@ app.post('/api/session', (req, res) => {
   }
 });
 
+app.get('/api/events', (req, res) => {
+  const token = String(req.query?.token || '');
+  const record = liveTokens.get(token);
+  if (!record || record.expiresAt <= Date.now()) return res.status(401).end();
+  const userId = record.userId;
+  res.status(200).setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+  liveStreams.set(userId, res);
+  res.write('event: entitlement\ndata: ' + JSON.stringify(getLiveEntitlement(userId)) + '\n\n');
+  req.on('close', () => { if (liveStreams.get(userId) === res) liveStreams.delete(userId); });
+});
+
 app.get('/api/admin/users', requireAdmin, (_req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const now = Date.now();
