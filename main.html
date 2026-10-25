@@ -598,8 +598,8 @@
     </div>
 </footer>
 
-<div class="admin-tools" id="admin-tools" hidden>
-    <button class="admin-tools__button" id="admin-users-button" type="button">Пользователи</button>
+<div class="admin-tools" id="admin-tools">
+    <button class="admin-tools__button" id="return-to-start-button" type="button">‹ Вернуться на стартовую</button>
 </div>
 
 <section class="admin-panel-overlay" id="admin-panel-overlay" role="dialog" aria-modal="true" aria-labelledby="admin-panel-title" hidden>
@@ -656,6 +656,9 @@
             </button>
             <button class="start-button start-button-secondary" id="continue-current-scan" type="button">
                 Вернуться к текущему скану
+            </button>
+            <button class="start-button start-button-secondary" id="start-admin-users-button" type="button" hidden>
+                Пользователи
             </button>
             <div id="scan-status" class="start-status" role="status" aria-live="polite"></div>
         </div>
@@ -1374,20 +1377,32 @@
 <script>
 (function () {
   function showAdminTools() {
-    const adminTools = document.getElementById('admin-tools');
-    const adminButton = document.getElementById('admin-users-button');
-    if (!adminTools || !adminButton) return;
-    adminTools.hidden = false;
-    if (adminButton.dataset.bound === '1') return;
-    adminButton.dataset.bound = '1';
-    adminButton.addEventListener('click', function () {
-      const panel = document.getElementById('admin-panel-overlay');
-      const frame = document.getElementById('admin-panel-frame');
-      if (!panel || !frame) return;
-      frame.src = '/roadnote/admin/users' + window.location.search;
-      panel.hidden = false;
-      document.body.classList.add('start-overlay-open');
-    });
+    const adminButton = document.getElementById('start-admin-users-button');
+    if (!adminButton) return;
+    adminButton.hidden = false;
+    if (adminButton.dataset.bound !== '1') {
+      adminButton.dataset.bound = '1';
+      adminButton.addEventListener('click', function () {
+        const panel = document.getElementById('admin-panel-overlay');
+        const frame = document.getElementById('admin-panel-frame');
+        if (!panel || !frame) return;
+        frame.src = '/roadnote/admin/users' + window.location.search;
+        panel.hidden = false;
+        document.body.classList.add('start-overlay-open');
+      });
+    }
+    const returnToStart = document.getElementById('return-to-start-button');
+    if (returnToStart && returnToStart.dataset.bound !== '1') {
+      returnToStart.dataset.bound = '1';
+      returnToStart.addEventListener('click', function () {
+        const panel = document.getElementById('admin-panel-overlay');
+        const frame = document.getElementById('admin-panel-frame');
+        if (panel) panel.hidden = true;
+        if (frame) frame.src = 'about:blank';
+        showStartOverlay();
+        window.history.pushState({ roadnoteScreen: 'start' }, '', window.location.href);
+      });
+    }
     const panelBack = document.getElementById('admin-panel-back');
     if (panelBack && panelBack.dataset.bound !== '1') {
       panelBack.dataset.bound = '1';
