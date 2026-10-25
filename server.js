@@ -358,6 +358,7 @@ app.post('/api/paytag', async (req, res) => {
         });
       }
       scanBalance = Number(getUserScanBalance.get(userId).scan_balance);
+      sendLiveEntitlement(userId);
     }
 
     return res.json({
@@ -477,6 +478,7 @@ app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
       return res.status(400).json({ error: 'Неизвестное действие.' });
     }
     const updated = getUserEntitlements.get(vkId);
+    sendLiveEntitlement(vkId);
     return res.json({
       ok: true,
       user: {
