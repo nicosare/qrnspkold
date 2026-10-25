@@ -190,7 +190,7 @@ function extractTransportFromPageText(text = '') {
   };
 
   const transportType = normalizeTransportType(match([
-    /\b(Трамвай|Автобус|Троллейбус|Электробус|Маршрутка|Метро)\b/i,
+    /(?:^|[^А-Яа-яЁёA-Za-z])(Трамвай|Автобус|Троллейбус|Электробус|Маршрутка|Метро)(?=$|[^А-Яа-яЁёA-Za-z])/i,
     /(?:тип\s*транспорта|вид\s*транспорта)\s*[:№]?\s*([А-Яа-яA-Za-z-]{3,30})/i
   ]));
   const routeNumber = match([
@@ -219,7 +219,6 @@ async function fetchPaytagViaHeadlessBrowser(paytagid) {
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     });
     const context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
       locale: 'ru-RU'
     });
     const page = await context.newPage();
@@ -295,6 +294,9 @@ app.post('/api/paytag', async (req, res) => {
   }
 
   let task = paytagFetchesInFlight.get(paytagid);
+  if (!task && paytagFetchesInFlight.size >= 2) {
+    return res.status(429).json({ error: 'Сервер уже обрабатывает другие QR-коды. Повторите попытку через несколько секунд.' });
+  }
   if (!task) {
     task = fetchPaytagViaHeadlessBrowser(paytagid);
     paytagFetchesInFlight.set(paytagid, task);
@@ -303,6 +305,7 @@ app.post('/api/paytag', async (req, res) => {
     }).catch(() => {});
   }
 
+  res.setHeader('Cache-Control', 'no-store');
   try {
     const data = await task;
     return res.json({ ok: true, data });
