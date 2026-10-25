@@ -1171,10 +1171,40 @@
 
 <script>
 (function () {
+  function showAdminTools() {
+    const adminTools = document.getElementById('admin-tools');
+    const adminButton = document.getElementById('admin-users-button');
+    if (!adminTools || !adminButton) return;
+    adminTools.hidden = false;
+    if (adminButton.dataset.bound === '1') return;
+    adminButton.dataset.bound = '1';
+    adminButton.addEventListener('click', function () {
+      window.location.href = '/roadnote/admin/users' + window.location.search;
+    });
+  }
+
   async function registerRoadnoteVisit() {
+    const launchUrl = new URL(window.location.href);
+    const wasRegisteredOnStartPage = launchUrl.searchParams.get('visitLogged') === '1';
+
+    if (launchUrl.searchParams.has('visitLogged')) {
+      launchUrl.searchParams.delete('visitLogged');
+      window.history.replaceState({}, document.title, launchUrl.pathname + launchUrl.search + launchUrl.hash);
+    }
+
+    if (wasRegisteredOnStartPage) {
+      try {
+        if (sessionStorage.getItem('roadnoteAdminForNavigation') === '1') showAdminTools();
+      } catch (error) {
+        console.warn('Could not restore Roadnote admin state:', error);
+      }
+      return;
+    }
+
     if (!window.vkBridge || typeof window.vkBridge.send !== 'function') return;
     const launchParams = window.location.search.slice(1);
     if (!launchParams) return;
+
     let profile = {};
     try {
       const info = await window.vkBridge.send('VKWebAppGetUserInfo');
@@ -1186,6 +1216,7 @@
     } catch (error) {
       console.warn('VK profile details unavailable:', error);
     }
+
     try {
       const response = await fetch('api/session', {
         method: 'POST',
@@ -1196,14 +1227,10 @@
       });
       if (!response.ok) return;
       const session = await response.json();
-      if (session.isAdmin === true) {
-        const adminTools = document.getElementById('admin-tools');
-        const adminButton = document.getElementById('admin-users-button');
-        adminTools.hidden = false;
-        adminButton.addEventListener('click', function () {
-          window.location.href = '/roadnote/admin/users' + window.location.search;
-        });
-      }
+      try {
+        sessionStorage.setItem('roadnoteAdminForNavigation', session.isAdmin === true ? '1' : '0');
+      } catch (_) {}
+      if (session.isAdmin === true) showAdminTools();
     } catch (error) {
       console.warn('Roadnote visit registration failed:', error);
     }
