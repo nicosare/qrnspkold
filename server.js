@@ -423,7 +423,11 @@ app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
         ? new Date(user.subscription_until)
         : now;
       const expiry = new Date(currentExpiry);
+      const originalDay = expiry.getUTCDate();
+      expiry.setUTCDate(1);
       expiry.setUTCMonth(expiry.getUTCMonth() + months);
+      const lastDayOfMonth = new Date(Date.UTC(expiry.getUTCFullYear(), expiry.getUTCMonth() + 1, 0)).getUTCDate();
+      expiry.setUTCDate(Math.min(originalDay, lastDayOfMonth));
       updateSubscription.run(expiry.toISOString(), vkId);
     } else if (action === 'set_unlimited') {
       if (typeof req.body?.enabled !== 'boolean') {
