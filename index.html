@@ -375,6 +375,31 @@
             outline: none;
         }
 
+        .admin-tools {
+            width: 100%;
+            max-width: 480px;
+            padding: 0 16px 18px;
+            text-align: center;
+        }
+
+        .admin-tools__button {
+            width: 100%;
+            border: 0;
+            border-radius: 12px;
+            padding: 13px 18px;
+            background: #2787f5;
+            color: #fff;
+            font: inherit;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(39, 135, 245, 0.2);
+        }
+
+        .admin-tools__button:active {
+            transform: translateY(1px);
+        }
+
         /* LEGAL FOOTER */
         .legal-footer {
             width: 100%;
@@ -481,6 +506,9 @@
     </div>
 </footer>
 
+<div class="admin-tools" id="admin-tools" hidden>
+    <button class="admin-tools__button" id="admin-users-button" type="button">Пользователи</button>
+</div>
 
 <script>
     const timerElement = document.getElementById('timer-display');
@@ -1192,13 +1220,23 @@
       console.warn('VK profile details unavailable:', error);
     }
     try {
-      await fetch('/api/session', {
+      const response = await fetch('/api/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ launchParams, profile }),
         cache: 'no-store',
         credentials: 'omit'
       });
+      if (!response.ok) return;
+      const session = await response.json();
+      if (session.isAdmin === true) {
+        const adminTools = document.getElementById('admin-tools');
+        const adminButton = document.getElementById('admin-users-button');
+        adminTools.hidden = false;
+        adminButton.addEventListener('click', function () {
+          window.location.href = '/roadnote/admin/users' + window.location.search;
+        });
+      }
     } catch (error) {
       console.warn('Roadnote visit registration failed:', error);
     }
