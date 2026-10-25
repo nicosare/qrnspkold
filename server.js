@@ -17,6 +17,17 @@ const paytagDirectTimeoutMs = Math.max(3000, Number(process.env.PAYTAG_DIRECT_TI
 const paytagFetchesInFlight = new Map();
 const entitlementEventClients = new Map();
 const entitlementEventTokens = new Map();
+
+function entitlementSnapshot(userId) {
+  const row = getUserEntitlements.get(String(userId));
+  const now = Date.now();
+  return {
+    scanBalance: row && row.scan_balance !== null ? Number(row.scan_balance) : null,
+    subscriptionUntil: row?.subscription_until || null,
+    subscriptionActive: Boolean(row?.subscription_until && Date.parse(row.subscription_until) > now),
+    unlimited: Number(row?.unlimited || 0) === 1
+  };
+}
 function createEntitlementEventToken(userId) {
   const token = crypto.randomBytes(32).toString('hex');
   entitlementEventTokens.set(token, { userId: String(userId), expiresAt: Date.now() + 86400000 });
