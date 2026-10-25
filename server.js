@@ -412,7 +412,6 @@ app.post('/api/session', (req, res) => {
       subscriptionUntil,
       subscriptionActive,
       unlimited,
-      eventsToken: createEntitlementEventToken(userId)
     });
   } catch (error) {
     return res.status(401).json({ error: 'VK authentication failed' });
