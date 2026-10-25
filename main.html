@@ -4,19 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Уведомление об оплате</title>
-    <!-- Подключаем библиотеку для QR -->
-    <script src="https://cdn.jsdelivr.net/npm/easyqrcodejs@4.5.0/dist/easy.qrcode.min.js"></script>
-    <!-- Инициализация VK Mini App: без неё VK может оставаться на экране загрузки. -->
-    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
-    <script src="scanner.js"></script>
+    <!-- Load dependencies explicitly: the start screen can hand off this document
+         without a normal browser navigation, where parser-loaded scripts may not run. -->
     <script>
-        window.addEventListener("DOMContentLoaded", function () {
-            if (window.vkBridge && typeof window.vkBridge.send === "function") {
-                window.vkBridge.send("VKWebAppInit").catch(function (error) {
-                    console.warn("VK Mini App initialization failed:", error);
-                });
-            }
+    (function () {
+        function loadRoadnoteScript(src, name, ready) {
+            if (ready()) return Promise.resolve();
+
+            return new Promise(function (resolve, reject) {
+                var script = document.createElement('script');
+                script.src = src;
+                script.async = true;
+                script.dataset.roadnoteDependency = name;
+
+                script.onload = function () {
+                    if (ready()) {
+                        resolve();
+                    } else {
+                        reject(new Error(name + ' загружен, но не инициализировался.'));
+                    }
+                };
+                script.onerror = function () {
+                    reject(new Error('Не удалось загрузить компонент: ' + name + '.'));
+                };
+
+                document.head.appendChild(script);
+            });
+        }
+
+        window.roadnoteDependenciesReady = Promise.all([
+            loadRoadnoteScript(
+                'https://cdn.jsdelivr.net/npm/easyqrcodejs@4.5.0/dist/easy.qrcode.min.js',
+                'генератор QR',
+                function () { return typeof window.QRCode === 'function' && window.QRCode.CorrectLevel; }
+            ),
+            loadRoadnoteScript(
+                'https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js',
+                'VK Bridge',
+                function () { return !!window.vkBridge && typeof window.vkBridge.send === 'function'; }
+            ),
+            loadRoadnoteScript(
+                'scanner.js',
+                'VK QR-сканер',
+                function () { return typeof window.roadnoteScanQr === 'function'; }
+            )
+        ]).then(function () {
+            return window.vkBridge.send('VKWebAppInit').catch(function (error) {
+                console.warn('VK Mini App initialization failed:', error);
+            });
         });
+    })();
     </script>
     <style>
         @font-face {
@@ -584,6 +621,11 @@
 
     function generateQR() {
         qrContainer.innerHTML = "";
+
+        if (typeof window.QRCode !== 'function' || !window.QRCode.CorrectLevel) {
+            console.error('QRCode library is not available; QR image generation skipped.');
+            return;
+        }
 
         const cleanRouteNumber = routeNumberElement.textContent.replace('№', '').trim();
         const currentDate = dateElement.textContent.trim();
@@ -1192,8 +1234,19 @@
         generateQR();
     }
 
-    // Инициализируем страницу при загрузке
-    window.addEventListener('DOMContentLoaded', initializePage);
+    // Start page logic only after its dependencies are actually available.
+    window.addEventListener('DOMContentLoaded', async function () {
+        try {
+            await window.roadnoteDependenciesReady;
+        } catch (error) {
+            console.error('Roadnote dependency initialization failed:', error);
+            const status = document.getElementById('scan-status');
+            if (status) {
+                status.textContent = error.message || 'Не удалось загрузить компоненты приложения.';
+            }
+        }
+        initializePage();
+    });
 </script>
 
 <script>
@@ -1211,6 +1264,12 @@
   }
 
   async function registerRoadnoteVisit() {
+    try {
+      await window.roadnoteDependenciesReady;
+    } catch (error) {
+      console.warn('Roadnote dependencies unavailable during visit registration:', error);
+    }
+
     const launchUrl = new URL(window.location.href);
     const wasRegisteredOnStartPage = launchUrl.searchParams.get('visitLogged') === '1';
 
