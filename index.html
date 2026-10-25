@@ -487,31 +487,165 @@
         }
         .scan-balance-extra[hidden] { display: none; }
 
-        .start-offers-card {
-            margin-bottom: 24px;
-            padding: 19px 20px;
-            border: 1px solid #e3e7ec;
-            border-radius: 20px;
-            background: #fff;
+        .start-offers-section {
+            margin: 0 0 24px;
+            padding: 19px 16px 15px;
+            border: 1px solid #e3e8ef;
+            border-radius: 22px;
+            background: linear-gradient(155deg, #ffffff 0%, #f9fbfe 100%);
+            box-shadow: 0 8px 24px rgba(31, 65, 105, .045);
+            text-align: left;
         }
-        .start-offers-heading {
+        .start-offers-section-heading {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
-            margin-bottom: 8px;
-            font-size: 17px;
-            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .start-section-kicker {
+            margin-bottom: 3px;
+            color: #2787f5;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 1.6px;
+        }
+        .start-offers-section-heading h3 {
+            color: #232a33;
+            font-size: 22px;
+            line-height: 1.2;
+            letter-spacing: -.35px;
         }
         .start-coming-soon {
-            padding: 5px 9px;
+            flex: 0 0 auto;
+            padding: 6px 10px;
+            border: 1px solid #e0e8f2;
             border-radius: 999px;
-            background: #f0f4f9;
-            color: #727983;
+            background: #f0f5fb;
+            color: #62758b;
+            font-size: 11px;
+            font-weight: 800;
+        }
+        .start-offers-lead {
+            margin-bottom: 19px;
+            color: #7a8491;
+            font-size: 13px;
+            line-height: 1.45;
+        }
+        .start-offer-group + .start-offer-group { margin-top: 20px; }
+        .start-offer-group-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            color: #384452;
+            font-size: 13px;
+            font-weight: 800;
+        }
+        .start-offer-group-icon {
+            display: grid;
+            place-items: center;
+            width: 25px;
+            height: 25px;
+            border-radius: 8px;
+            background: #eaf3ff;
+            color: #2787f5;
+            font-size: 15px;
+        }
+        .start-offer-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 7px;
+        }
+        .start-offer {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 11px 9px 10px;
+            border: 1px solid #e5eaf0;
+            border-radius: 15px;
+            background: #fff;
+        }
+        .start-offer-top { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px; }
+        .start-offer-count {
+            color: #202b38;
+            font-size: 25px;
+            line-height: 1.05;
+            font-weight: 800;
+            letter-spacing: -.8px;
+        }
+        .start-offer-unit { color: #818b98; font-size: 10px; font-weight: 700; }
+        .start-offer-name {
+            margin-top: 6px;
+            color: #303b48;
+            font-size: 11px;
+            line-height: 1.25;
+            font-weight: 800;
+        }
+        .start-offer-description {
+            margin-top: 5px;
+            color: #7b8591;
+            font-size: 10px;
+            line-height: 1.35;
+        }
+        .start-offer-badge {
+            display: inline-flex;
+            align-items: center;
+            margin-top: 10px;
+            padding: 4px 7px;
+            border-radius: 7px;
+            background: #f1f5f9;
+            color: #68798b;
+            font-size: 9px;
+            line-height: 1.2;
+            font-weight: 800;
+        }
+        .start-subscription-grid .start-offer { position: relative; padding-top: 13px; }
+        .start-offer-duration {
+            color: #202b38;
+            font-size: 24px;
+            line-height: 1.1;
+            font-weight: 800;
+            letter-spacing: -.7px;
+        }
+        .start-offer-duration span {
+            color: #606d7b;
             font-size: 11px;
             font-weight: 700;
+            letter-spacing: 0;
         }
-        .start-offers-card p { color: #727983; font-size: 14px; line-height: 1.5; }
+        .start-offer-featured {
+            border-color: #b9d8ff;
+            background: linear-gradient(160deg, #f3f8ff 0%, #fff 90%);
+        }
+        .start-offer-featured-label {
+            margin-bottom: 7px;
+            color: #2787f5;
+            font-size: 8px;
+            line-height: 1.2;
+            font-weight: 800;
+        }
+        .start-offers-note {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid #edf0f4;
+            color: #8993a0;
+            font-size: 11px;
+            text-align: center;
+        }
+        @media (max-width: 360px) {
+            .start-offers-section { padding: 16px 11px 13px; }
+            .start-offer-grid { gap: 5px; }
+            .start-offer { padding-left: 7px; padding-right: 7px; }
+            .start-offer-count { font-size: 22px; }
+            .start-offer-description { font-size: 9px; }
+            .start-offer-duration { font-size: 21px; }
+        }
 
         .start-actions { display: flex; flex-direction: column; gap: 11px; margin-top: auto; }
         .start-button {
@@ -656,13 +790,63 @@
             <div id="scan-balance-status" class="scan-balance-status" role="status" aria-live="polite">Проверяем баланс…</div>
         </div>
 
-        <div class="start-offers-card">
-            <div class="start-offers-heading">
-                <span>Предложения</span>
+        <section class="start-offers-section" aria-labelledby="start-offers-title">
+            <div class="start-offers-section-heading">
+                <div>
+                    <div class="start-section-kicker">ROADNOTE PLUS</div>
+                    <h3 id="start-offers-title">Предложения</h3>
+                </div>
                 <span class="start-coming-soon">Скоро</span>
             </div>
-            <p>Здесь появятся специальные предложения и способы пополнения баланса сканов.</p>
-        </div>
+            <p class="start-offers-lead">Выбирай удобный формат — оплата и подключение появятся чуть позже.</p>
+
+            <div class="start-offer-group">
+                <div class="start-offer-group-title"><span class="start-offer-group-icon">↗</span><span>Пакеты сканирований</span></div>
+                <div class="start-offer-grid">
+                    <article class="start-offer">
+                        <div class="start-offer-top"><span class="start-offer-count">09</span><span class="start-offer-unit">сканов</span></div>
+                        <div class="start-offer-name">Старт</div>
+                        <div class="start-offer-description">Попробовать и пользоваться время от времени</div>
+                        <span class="start-offer-badge">Скоро</span>
+                    </article>
+                    <article class="start-offer">
+                        <div class="start-offer-top"><span class="start-offer-count">29</span><span class="start-offer-unit">сканов</span></div>
+                        <div class="start-offer-name">Оптимальный</div>
+                        <div class="start-offer-description">Запас сканирований на каждый день</div>
+                        <span class="start-offer-badge">Скоро</span>
+                    </article>
+                    <article class="start-offer">
+                        <div class="start-offer-top"><span class="start-offer-count">49</span><span class="start-offer-unit">сканов</span></div>
+                        <div class="start-offer-name">Большой запас</div>
+                        <div class="start-offer-description">Реже пополнять баланс и не отвлекаться</div>
+                        <span class="start-offer-badge">Скоро</span>
+                    </article>
+                </div>
+            </div>
+
+            <div class="start-offer-group start-subscription-group">
+                <div class="start-offer-group-title"><span class="start-offer-group-icon">✦</span><span>Подписка</span></div>
+                <div class="start-offer-grid start-subscription-grid">
+                    <article class="start-offer start-offer-subscription">
+                        <div class="start-offer-duration">1 <span>месяц</span></div>
+                        <div class="start-offer-description">Для регулярного использования</div>
+                        <span class="start-offer-badge">Скоро</span>
+                    </article>
+                    <article class="start-offer start-offer-subscription start-offer-featured">
+                        <div class="start-offer-featured-label">Надолго выгоднее</div>
+                        <div class="start-offer-duration">3 <span>месяца</span></div>
+                        <div class="start-offer-description">Удобный вариант на сезон</div>
+                        <span class="start-offer-badge">Скоро</span>
+                    </article>
+                    <article class="start-offer start-offer-subscription">
+                        <div class="start-offer-duration">6 <span>месяцев</span></div>
+                        <div class="start-offer-description">Подключить надолго и забыть о пополнении</div>
+                        <span class="start-offer-badge">Скоро</span>
+                    </article>
+                </div>
+            </div>
+            <div class="start-offers-note"><span aria-hidden="true">✧</span> Цены и подключение появятся здесь позже</div>
+        </section>
 
         <div class="start-actions">
             <button class="start-button start-button-primary" id="start-scan-new" type="button" disabled>
