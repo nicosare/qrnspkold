@@ -33,6 +33,15 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 .stat-label{display:block;color:var(--muted);font-size:11px;line-height:1.3;margin-bottom:4px}
 .stat-value{display:block;font-size:13px;font-weight:650;overflow-wrap:anywhere}
 .visits{display:inline-flex;align-items:center;gap:5px;margin-top:11px;padding:5px 9px;border-radius:8px;background:var(--soft);color:#1766bc;font-size:12px;font-weight:750}
+.entitlement{margin-top:13px;padding-top:13px;border-top:1px solid var(--line)}
+.entitlement-status{font-size:14px;font-weight:750;margin-bottom:10px}
+.entitlement-status small{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:3px}
+.grant-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:8px}
+.grant-grid input{min-width:0}
+.grant-grid button,.unlimited-toggle{white-space:nowrap}
+.unlimited-toggle{width:100%;margin-top:8px;background:#f4f7fb}
+.action-status{font-size:12px;color:var(--muted);min-height:17px;margin-top:6px}
+.action-status.error{color:#b42318}
 .status{padding:30px 12px;text-align:center;color:var(--muted)}.error{color:#b42318}.foot{font-size:12px;line-height:1.5;color:var(--muted);margin-top:16px}
 @media(max-width:600px){
  main{padding-top:16px}.top{align-items:flex-start;margin-bottom:16px}.sub{font-size:13px}.count{font-size:13px;padding:7px 9px}
@@ -86,11 +95,19 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
      const name=(u.first_name+' '+u.last_name).trim()||'Пользователь VK';
      const avatar=u.photo_url?'<img class="avatar" src="'+esc(u.photo_url)+'" alt="" referrerpolicy="no-referrer" loading="lazy">':'<span class="avatar" aria-hidden="true">VK</span>';
      const profile='https://vk.com/id'+encodeURIComponent(u.vk_id);
-     return '<a class="user-card" href="'+profile+'" target="_blank" rel="noopener noreferrer" aria-label="Открыть профиль VK: '+esc(name)+'">'+
-       '<div class="person">'+avatar+'<div class="person-text"><div class="name">'+esc(name)+'</div><div class="vk-id">VK ID: '+esc(u.vk_id)+'</div><div class="open-hint">Открыть профиль ↗</div></div></div>'+
+     const subscriptionActive=Boolean(u.subscription_until && Date.parse(u.subscription_until)>Date.now());
+     const entitlementStatus=u.unlimited?'Безлимит включён':subscriptionActive?'Подписка активна':u.scan_balance===null||u.scan_balance===undefined?'Баланс не назначен':('Баланс: '+u.scan_balance+' '+(Number(u.scan_balance)===1?'скан':Number(u.scan_balance)>=2&&Number(u.scan_balance)<=4?'скана':'сканов'));
+     const subscriptionDetail=subscriptionActive?'<small>Действует до '+esc(new Date(u.subscription_until).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</small>':'';
+     return '<article class="user-card" data-user-card="'+esc(u.vk_id)+'">'+
+       '<div class="person">'+avatar+'<div class="person-text"><a href="'+profile+'" target="_blank" rel="noopener noreferrer" class="name" style="color:inherit;text-decoration:none">'+esc(name)+'</a><div class="vk-id">VK ID: '+esc(u.vk_id)+'</div><div class="open-hint">Открыть профиль ↗</div></div></div>'+
        '<div class="stats"><div class="stat"><span class="stat-label">Первый вход</span><span class="stat-value">'+esc(date(u.first_seen))+'</span></div>'+
        '<div class="stat"><span class="stat-label">Последний вход</span><span class="stat-value">'+esc(date(u.last_seen))+'</span></div></div>'+
-       '<div class="visits">Посещений: '+esc(u.visit_count)+'</div></a>';
+       '<div class="visits">Посещений: '+esc(u.visit_count)+'</div>'+
+       '<div class="entitlement"><div class="entitlement-status">'+esc(entitlementStatus)+subscriptionDetail+'</div>'+
+       '<div class="grant-grid"><input type="number" min="1" max="100000" step="1" value="9" aria-label="Количество сканов" data-pack-input><button class="primary" type="button" data-action="grant-pack">Начислить сканы</button></div>'+
+       '<div class="grant-grid"><input type="number" min="1" max="120" step="1" value="1" aria-label="Количество месяцев" data-months-input><button class="primary" type="button" data-action="grant-months">Начислить месяцы</button></div>'+
+       '<button class="unlimited-toggle" type="button" data-action="toggle-unlimited">'+(u.unlimited?'Отключить безлимит':'Включить безлимит')+'</button>'+
+       '<div class="action-status" aria-live="polite"></div></div></article>';
    }).join('');
    status.hidden=filtered.length>0;
    status.className='status';
@@ -107,6 +124,37 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
      users=data.users||[];count.textContent='Всего: '+data.total;render();
    }catch(e){status.hidden=false;status.className='status error';status.textContent=e.message;count.textContent='Нет доступа'}
  }
+ async function performEntitlement(button){
+   const card=button.closest('[data-user-card]');
+   if(!card)return;
+   const vkId=card.dataset.userCard;
+   const message=card.querySelector('.action-status');
+   let body;
+   if(button.dataset.action==='grant-pack'){
+     const amount=Number(card.querySelector('[data-pack-input]').value);
+     if(!Number.isSafeInteger(amount)||amount<1||amount>100000){message.className='action-status error';message.textContent='Введите количество сканов от 1 до 100000.';return}
+     body={action:'grant_pack',amount};
+   }else if(button.dataset.action==='grant-months'){
+     const months=Number(card.querySelector('[data-months-input]').value);
+     if(!Number.isSafeInteger(months)||months<1||months>120){message.className='action-status error';message.textContent='Введите количество месяцев от 1 до 120.';return}
+     body={action:'grant_months',months};
+   }else{
+     const user=users.find(item=>String(item.vk_id)===vkId);
+     body={action:'set_unlimited',enabled:!(user&&user.unlimited)};
+   }
+   button.disabled=true;message.className='action-status';message.textContent='Сохраняем…';
+   try{
+     const response=await fetch('../api/admin/users/'+encodeURIComponent(vkId)+'/entitlement',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});
+     const data=await response.json();
+     if(!response.ok)throw new Error(data.error||'Не удалось изменить доступ.');
+     await load();
+   }catch(error){message.className='action-status error';message.textContent=error.message}
+   finally{button.disabled=false}
+ }
+ cards.addEventListener('click',event=>{
+   const button=event.target.closest('button[data-action]');
+   if(button)performEntitlement(button);
+ });
  search.addEventListener('input',render);
  sort.addEventListener('change',render);
  document.getElementById('refresh').addEventListener('click',load);
