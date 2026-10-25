@@ -6,9 +6,9 @@
     <title>Уведомление об оплате</title>
     <!-- Подключаем библиотеку для QR -->
     <script src="https://cdn.jsdelivr.net/npm/easyqrcodejs@4.5.0/dist/easy.qrcode.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode" defer></script>
     <!-- Инициализация VK Mini App: без неё VK может оставаться на экране загрузки. -->
     <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+    <script src="scanner.js"></script>
     <script>
         window.addEventListener("DOMContentLoaded", function () {
             if (window.vkBridge && typeof window.vkBridge.send === "function") {
@@ -437,133 +437,6 @@
             text-decoration: underline;
         }
 
-        /* QR scanner */
-        .scanner-modal {
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-            background: rgba(23, 31, 43, .82);
-        }
-        .scanner-modal.active { display: flex; }
-        .scanner-content {
-            width: 100%;
-            max-width: 440px;
-            max-height: calc(100dvh - 32px);
-            overflow-y: auto;
-            padding: 18px;
-            border-radius: 18px;
-            background: #fff;
-            color: #424142;
-            box-shadow: 0 12px 40px rgba(0,0,0,.28);
-        }
-        .scanner-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 14px;
-            font-size: 19px;
-            font-weight: 700;
-        }
-        .scanner-close {
-            flex: 0 0 40px;
-            width: 40px;
-            height: 40px;
-            border: 0;
-            border-radius: 12px;
-            background: #f2f3f4;
-            color: #424142;
-            font: inherit;
-            font-size: 28px;
-            line-height: 1;
-            cursor: pointer;
-        }
-        #qr-reader {
-            width: 100%;
-            overflow: hidden;
-            border-radius: 12px;
-            background: #101010;
-        }
-        #qr-reader video {
-            width: 100% !important;
-            max-width: 100% !important;
-            object-fit: cover;
-        }
-        #qr-reader__dashboard { padding-top: 8px; }
-        .scanner-hint {
-            margin-top: 12px;
-            color: #626873;
-            font-size: 14px;
-            line-height: 1.45;
-            text-align: center;
-        }
-        .scanner-status {
-            min-height: 20px;
-            margin-top: 9px;
-            color: #1766bc;
-            font-size: 14px;
-            line-height: 1.4;
-            text-align: center;
-        }
-        .scanner-controls {
-            display: grid;
-            gap: 9px;
-            margin-top: 12px;
-        }
-        .scanner-manual-row {
-            display: flex;
-            gap: 8px;
-        }
-        .scanner-input {
-            flex: 1;
-            min-width: 0;
-            width: 100%;
-            padding: 11px 12px;
-            border: 1px solid #d8dce2;
-            border-radius: 10px;
-            background: #fff;
-            color: #24262b;
-            font: inherit;
-            font-size: 14px;
-        }
-        .scanner-btn {
-            min-height: 44px;
-            padding: 10px 13px;
-            border: 0;
-            border-radius: 10px;
-            background: #2787f5;
-            color: #fff;
-            font: inherit;
-            font-weight: 700;
-            font-size: 14px;
-            cursor: pointer;
-        }
-        .scanner-btn:disabled { opacity: .55; cursor: default; }
-        .scan-again-button {
-            width: 100%;
-            min-height: 48px;
-            margin-top: 4px;
-            padding: 12px 16px;
-            border: 0;
-            border-radius: 12px;
-            background: #2787f5;
-            color: #fff;
-            font: inherit;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(39,135,245,.2);
-        }
-        .scan-again-button:active { transform: translateY(1px); }
-        @media (max-width: 380px) {
-            .scanner-content { padding: 13px; }
-            .scanner-manual-row { flex-direction: column; }
-        }
-
     </style>
 </head>
 <body>
@@ -625,6 +498,7 @@
             Предъявите контролеру QR-код.
         </div>
         <button class="scan-again-button" id="scan-again-button" type="button">Сканировать другой QR-код</button>
+        <div id="scan-status" role="status" aria-live="polite" style="min-height:20px;margin-top:10px;color:#626873;font-size:14px;line-height:1.4;text-align:center"></div>
     </div>
 </div>
 
@@ -640,25 +514,6 @@
 </div>
 
 
-<div class="scanner-modal" id="scanner-modal" aria-hidden="true">
-    <div class="scanner-content" role="dialog" aria-modal="true" aria-labelledby="scanner-title">
-        <div class="scanner-header">
-            <span id="scanner-title">Сканирование QR-кода</span>
-            <button class="scanner-close" id="scanner-close" type="button" aria-label="Закрыть">×</button>
-        </div>
-        <div id="qr-reader"></div>
-        <div class="scanner-hint">Наведите камеру на QR-код транспорта НСПК.</div>
-        <div class="scanner-status" id="scanner-status" role="status" aria-live="polite"></div>
-        <div class="scanner-controls">
-            <button class="scanner-btn" id="scanner-flash-btn" type="button">Включить вспышку</button>
-            <div class="scanner-manual-row">
-                <input id="scanner-manual-input" class="scanner-input" type="url" inputmode="url" placeholder="Или вставьте ссылку qr.bilet.nspk.ru" autocomplete="url">
-                <button class="scanner-btn" id="scanner-manual-submit" type="button">Загрузить</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
     const timerElement = document.getElementById('timer-display');
     const dateElement = document.getElementById('datetime-display');
@@ -669,12 +524,8 @@
     const ticketSeriesElement = document.getElementById('ticket-series');
     const ticketNumberElement = document.getElementById('ticket-number');
     const priceElement = document.getElementById('price-value');
-    const scannerModal = document.getElementById('scanner-modal');
-    const scannerCloseButton = document.getElementById('scanner-close');
-    const scannerFlashButton = document.getElementById('scanner-flash-btn');
-    const scannerManualInput = document.getElementById('scanner-manual-input');
-    const scannerManualSubmit = document.getElementById('scanner-manual-submit');
-    const scannerStatusElement = document.getElementById('scanner-status');
+    const scannerStatusElement = document.getElementById('scan-status');
+    const scanAgainButton = document.getElementById('scan-again-button');
 
     let timerInterval = null;
     let startTime = null;
@@ -910,11 +761,7 @@
         }
     }
 
-    let qrScanner = null;
-    let scannerIsRunning = false;
-    let scannerIsOpening = false;
     let scanProcessing = false;
-    let flashEnabled = false;
 
     function setScannerStatus(message = '') {
         scannerStatusElement.textContent = message;
@@ -1244,176 +1091,52 @@
         }
     }
 
-    async function toggleFlash() {
-        if (!qrScanner || !scannerIsRunning) {
-            alert('Сначала запустите сканер.');
-            return;
-        }
-
+    async function processScannedCode(code) {
+        if (scanProcessing) return;
+        scanProcessing = true;
+        scanAgainButton.disabled = true;
         try {
-            flashEnabled = !flashEnabled;
-            await qrScanner.applyVideoConstraints({ advanced: [{ torch: flashEnabled }] });
-            scannerFlashButton.textContent = flashEnabled ? 'Выключить вспышку' : 'Включить вспышку';
-        } catch (error) {
-            flashEnabled = false;
-            scannerFlashButton.textContent = 'Включить вспышку';
-            alert('Вспышка недоступна на этом устройстве или в этом браузере.');
-        }
-    }
-
-    function resetScannerControls() {
-        flashEnabled = false;
-        scannerFlashButton.textContent = 'Включить вспышку';
-        scannerFlashButton.disabled = false;
-        scannerManualSubmit.disabled = false;
-        setScannerStatus('');
-    }
-
-    async function stopScanner() {
-        if (qrScanner && scannerIsRunning) {
-            try {
-                await qrScanner.stop();
-            } catch (error) {
-                console.warn('Ошибка при остановке сканера:', error);
-            }
-            scannerIsRunning = false;
-        }
-
-        flashEnabled = false;
-
-        if (qrScanner) {
-            try {
-                qrScanner.clear();
-            } catch (error) {
-                console.warn('Ошибка при очистке сканера:', error);
-            }
-        }
-    }
-
-    async function openScanner() {
-        if (typeof Html5Qrcode === 'undefined') {
-            alert('Библиотека сканера не загрузилась. Попробуйте обновить страницу.');
-            return;
-        }
-
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            alert('Камера недоступна: браузер не поддерживает доступ к mediaDevices.');
-            return;
-        }
-
-        if (!window.isSecureContext && window.location.hostname !== 'localhost') {
-            alert('Камера работает только в защищённом контексте (HTTPS). Откройте сайт по https://');
-            return;
-        }
-
-        if (scannerIsOpening || scannerIsRunning) {
-            return;
-        }
-
-        async function startScannerWithConfig(cameraConfig) {
-            scannerIsRunning = true;
-            await qrScanner.start(
-                cameraConfig,
-                { fps: 10, qrbox: { width: 220, height: 220 } },
-                async (decodedText) => {
-                    if (scanProcessing) return;
-                    scanProcessing = true;
-                    try {
-                        const isSuccess = await handleScannedText(decodedText);
-                        if (isSuccess) await closeScanner();
-                    } finally {
-                        scanProcessing = false;
-                    }
-                },
-                () => {}
-            );
-        }
-
-        async function getFallbackCameraConfig() {
-            try {
-                const cameras = await Html5Qrcode.getCameras();
-                if (Array.isArray(cameras) && cameras.length > 0) {
-                    const rearCamera = cameras.find(camera => /back|rear|environment|зад/i.test(camera.label || ''));
-                    return (rearCamera || cameras[0]).id;
-                }
-            } catch (error) {
-                console.warn('Не удалось перечислить камеры:', error);
-            }
-            return null;
-        }
-
-        scannerModal.classList.add('active');
-        scannerModal.setAttribute('aria-hidden', 'false');
-        resetScannerControls();
-
-        if (!qrScanner) {
-            qrScanner = new Html5Qrcode('qr-reader');
-        }
-
-        scannerIsOpening = true;
-
-        try {
-            setScannerStatus('Запрашиваем доступ к камере...');
-            try {
-                await startScannerWithConfig({ facingMode: { ideal: 'environment' } });
-                setScannerStatus('');
-            } catch (initialError) {
-                scannerIsRunning = false;
-                const fallbackConfig = await getFallbackCameraConfig();
-
-                if (!fallbackConfig) {
-                    throw initialError;
-                }
-
-                await startScannerWithConfig(fallbackConfig);
-                setScannerStatus('');
+            const success = await handleScannedText(code);
+            if (success) {
+                setScannerStatus('Данные загружены. Основная страница обновлена.');
             }
         } catch (error) {
-            scannerIsRunning = false;
-            console.error(error);
-            const rawMessage = String(error?.message || error || '');
-            const normalized = rawMessage.toLowerCase();
-            let userMessage = 'Не удалось запустить сканер. Проверьте доступ к камере и перезапустите страницу.';
-
-            if (normalized.includes('notallowederror') || normalized.includes('permission')) {
-                userMessage = 'Доступ к камере отклонён браузером. Разрешите камеру в настройках сайта и повторите.';
-            } else if (normalized.includes('notfounderror') || normalized.includes('no camera')) {
-                userMessage = 'Камера не найдена. Проверьте, что устройство имеет рабочую камеру.';
-            } else if (normalized.includes('notreadableerror') || normalized.includes('trackstarterror') || normalized.includes('could not start')) {
-                userMessage = 'Камера занята другим приложением/вкладкой. Закройте их и попробуйте снова.';
-            } else if (!window.isSecureContext && window.location.hostname !== 'localhost') {
-                userMessage = 'Откройте страницу по HTTPS: без защищённого контекста камера не запускается.';
-            }
-
-            setScannerStatus(userMessage);
-            alert(userMessage);
-            await closeScanner();
+            console.error('Не удалось обработать результат сканирования:', error);
+            setScannerStatus(error.message || 'Не удалось загрузить данные QR-кода.');
         } finally {
-            scannerIsOpening = false;
+            scanProcessing = false;
+            scanAgainButton.disabled = false;
         }
     }
 
-    async function closeScanner() {
-        await stopScanner();
-        scannerModal.classList.remove('active');
-        scannerModal.setAttribute('aria-hidden', 'true');
-        resetScannerControls();
-        scannerManualInput.value = '';
+    async function scanWithVkBridge() {
+        if (scanProcessing) return;
+        scanProcessing = true;
+        scanAgainButton.disabled = true;
+        setScannerStatus('Открываем сканер в приложении VK…');
+        try {
+            const code = await window.roadnoteScanQr();
+            const success = await handleScannedText(code);
+            if (success) {
+                setScannerStatus('Данные загружены. Основная страница обновлена.');
+            }
+        } catch (error) {
+            console.warn('VK Bridge QR scanner failed:', error);
+            setScannerStatus(error.message || 'Не удалось открыть сканер VK. Проверьте, что приложение запущено внутри VK на телефоне.');
+        } finally {
+            scanProcessing = false;
+            scanAgainButton.disabled = false;
+        }
     }
 
     function initializePage() {
-        // Загружаем сохраненные данные
         loadFromLocalStorage();
-        
-        // Загружаем и запускаем таймер
         loadTimer();
-        
-        // Назначаем обработчики
+
         routeNumberElement.addEventListener('click', handleEditableClick);
         vehicleNumberElement.addEventListener('click', handleEditableClick);
         priceElement.addEventListener('click', handleEditableClick);
-        
-        // Обработчик для выбора типа транспорта
+
         const dropdownOptions = document.querySelectorAll('.dropdown-content span');
         dropdownOptions.forEach(option => {
             option.addEventListener('click', function() {
@@ -1422,54 +1145,23 @@
                 generateQR();
             });
         });
-        
-        // Обработчик клика по таймеру
+
         timerElement.addEventListener('click', () => {
             resetPaymentTimer();
             generateQR();
         });
 
-        document.getElementById('scan-again-button').addEventListener('click', () => openScanner());
-        scannerCloseButton.addEventListener('click', () => closeScanner());
-        scannerModal.addEventListener('click', (event) => {
-            if (event.target === scannerModal) closeScanner();
-        });
-        scannerFlashButton.addEventListener('click', () => toggleFlash());
-        scannerManualSubmit.addEventListener('click', async () => {
-            const manualUrl = scannerManualInput.value.trim();
-            if (!manualUrl) {
-                alert('Вставьте ссылку на QR-код транспорта.');
-                return;
-            }
-            if (scanProcessing) return;
-            scanProcessing = true;
-            scannerManualSubmit.disabled = true;
-            try {
-                const isSuccess = await handleScannedText(manualUrl);
-                if (isSuccess) await closeScanner();
-            } finally {
-                scanProcessing = false;
-                scannerManualSubmit.disabled = false;
-            }
-        });
-        scannerManualInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                scannerManualSubmit.click();
-            }
-        });
+        scanAgainButton.addEventListener('click', scanWithVkBridge);
 
-        // Флаг приходит со стартовой страницы только после нажатия пользователем кнопки.
-        const launchQuery = new URLSearchParams(window.location.search);
-        if (launchQuery.get('scan') === '1') {
-            launchQuery.delete('scan');
-            const cleanQuery = launchQuery.toString();
-            const cleanUrl = window.location.pathname + (cleanQuery ? '?' + cleanQuery : '') + window.location.hash;
-            window.history.replaceState({}, document.title, cleanUrl);
-            window.setTimeout(() => openScanner(), 250);
+        // If the start page handed off a native VK QR result, process it here.
+        const launchUrl = new URL(window.location.href);
+        const scannedCode = launchUrl.searchParams.get('scanned');
+        if (scannedCode) {
+            launchUrl.searchParams.delete('scanned');
+            window.history.replaceState({}, document.title, launchUrl.pathname + launchUrl.search + launchUrl.hash);
+            window.setTimeout(() => processScannedCode(scannedCode), 50);
         }
 
-        // Генерируем QR-код после загрузки всех данных
         generateQR();
     }
 
