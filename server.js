@@ -135,7 +135,7 @@ app.post('/api/session', (req, res) => {
       photo_url: cleanText(profile.photo_url, 1000),
       now
     });
-    return res.json({ ok: true });
+    return res.json({ ok: true, isAdmin: userId === adminVkId });
   } catch (error) {
     return res.status(401).json({ error: 'VK authentication failed' });
   }
