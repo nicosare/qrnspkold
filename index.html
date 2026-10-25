@@ -851,6 +851,7 @@
     let scanBalanceAssigned = false;
     let currentScanBalance = null;
     let scanAccessUnlimited = false;
+    let entitlementRefreshInterval = null;
 
     function setScannerStatus(message = '') {
         scannerStatusElement.textContent = message;
@@ -1488,6 +1489,28 @@
       } catch (_) {}
       if (session.isAdmin === true) showAdminTools();
       if (!scanBalanceAssigned) setScannerStatus('');
+
+      const refreshEntitlement = async () => {
+        try {
+          const refreshResponse = await fetch(new URL(appBase + 'api/session', window.location.origin), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ launchParams, profile, refreshOnly: true }),
+            cache: 'no-store',
+            credentials: 'omit'
+          });
+          if (!refreshResponse.ok) return;
+          const current = await refreshResponse.json();
+          scanSessionReady = true;
+          updateScanBalance(current.scanBalance, current.subscriptionUntil, current.unlimited, current.subscriptionActive);
+          if (!scanBalanceAssigned) setScannerStatus('');
+        } catch (refreshError) {
+          console.warn('Roadnote entitlement refresh failed:', refreshError);
+        }
+      };
+      if (entitlementRefreshInterval === null) {
+        entitlementRefreshInterval = setInterval(refreshEntitlement, 3000);
+      }
     } catch (error) {
       console.warn('Roadnote session/balance check failed:', error);
       scanSessionReady = false;
