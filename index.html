@@ -71,16 +71,60 @@ h1{font-size:clamp(28px,7vw,35px);line-height:1.12;letter-spacing:-.7px;margin:0
 const scanButton = document.getElementById('scan-button');
 const scanStatus = document.getElementById('scan-status');
 
+async function registerRoadnoteVisit() {
+  if (!window.vkBridge || typeof window.vkBridge.send !== 'function') return false;
+  const launchParams = window.location.search.slice(1);
+  if (!launchParams) return false;
+
+  let profile = {};
+  try {
+    const info = await window.vkBridge.send('VKWebAppGetUserInfo');
+    profile = {
+      first_name: info.first_name || '',
+      last_name: info.last_name || '',
+      photo_url: info.photo_200 || info.photo_100 || ''
+    };
+  } catch (error) {
+    console.warn('VK profile details unavailable:', error);
+  }
+
+  try {
+    const response = await fetch('api/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ launchParams, profile }),
+      cache: 'no-store',
+      credentials: 'omit'
+    });
+    if (!response.ok) return false;
+    const session = await response.json();
+    sessionStorage.setItem('roadnoteAdminForNavigation', session.isAdmin === true ? '1' : '0');
+    return true;
+  } catch (error) {
+    console.warn('Roadnote visit registration failed:', error);
+    return false;
+  }
+}
+
+const visitRegistration = new Promise(resolve => {
+  window.addEventListener('DOMContentLoaded', async () => {
+    resolve(await registerRoadnoteVisit());
+  }, { once: true });
+});
+
 scanButton.addEventListener('click', async () => {
   if (scanButton.disabled) return;
   scanButton.disabled = true;
   scanStatus.textContent = 'Открываем сканер в приложении VK…';
 
   try {
+    // Запуск происходит непосредственно по нажатию пользователя — это важно для VK Bridge.
     const codeData = await window.roadnoteScanQr();
+    const wasVisitRegistered = await visitRegistration;
     const destination = new URL('main.html', window.location.href);
     destination.search = window.location.search;
     destination.searchParams.set('scanned', codeData);
+    destination.searchParams.set('visitLogged', wasVisitRegistered ? '1' : '0');
     window.location.assign(destination.href);
   } catch (error) {
     console.warn('Native VK QR scanner failed:', error);
