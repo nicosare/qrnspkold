@@ -1,0 +1,76 @@
+name: Deploy qrnspkold to private server directory
+
+on:
+  push:
+    branches:
+      - server-deploy
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qrnspkold-server-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy static files to the dedicated directory
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out server branch
+        uses: actions/checkout@v4
+
+      - name: Validate deployment secrets
+        env:
+          SERVER_HOST: ${{ secrets.QRNSPKOLD_SERVER_HOST }}
+          SERVER_USER: ${{ secrets.QRNSPKOLD_SERVER_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.QRNSPKOLD_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.QRNSPKOLD_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${GITHUB_REF}" == "refs/heads/server-deploy" ]] || {
+            echo "::error::This workflow can deploy only from server-deploy."
+            exit 1
+          }
+          [[ -n "$SERVER_HOST" ]] || { echo "::error::Missing QRNSPKOLD_SERVER_HOST secret."; exit 1; }
+          [[ -n "$SERVER_USER" ]] || { echo "::error::Missing QRNSPKOLD_SERVER_USER secret."; exit 1; }
+          [[ -n "$SSH_PRIVATE_KEY" ]] || { echo "::error::Missing QRNSPKOLD_SSH_PRIVATE_KEY secret."; exit 1; }
+          [[ -n "$KNOWN_HOSTS" ]] || { echo "::error::Missing QRNSPKOLD_KNOWN_HOSTS secret."; exit 1; }
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.QRNSPKOLD_SSH_PRIVATE_KEY }}
+
+      - name: Configure verified SSH host key
+        env:
+          KNOWN_HOSTS: ${{ secrets.QRNSPKOLD_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Deploy without deleting remote files
+        env:
+          SERVER_HOST: ${{ secrets.QRNSPKOLD_SERVER_HOST }}
+          SERVER_USER: ${{ secrets.QRNSPKOLD_SERVER_USER }}
+          SERVER_PORT: ${{ secrets.QRNSPKOLD_SERVER_PORT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          PORT="${SERVER_PORT:-22}"
+          TARGET="/var/www/qrnspkold"
+
+          # Dedicated target only. No --delete and no service restarts.
+          rsync -az --chmod=D755,F644 \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='deploy/' \
+            --exclude='*.md' \
+            --exclude='.gitignore' \
+            -e "ssh -p $PORT -o BatchMode=yes -o StrictHostKeyChecking=yes" \
+            ./ "$SERVER_USER@$SERVER_HOST:$TARGET/"
