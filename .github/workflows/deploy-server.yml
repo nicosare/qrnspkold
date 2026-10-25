@@ -1,4 +1,4 @@
-name: Deploy qrnspkold to private server directory
+name: Deploy static site to Roadnote server directory
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: qrnspkold-server-deploy
+  group: roadnote-server-deploy
   cancel-in-progress: true
 
 jobs:
@@ -63,7 +63,7 @@ jobs:
         run: |
           set -euo pipefail
           PORT="${SERVER_PORT:-22}"
-          TARGET="/var/www/qrnspkold"
+          TARGET="/var/www/roadnote"
 
           # Dedicated target only. No --delete and no service restarts.
           rsync -az --chmod=D755,F644 \
