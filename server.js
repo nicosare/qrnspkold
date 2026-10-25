@@ -5,7 +5,6 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import Database from 'better-sqlite3';
 import { chromium } from 'playwright';
-import { chromium } from 'playwright';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,8 +14,6 @@ const appId = String(process.env.VK_APP_ID || '54843054');
 const appSecret = process.env.VK_APP_SECRET || '';
 const adminVkId = String(process.env.ADMIN_VK_ID || '');
 const databasePath = process.env.DATABASE_PATH || '/data/roadnote.sqlite';
-const paytagBrowserTimeoutMs = Math.max(8000, Number(process.env.PAYTAG_BROWSER_TIMEOUT_MS || 25000));
-const paytagFetchesInFlight = new Map();
 const paytagBrowserTimeoutMs = Math.max(8000, Number(process.env.PAYTAG_BROWSER_TIMEOUT_MS || 25000));
 const paytagFetchesInFlight = new Map();
 
@@ -183,7 +180,7 @@ function normalizePaytagPayload(payload = {}) {
 }
 
 function extractTransportFromPageText(text = '') {
-  const source = String(text).replace(/\\s+/g, ' ');
+  const source = String(text).replace(/\s+/g, ' ');
   const match = (patterns) => {
     for (const pattern of patterns) {
       const found = source.match(pattern);
@@ -193,23 +190,22 @@ function extractTransportFromPageText(text = '') {
   };
 
   const transportType = normalizeTransportType(match([
-    /\\b(Трамвай|Автобус|Троллейбус|Электробус|Маршрутка|Метро)\\b/i,
-    /(?:тип\\s*транспорта|вид\\s*транспорта)\\s*[:№]?\\s*([А-Яа-яA-Za-z-]{3,30})/i
+    /\b(Трамвай|Автобус|Троллейбус|Электробус|Маршрутка|Метро)\b/i,
+    /(?:тип\s*транспорта|вид\s*транспорта)\s*[:№]?\s*([А-Яа-яA-Za-z-]{3,30})/i
   ]));
   const routeNumber = match([
-    /маршрут[^№\\d]{0,20}№\\s*([0-9A-Za-zА-Яа-я-]{1,8})/i,
-    /(?:номер\\s*маршрута|маршрут)\\s*[:№]?\\s*([0-9A-Za-zА-Яа-я-]{1,8})/i,
-    /№\\s*([0-9A-Za-zА-Яа-я-]{1,8})/
+    /маршрут[^№\d]{0,20}№\s*([0-9A-Za-zА-Яа-я-]{1,8})/i,
+    /(?:номер\s*маршрута|маршрут)\s*[:№]?\s*([0-9A-Za-zА-Яа-я-]{1,8})/i,
+    /№\s*([0-9A-Za-zА-Яа-я-]{1,8})/
   ]);
   const vehicleNumber = match([
-    /Т\\s*\\/\\s*С\\s*[:№]?\\s*([0-9A-Za-zА-Яа-я-]{1,12})/i,
-    /ТС\\s*[:№]?\\s*([0-9A-Za-zА-Яа-я-]{1,12})/i,
-    /(?:борт(?:овой)?\\s*номер|номер\\s*тс)\\s*[:№]?\\s*([0-9A-Za-zА-Яа-я-]{1,12})/i
+    /Т\s*\/\s*С\s*[:№]?\s*([0-9A-Za-zА-Яа-я-]{1,12})/i,
+    /ТС\s*[:№]?\s*([0-9A-Za-zА-Яа-я-]{1,12})/i,
+    /(?:борт(?:овой)?\s*номер|номер\s*тс)\s*[:№]?\s*([0-9A-Za-zА-Яа-я-]{1,12})/i
   ]);
 
   return { transportType, routeNumber, vehicleNumber };
 }
-
 async function fetchPaytagViaHeadlessBrowser(paytagid) {
   const targetUrl = `https://qr.bilet.nspk.ru/?paytagid=${encodeURIComponent(paytagid)}&s=qr&m=t`;
   let browser;
