@@ -15,34 +15,6 @@ const adminVkId = String(process.env.ADMIN_VK_ID || '');
 const databasePath = process.env.DATABASE_PATH || '/data/roadnote.sqlite';
 const paytagDirectTimeoutMs = Math.max(3000, Number(process.env.PAYTAG_DIRECT_TIMEOUT_MS || 12000));
 const paytagFetchesInFlight = new Map();
-const entitlementEventClients = new Map();
-const entitlementEventTokens = new Map();
-
-
-function publishEntitlementUpdate(userId) {
-  const clients = entitlementEventClients.get(String(userId));
-  if (!clients || !clients.size) return;
-  const message = 'event: entitlement\ndata: ' + JSON.stringify(entitlementSnapshot(userId)) + '\n\n';
-  for (const client of clients) {
-    try { client.write(message); } catch (_) {}
-  }
-}
-function entitlementSnapshot(userId) {
-  const row = getUserEntitlements.get(String(userId));
-  const now = Date.now();
-  return {
-    scanBalance: row && row.scan_balance !== null ? Number(row.scan_balance) : null,
-    subscriptionUntil: row?.subscription_until || null,
-    subscriptionActive: Boolean(row?.subscription_until && Date.parse(row.subscription_until) > now),
-    unlimited: Number(row?.unlimited || 0) === 1
-  };
-}
-function createEntitlementEventToken(userId) {
-  const token = crypto.randomBytes(32).toString('hex');
-  entitlementEventTokens.set(token, { userId: String(userId), expiresAt: Date.now() + 86400000 });
-  return token;
-}
-
 
 if (!appSecret) console.warn('VK_APP_SECRET is not configured: VK-authenticated endpoints will reject requests.');
 if (!adminVkId) console.warn('ADMIN_VK_ID is not configured: admin users page will remain locked.');
@@ -411,7 +383,7 @@ app.post('/api/session', (req, res) => {
       scanBalance,
       subscriptionUntil,
       subscriptionActive,
-      unlimited,
+      unlimited
     });
   } catch (error) {
     return res.status(401).json({ error: 'VK authentication failed' });
