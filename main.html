@@ -523,6 +523,7 @@
         .start-button-primary:active:not(:disabled) { background: #176dcc; }
         .start-button-secondary { border: 1px solid #d9e0e8; background: #fff; color: #30343a; }
         .start-button:disabled { opacity: .42; cursor: not-allowed; box-shadow: none; }
+        .start-button[hidden] { display: none; }
         .start-status { min-height: 20px; color: #727983; font-size: 14px; line-height: 1.45; text-align: center; }
         .start-status:empty { min-height: 0; }
         .start-footer { padding-top: 21px; color: #8a919b; font-size: 12px; line-height: 1.4; text-align: center; }
@@ -1391,18 +1392,6 @@
         document.body.classList.add('start-overlay-open');
       });
     }
-    const returnToStart = document.getElementById('return-to-start-button');
-    if (returnToStart && returnToStart.dataset.bound !== '1') {
-      returnToStart.dataset.bound = '1';
-      returnToStart.addEventListener('click', function () {
-        const panel = document.getElementById('admin-panel-overlay');
-        const frame = document.getElementById('admin-panel-frame');
-        if (panel) panel.hidden = true;
-        if (frame) frame.src = 'about:blank';
-        showStartOverlay();
-        window.history.pushState({ roadnoteScreen: 'start' }, '', window.location.href);
-      });
-    }
     const panelBack = document.getElementById('admin-panel-back');
     if (panelBack && panelBack.dataset.bound !== '1') {
       panelBack.dataset.bound = '1';
@@ -1414,6 +1403,18 @@
         document.body.classList.remove('start-overlay-open');
       });
     }
+  }
+
+  const returnToStartButton = document.getElementById('return-to-start-button');
+  if (returnToStartButton) {
+    returnToStartButton.addEventListener('click', function () {
+      const panel = document.getElementById('admin-panel-overlay');
+      const frame = document.getElementById('admin-panel-frame');
+      if (panel) panel.hidden = true;
+      if (frame) frame.src = 'about:blank';
+      showStartOverlay();
+      window.history.pushState({ roadnoteScreen: 'start' }, '', window.location.href);
+    });
   }
 
   async function registerRoadnoteVisit() {
