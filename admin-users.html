@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Roadnote — Пользователи</title>
+<style>
+:root{color-scheme:light;--bg:#f2f3f4;--card:#fff;--text:#24262b;--muted:#777d87;--line:#e4e7eb;--accent:#2787f5}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:1120px;margin:0 auto;padding:28px 18px 48px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+h1{font-size:28px;letter-spacing:-.5px;margin:0 0 4px}.sub{color:var(--muted)}.count{font-weight:700;background:#e3efff;color:#1766bc;padding:8px 12px;border-radius:12px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 5px 22px #15243b08}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}input,select,button{font:inherit;border-radius:10px;padding:10px 12px;border:1px solid var(--line);background:#fff;color:var(--text)}input{flex:1;min-width:190px}button{cursor:pointer;font-weight:600}button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:760px}th,td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);white-space:nowrap}th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}tbody tr:last-child td{border-bottom:0}.person{display:flex;align-items:center;gap:10px;min-width:170px}.avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;background:#e7edf5;display:grid;place-items:center;color:#667}.name{font-weight:650}.id{font-size:12px;color:var(--muted)}.status{padding:28px 12px;text-align:center;color:var(--muted)}.error{color:#b42318}.foot{font-size:12px;color:var(--muted);margin-top:14px}
+@media(max-width:600px){main{padding:20px 12px}h1{font-size:24px}.panel{padding:12px}}
+</style>
+</head>
+<body><main>
+<header class="top"><div><h1>Пользователи Roadnote</h1><div class="sub">Аккаунты, открывавшие приложение через VK Mini Apps</div></div><div class="count" id="count">Загрузка…</div></header>
+<section class="panel">
+<div class="toolbar"><input id="search" type="search" placeholder="Поиск по имени или VK ID" autocomplete="off"><select id="sort" aria-label="Сортировка"><option value="recent">Последние посещения</option><option value="first">Первые посещения</option><option value="visits">Число посещений</option><option value="name">Имя</option></select><button class="primary" id="refresh">Обновить</button></div>
+<div id="status" class="status">Проверяем доступ…</div>
+<div class="table-wrap" id="table-wrap" hidden><table><thead><tr><th>Пользователь</th><th>VK ID</th><th>Первый вход</th><th>Последний вход</th><th>Посещений</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="foot">Доступ ограничен проверенной подписью запуска VK и разрешённым VK ID. Имена и аватары — данные профиля, полученные клиентом; идентификатор подтверждается сервером.</div>
+</section></main>
+<script>
+(() => {
+ const query = window.location.search.slice(1);
+ const auth = 'VK ' + btoa(unescape(encodeURIComponent(query))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+ const status = document.getElementById('status');
+ const rows = document.getElementById('rows');
+ const count = document.getElementById('count');
+ const search = document.getElementById('search');
+ const sort = document.getElementById('sort');
+ const table = document.getElementById('table-wrap');
+ let users = [];
+ const date = value => value ? new Date(value).toLocaleString('ru-RU',{dateStyle:'short',timeStyle:'short'}) : '—';
+ const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function render(){
+   const q=search.value.trim().toLowerCase();
+   const filtered=users.filter(u=>(u.first_name+' '+u.last_name+' '+u.vk_id).toLowerCase().includes(q));
+   filtered.sort((a,b)=>sort.value==='visits'?b.visit_count-a.visit_count:sort.value==='name'?(a.last_name+a.first_name).localeCompare(b.last_name+b.first_name,'ru'):sort.value==='first'?a.first_seen.localeCompare(b.first_seen):b.last_seen.localeCompare(a.last_seen));
+   rows.innerHTML=filtered.map(u=>{const name=(u.first_name+' '+u.last_name).trim()||'Пользователь VK';const avatar=u.photo_url?'<img class="avatar" src="'+esc(u.photo_url)+'" alt="" referrerpolicy="no-referrer">':'<span class="avatar">VK</span>';return '<tr><td><div class="person">'+avatar+'<div><div class="name">'+esc(name)+'</div><div class="id">Участник Roadnote</div></div></div></td><td>'+esc(u.vk_id)+'</td><td>'+esc(date(u.first_seen))+'</td><td>'+esc(date(u.last_seen))+'</td><td>'+esc(u.visit_count)+'</td></tr>'}).join('');
+   status.hidden=filtered.length>0; status.textContent=users.length?'По вашему запросу ничего не найдено':'Пока нет зарегистрированных пользователей';
+   table.hidden=filtered.length===0;
+ }
+ async function load(){
+   if(!query){status.textContent='Откройте эту страницу из VK Mini App, чтобы проверить подпись запуска.';status.className='status error';return}
+   status.hidden=false;status.className='status';status.textContent='Загрузка списка…';table.hidden=true;
+   try{
+     const response=await fetch('/api/admin/users',{headers:{Authorization:auth},cache:'no-store'});
+     const data=await response.json();
+     if(!response.ok)throw new Error(response.status===403?'Доступ запрещён: этот аккаунт VK не является администратором.':data.error||'Не удалось загрузить список');
+     users=data.users||[];count.textContent='Всего: '+data.total;render();
+   }catch(e){status.hidden=false;status.className='status error';status.textContent=e.message;count.textContent='Нет доступа'}
+ }
+ search.addEventListener('input',render);sort.addEventListener('change',render);document.getElementById('refresh').addEventListener('click',load);load();
+})();
+</script></body></html>
