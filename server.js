@@ -18,8 +18,12 @@ const paytagFetchesInFlight = new Map();
 const liveStreams = new Map();
 const liveTokens = new Map();
 function makeLiveToken(userId) {
+  const now = Date.now();
+  for (const [token, record] of liveTokens) {
+    if (record.expiresAt <= now) liveTokens.delete(token);
+  }
   const token = crypto.randomBytes(32).toString('hex');
-  liveTokens.set(token, { userId: String(userId), expiresAt: Date.now() + 86400000 });
+  liveTokens.set(token, { userId: String(userId), expiresAt: now + 86400000 });
   return token;
 }
 function getLiveEntitlement(userId) {
@@ -424,7 +428,11 @@ app.get('/api/events', (req, res) => {
   res.flushHeaders?.();
   liveStreams.set(userId, res);
   res.write('event: entitlement\ndata: ' + JSON.stringify(getLiveEntitlement(userId)) + '\n\n');
-  req.on('close', () => { if (liveStreams.get(userId) === res) liveStreams.delete(userId); });
+  const heartbeat = setInterval(() => { try { res.write(': keep-alive\n\n'); } catch (_) {} }, 25000);
+  res.on('close', () => {
+    clearInterval(heartbeat);
+    if (liveStreams.get(userId) === res) liveStreams.delete(userId);
+  });
 });
 
 app.get('/api/admin/users', requireAdmin, (_req, res) => {
