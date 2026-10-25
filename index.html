@@ -1482,6 +1482,14 @@
       console.warn('VK profile details unavailable:', error);
     }
 
+    const startTitle = document.getElementById('start-title');
+    if (startTitle) {
+      const hour = new Date().getHours();
+      const greeting = hour >= 5 && hour < 12 ? 'Доброе утро' : hour >= 12 && hour < 18 ? 'Добрый день' : 'Добрый вечер';
+      const firstName = String(profile.first_name || '').trim();
+      startTitle.textContent = greeting + (firstName ? ', ' + firstName : '');
+    }
+
     try {
       const pathname = window.location.pathname;
       const appBase = pathname.endsWith('/')
