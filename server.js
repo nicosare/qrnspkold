@@ -319,8 +319,12 @@ app.get('/proxy', async (req, res) => {
 });
 
 app.use((req, res, next) => {
-  if (/\\.(html|js)$/i.test(req.path)) {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  // VK's webview may keep HTML/JS cached aggressively. Always serve the app entry
+  // document and executable scripts with explicit no-cache headers.
+  if (req.path === '/' || /\.(html|js)$/i.test(req.path)) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
   }
   next();
 });
