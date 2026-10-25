@@ -360,14 +360,16 @@ app.post('/api/session', (req, res) => {
   try {
     const { userId } = parseLaunchParams(req.body?.launchParams);
     const profile = req.body?.profile || {};
-    const now = new Date().toISOString();
-    upsertUser.run({
-      vk_id: userId,
-      first_name: cleanText(profile.first_name),
-      last_name: cleanText(profile.last_name),
-      photo_url: cleanText(profile.photo_url, 1000),
-      now
-    });
+    if (req.body?.refreshOnly !== true) {
+      const now = new Date().toISOString();
+      upsertUser.run({
+        vk_id: userId,
+        first_name: cleanText(profile.first_name),
+        last_name: cleanText(profile.last_name),
+        photo_url: cleanText(profile.photo_url, 1000),
+        now
+      });
+    }
     const balanceRow = getUserScanBalance.get(userId);
     const scanBalance = balanceRow && balanceRow.scan_balance !== null
       ? Number(balanceRow.scan_balance)
