@@ -453,6 +453,7 @@
         .start-intro p { max-width: 360px; color: #727983; font-size: 16px; line-height: 1.5; }
 
         .start-balance-card {
+            position: relative;
             margin-bottom: 14px;
             padding: 21px 22px;
             border-radius: 22px;
@@ -470,6 +471,21 @@
         .scan-balance-status { font-size: 28px; font-weight: 700; line-height: 1.2; color: #fff; }
         .scan-balance-status.empty { font-size: 22px; color: #fff; }
         .scan-balance-status.unassigned { font-size: 19px; color: #fff; }
+        .scan-balance-extra {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 6px 9px;
+            border: 1px solid #ffffff55;
+            border-radius: 999px;
+            background: #075bb6;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 750;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+        .scan-balance-extra[hidden] { display: none; }
 
         .start-offers-card {
             margin-bottom: 24px;
@@ -636,6 +652,7 @@
 
         <div class="start-balance-card">
             <div class="start-card-eyebrow">ТВОЙ БАЛАНС</div>
+            <span id="scan-balance-extra" class="scan-balance-extra" hidden></span>
             <div id="scan-balance-status" class="scan-balance-status" role="status" aria-live="polite">Проверяем баланс…</div>
         </div>
 
@@ -681,6 +698,7 @@
     const priceElement = document.getElementById('price-value');
     const scannerStatusElement = document.getElementById('scan-status');
     const scanBalanceElement = document.getElementById('scan-balance-status');
+    const scanBalanceExtraElement = document.getElementById('scan-balance-extra');
     const startOverlayElement = document.getElementById('start-overlay');
     const startScanButton = document.getElementById('start-scan-new');
     const continueCurrentScanButton = document.getElementById('continue-current-scan');
@@ -864,6 +882,10 @@
 
     function updateScanBalance(balance, subscriptionUntil = null, unlimited = false, subscriptionActive = false) {
         scanAccessUnlimited = Boolean(unlimited || subscriptionActive);
+        const numericBalance = balance === null || balance === undefined || balance === '' ? null : Number(balance);
+        const hasPackScans = Number.isSafeInteger(numericBalance) && numericBalance > 0;
+        scanBalanceExtraElement.hidden = !(subscriptionActive && hasPackScans && !unlimited);
+        scanBalanceExtraElement.textContent = scanBalanceExtraElement.hidden ? '' : '+' + numericBalance + (numericBalance === 1 ? ' скан' : numericBalance < 5 ? ' скана' : ' сканов');
         if (unlimited) {
             scanBalanceAssigned = false;
             currentScanBalance = null;
@@ -871,8 +893,8 @@
             scanBalanceElement.classList.remove('empty', 'unassigned');
             scanBalanceElement.textContent = 'Безлимит';
         } else if (subscriptionActive && subscriptionUntil) {
-            scanBalanceAssigned = false;
-            currentScanBalance = null;
+            scanBalanceAssigned = Number.isSafeInteger(numericBalance);
+            currentScanBalance = scanBalanceAssigned ? Math.max(0, numericBalance) : null;
             scanBalanceElement.hidden = false;
             scanBalanceElement.classList.remove('empty', 'unassigned');
             scanBalanceElement.textContent = 'Подписка до ' + new Date(subscriptionUntil).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
