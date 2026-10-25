@@ -32,7 +32,9 @@ db.exec(`
     first_seen TEXT NOT NULL,
     last_seen TEXT NOT NULL,
     visit_count INTEGER NOT NULL DEFAULT 1,
-    scan_balance INTEGER DEFAULT NULL
+    scan_balance INTEGER DEFAULT NULL,
+    subscription_until TEXT DEFAULT NULL,
+    unlimited INTEGER NOT NULL DEFAULT 0
   );
 `);
 
@@ -42,6 +44,12 @@ db.exec(`
 const userColumns = db.pragma('table_info(users)');
 if (!userColumns.some(column => column.name === 'scan_balance')) {
   db.exec('ALTER TABLE users ADD COLUMN scan_balance INTEGER DEFAULT NULL');
+}
+if (!userColumns.some(column => column.name === 'subscription_until')) {
+  db.exec('ALTER TABLE users ADD COLUMN subscription_until TEXT DEFAULT NULL');
+}
+if (!userColumns.some(column => column.name === 'unlimited')) {
+  db.exec('ALTER TABLE users ADD COLUMN unlimited INTEGER NOT NULL DEFAULT 0');
 }
 
 const upsertUser = db.prepare(`
@@ -55,12 +63,17 @@ const upsertUser = db.prepare(`
     visit_count = users.visit_count + 1
 `);
 const listUsers = db.prepare(`
-  SELECT vk_id, first_name, last_name, photo_url, first_seen, last_seen, visit_count, scan_balance
+  SELECT vk_id, first_name, last_name, photo_url, first_seen, last_seen, visit_count,
+         scan_balance, subscription_until, unlimited
   FROM users
   ORDER BY last_seen DESC
 `);
 const userCount = db.prepare('SELECT COUNT(*) AS count FROM users');
-const getUserScanBalance = db.prepare('SELECT scan_balance FROM users WHERE vk_id = ?');
+const getUserScanBalance = db.prepare('SELECT scan_balance, subscription_until, unlimited FROM users WHERE vk_id = ?');
+const grantPack = db.prepare('UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + ? WHERE vk_id = ?');
+const setUnlimited = db.prepare('UPDATE users SET unlimited = ? WHERE vk_id = ?');
+const updateSubscription = db.prepare('UPDATE users SET subscription_until = ? WHERE vk_id = ?');
+const getUserEntitlements = db.prepare('SELECT scan_balance, subscription_until, unlimited FROM users WHERE vk_id = ?');
 const spendUserScan = db.prepare(
   'UPDATE users SET scan_balance = scan_balance - 1 WHERE vk_id = ? AND scan_balance IS NOT NULL AND scan_balance > 0'
 );
@@ -282,8 +295,10 @@ app.post('/api/paytag', async (req, res) => {
   const balanceBefore = balanceRow?.scan_balance === null || balanceRow?.scan_balance === undefined
     ? null
     : Number(balanceRow.scan_balance);
+  const subscriptionActive = Boolean(balanceRow?.subscription_until && Date.parse(balanceRow.subscription_until) > Date.now());
+  const hasUnlimited = Number(balanceRow?.unlimited || 0) === 1 || subscriptionActive;
 
-  if (balanceBefore !== null && (!Number.isSafeInteger(balanceBefore) || balanceBefore <= 0)) {
+  if (!hasUnlimited && balanceBefore !== null && (!Number.isSafeInteger(balanceBefore) || balanceBefore <= 0)) {
     return res.status(402).json({
       ok: false,
       code: 'SCAN_BALANCE_EMPTY',
@@ -309,9 +324,9 @@ app.post('/api/paytag', async (req, res) => {
     const data = await task;
     let scanBalance = balanceBefore;
 
-    // Charge only after valid transport data was fetched. The conditional UPDATE
-    // prevents concurrent requests from spending the same last scan twice.
-    if (balanceBefore !== null) {
+    // Active subscriptions and explicit unlimited access do not consume pack scans.
+    // Charge only after valid transport data was fetched.
+    if (!hasUnlimited && balanceBefore !== null) {
       const spent = spendUserScan.run(userId);
       if (spent.changes !== 1) {
         return res.status(402).json({
@@ -324,7 +339,15 @@ app.post('/api/paytag', async (req, res) => {
       scanBalance = Number(getUserScanBalance.get(userId).scan_balance);
     }
 
-    return res.json({ ok: true, data, source: 'direct-api', scanBalance });
+    return res.json({
+      ok: true,
+      data,
+      source: 'direct-api',
+      scanBalance,
+      subscriptionUntil: balanceRow?.subscription_until || null,
+      unlimited: Number(balanceRow?.unlimited || 0) === 1,
+      subscriptionActive
+    });
   } catch (error) {
     console.error('[api/paytag] ' + paytagid + ': ' + (error?.message || error));
     return res.status(502).json({ error: error?.message || 'Не удалось получить данные QR-кода с НСПК.' });
@@ -349,7 +372,17 @@ app.post('/api/session', (req, res) => {
     const scanBalance = balanceRow && balanceRow.scan_balance !== null
       ? Number(balanceRow.scan_balance)
       : null;
-    return res.json({ ok: true, isAdmin: userId === adminVkId, scanBalance });
+    const subscriptionUntil = balanceRow?.subscription_until || null;
+    const subscriptionActive = Boolean(subscriptionUntil && Date.parse(subscriptionUntil) > Date.now());
+    const unlimited = Number(balanceRow?.unlimited || 0) === 1;
+    return res.json({
+      ok: true,
+      isAdmin: userId === adminVkId,
+      scanBalance,
+      subscriptionUntil,
+      subscriptionActive,
+      unlimited
+    });
   } catch (error) {
     return res.status(401).json({ error: 'VK authentication failed' });
   }
@@ -357,7 +390,64 @@ app.post('/api/session', (req, res) => {
 
 app.get('/api/admin/users', requireAdmin, (_req, res) => {
   res.setHeader('Cache-Control', 'no-store');
-  res.json({ users: listUsers.all(), total: userCount.get().count });
+  const now = Date.now();
+  const users = listUsers.all().map(user => ({
+    ...user,
+    unlimited: Number(user.unlimited || 0) === 1,
+    subscriptionActive: Boolean(user.subscription_until && Date.parse(user.subscription_until) > now)
+  }));
+  res.json({ users, total: userCount.get().count });
+});
+
+app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
+  const vkId = String(req.params.vkId || '');
+  if (!/^[0-9]+$/.test(vkId)) return res.status(400).json({ error: 'Некорректный VK ID.' });
+  const user = getUserEntitlements.get(vkId);
+  if (!user) return res.status(404).json({ error: 'Пользователь не найден.' });
+
+  const action = req.body?.action;
+  const now = new Date();
+  try {
+    if (action === 'grant_pack') {
+      const amount = Number(req.body?.amount);
+      if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100000) {
+        return res.status(400).json({ error: 'Укажите количество сканов от 1 до 100000.' });
+      }
+      grantPack.run(amount, vkId);
+    } else if (action === 'grant_months') {
+      const months = Number(req.body?.months);
+      if (!Number.isSafeInteger(months) || months < 1 || months > 120) {
+        return res.status(400).json({ error: 'Укажите количество месяцев от 1 до 120.' });
+      }
+      const currentExpiry = user.subscription_until && Date.parse(user.subscription_until) > now.getTime()
+        ? new Date(user.subscription_until)
+        : now;
+      const expiry = new Date(currentExpiry);
+      expiry.setUTCMonth(expiry.getUTCMonth() + months);
+      updateSubscription.run(expiry.toISOString(), vkId);
+    } else if (action === 'set_unlimited') {
+      if (typeof req.body?.enabled !== 'boolean') {
+        return res.status(400).json({ error: 'Не задано состояние безлимита.' });
+      }
+      setUnlimited.run(req.body.enabled ? 1 : 0, vkId);
+    } else {
+      return res.status(400).json({ error: 'Неизвестное действие.' });
+    }
+    const updated = getUserEntitlements.get(vkId);
+    return res.json({
+      ok: true,
+      user: {
+        vk_id: vkId,
+        scan_balance: updated.scan_balance,
+        subscription_until: updated.subscription_until,
+        unlimited: Number(updated.unlimited || 0) === 1,
+        subscriptionActive: Boolean(updated.subscription_until && Date.parse(updated.subscription_until) > Date.now())
+      }
+    });
+  } catch (error) {
+    console.error('[admin entitlement]', error);
+    return res.status(500).json({ error: 'Не удалось изменить доступ пользователя.' });
+  }
 });
 
 app.get('/admin/users', (_req, res) => {
