@@ -1173,5 +1173,39 @@
     // Инициализируем страницу при загрузке
     window.addEventListener('DOMContentLoaded', initializePage);
 </script>
+
+<script>
+(function () {
+  async function registerRoadnoteVisit() {
+    if (!window.vkBridge || typeof window.vkBridge.send !== 'function') return;
+    const launchParams = window.location.search.slice(1);
+    if (!launchParams) return;
+    let profile = {};
+    try {
+      const info = await window.vkBridge.send('VKWebAppGetUserInfo');
+      profile = {
+        first_name: info.first_name || '',
+        last_name: info.last_name || '',
+        photo_url: info.photo_200 || info.photo_100 || ''
+      };
+    } catch (error) {
+      console.warn('VK profile details unavailable:', error);
+    }
+    try {
+      await fetch('/api/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ launchParams, profile }),
+        cache: 'no-store',
+        credentials: 'omit'
+      });
+    } catch (error) {
+      console.warn('Roadnote visit registration failed:', error);
+    }
+  }
+  window.addEventListener('DOMContentLoaded', registerRoadnoteVisit, { once: true });
+})();
+</script>
+
 </body>
 </html>
