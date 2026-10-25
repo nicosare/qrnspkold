@@ -419,6 +419,16 @@ app.post('/api/session', (req, res) => {
   }
 });
 
+app.get('/api/events', (req, res) => {
+  const token = String(req.query?.token || '');
+  const record = entitlementEventTokens.get(token);
+  if (!record || record.expiresAt <= Date.now()) return res.status(401).end();
+  res.status(200).setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+});
+
 app.get('/api/admin/users', requireAdmin, (_req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const now = Date.now();
