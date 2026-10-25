@@ -4,55 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Уведомление об оплате</title>
-    <!-- Load dependencies explicitly: the start screen can hand off this document
-         without a normal browser navigation, where parser-loaded scripts may not run. -->
+    <!-- Load dependencies normally; application startup must not wait for VKWebAppInit. -->
+    <script src="https://cdn.jsdelivr.net/npm/easyqrcodejs@4.5.0/dist/easy.qrcode.min.js"></script>
+    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+    <script src="scanner.js"></script>
     <script>
     (function () {
-        function loadRoadnoteScript(src, name, ready) {
-            if (ready()) return Promise.resolve();
-
-            return new Promise(function (resolve, reject) {
-                var script = document.createElement('script');
-                script.src = src;
-                script.async = true;
-                script.dataset.roadnoteDependency = name;
-
-                script.onload = function () {
-                    if (ready()) {
-                        resolve();
-                    } else {
-                        reject(new Error(name + ' загружен, но не инициализировался.'));
-                    }
-                };
-                script.onerror = function () {
-                    reject(new Error('Не удалось загрузить компонент: ' + name + '.'));
-                };
-
-                document.head.appendChild(script);
-            });
+        try {
+            if (window.vkBridge && typeof window.vkBridge.send === "function") {
+                Promise.resolve(window.vkBridge.send("VKWebAppInit")).catch(function (error) {
+                    console.warn("VK Mini App initialization failed:", error);
+                });
+            }
+        } catch (error) {
+            console.warn("VK Mini App initialization failed:", error);
         }
-
-        window.roadnoteDependenciesReady = Promise.all([
-            loadRoadnoteScript(
-                'https://cdn.jsdelivr.net/npm/easyqrcodejs@4.5.0/dist/easy.qrcode.min.js',
-                'генератор QR',
-                function () { return typeof window.QRCode === 'function' && window.QRCode.CorrectLevel; }
-            ),
-            loadRoadnoteScript(
-                'https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js',
-                'VK Bridge',
-                function () { return !!window.vkBridge && typeof window.vkBridge.send === 'function'; }
-            ),
-            loadRoadnoteScript(
-                'scanner.js',
-                'VK QR-сканер',
-                function () { return typeof window.roadnoteScanQr === 'function'; }
-            )
-        ]).then(function () {
-            return window.vkBridge.send('VKWebAppInit').catch(function (error) {
-                console.warn('VK Mini App initialization failed:', error);
-            });
-        });
     })();
     </script>
     <style>
@@ -474,7 +440,26 @@
             text-decoration: underline;
         }
 
-    </style>
+            .scan-again-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 48px;
+            margin: 12px auto 0;
+            padding: 12px 20px;
+            border: 0;
+            border-radius: 12px;
+            background: #2787f5;
+            color: #fff;
+            font: inherit;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .scan-again-button:active { background: #176dcc; }
+        .scan-again-button:disabled { opacity: .6; cursor: default; }
+
+</style>
 </head>
 <body>
 <div class="wrapper">
@@ -534,7 +519,7 @@
         <div class="instructions">
             Предъявите контролеру QR-код.
         </div>
-        <button class="scan-again-button" id="scan-again-button" type="button">Сканировать другой QR-код</button>
+        <button class="scan-again-button" id="scan-again-button" type="button">Сканировать QR-код</button>
         <div id="scan-status" role="status" aria-live="polite" style="min-height:20px;margin-top:10px;color:#626873;font-size:14px;line-height:1.4;text-align:center"></div>
     </div>
 </div>
@@ -1104,7 +1089,13 @@
     }
 
     async function fetchPaytagFromBackend(paytagid) {
-        const endpoint = new URL('api/paytag', window.location.href);
+        const pathname = window.location.pathname;
+        const appBase = pathname.endsWith('/')
+            ? pathname
+            : (pathname.slice(pathname.lastIndexOf('/') + 1).includes('.')
+                ? pathname.slice(0, pathname.lastIndexOf('/') + 1)
+                : pathname + '/');
+        const endpoint = new URL(appBase + 'api/paytag', window.location.origin);
         const response = await fetch(endpoint.toString(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1184,6 +1175,9 @@
         scanAgainButton.disabled = true;
         setScannerStatus('Открываем сканер в приложении VK…');
         try {
+            if (typeof window.roadnoteScanQr !== 'function') {
+                throw new Error('VK QR-сканер не загрузился. Проверьте интернет и перезапустите Mini App.');
+            }
             const code = await window.roadnoteScanQr();
             const success = await handleScannedText(code);
             if (success) {
@@ -1237,15 +1231,11 @@
     // This script is at the end of main.html, so the page markup already exists.
     // Do not wait for DOMContentLoaded: this document can be injected into the
     // already-running VK Mini App document, where that event may have fired.
-    (async function bootRoadnoteMainPage() {
-        try {
-            await window.roadnoteDependenciesReady;
-        } catch (error) {
-            console.error('Roadnote dependency initialization failed:', error);
+    (function bootRoadnoteMainPage() {
+        if (typeof window.QRCode !== 'function' || !window.QRCode.CorrectLevel) {
+            console.error('QRCode library did not load; ticket QR rendering is unavailable.');
             const status = document.getElementById('scan-status');
-            if (status) {
-                status.textContent = error.message || 'Не удалось загрузить компоненты приложения.';
-            }
+            if (status) status.textContent = 'Не загрузился генератор QR-кода. Проверьте интернет и перезапустите приложение.';
         }
         initializePage();
     })();
@@ -1266,12 +1256,6 @@
   }
 
   async function registerRoadnoteVisit() {
-    try {
-      await window.roadnoteDependenciesReady;
-    } catch (error) {
-      console.warn('Roadnote dependencies unavailable during visit registration:', error);
-    }
-
     const launchUrl = new URL(window.location.href);
     const wasRegisteredOnStartPage = launchUrl.searchParams.get('visitLogged') === '1';
 
@@ -1306,7 +1290,13 @@
     }
 
     try {
-      const response = await fetch('api/session', {
+      const pathname = window.location.pathname;
+      const appBase = pathname.endsWith('/')
+        ? pathname
+        : (pathname.slice(pathname.lastIndexOf('/') + 1).includes('.')
+            ? pathname.slice(0, pathname.lastIndexOf('/') + 1)
+            : pathname + '/');
+      const response = await fetch(new URL(appBase + 'api/session', window.location.origin), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ launchParams, profile }),
