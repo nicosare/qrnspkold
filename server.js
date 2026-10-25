@@ -18,6 +18,15 @@ const paytagFetchesInFlight = new Map();
 const entitlementEventClients = new Map();
 const entitlementEventTokens = new Map();
 
+
+function publishEntitlementUpdate(userId) {
+  const clients = entitlementEventClients.get(String(userId));
+  if (!clients || !clients.size) return;
+  const message = 'event: entitlement\ndata: ' + JSON.stringify(entitlementSnapshot(userId)) + '\n\n';
+  for (const client of clients) {
+    try { client.write(message); } catch (_) {}
+  }
+}
 function entitlementSnapshot(userId) {
   const row = getUserEntitlements.get(String(userId));
   const now = Date.now();
