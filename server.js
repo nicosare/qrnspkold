@@ -71,8 +71,8 @@ const listUsers = db.prepare(`
 const userCount = db.prepare('SELECT COUNT(*) AS count FROM users');
 const getUserScanBalance = db.prepare('SELECT scan_balance, subscription_until, unlimited FROM users WHERE vk_id = ?');
 const grantPack = db.prepare('UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + ? WHERE vk_id = ?');
-const setUnlimited = db.prepare('UPDATE users SET unlimited = ? WHERE vk_id = ?');
-const updateSubscription = db.prepare('UPDATE users SET subscription_until = ? WHERE vk_id = ?');
+const setUnlimited = db.prepare('UPDATE users SET unlimited = ?, scan_balance = CASE WHEN ? = 0 THEN COALESCE(scan_balance, 0) ELSE scan_balance END WHERE vk_id = ?');
+const updateSubscription = db.prepare('UPDATE users SET subscription_until = ?, scan_balance = COALESCE(scan_balance, 0) WHERE vk_id = ?');
 const getUserEntitlements = db.prepare('SELECT scan_balance, subscription_until, unlimited FROM users WHERE vk_id = ?');
 const spendUserScan = db.prepare(
   'UPDATE users SET scan_balance = scan_balance - 1 WHERE vk_id = ? AND scan_balance IS NOT NULL AND scan_balance > 0'
@@ -429,7 +429,8 @@ app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
       if (typeof req.body?.enabled !== 'boolean') {
         return res.status(400).json({ error: 'Не задано состояние безлимита.' });
       }
-      setUnlimited.run(req.body.enabled ? 1 : 0, vkId);
+      const enabled = req.body.enabled ? 1 : 0;
+      setUnlimited.run(enabled, enabled, vkId);
     } else {
       return res.status(400).json({ error: 'Неизвестное действие.' });
     }
