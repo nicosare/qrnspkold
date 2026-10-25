@@ -2,52 +2,104 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#f2f3f4">
 <title>Roadnote — Пользователи</title>
 <style>
-:root{color-scheme:light;--bg:#f2f3f4;--card:#fff;--text:#24262b;--muted:#777d87;--line:#e4e7eb;--accent:#2787f5}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-main{max-width:1120px;margin:0 auto;padding:28px 18px 48px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
-h1{font-size:28px;letter-spacing:-.5px;margin:0 0 4px}.sub{color:var(--muted)}.count{font-weight:700;background:#e3efff;color:#1766bc;padding:8px 12px;border-radius:12px}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 5px 22px #15243b08}
-.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}input,select,button{font:inherit;border-radius:10px;padding:10px 12px;border:1px solid var(--line);background:#fff;color:var(--text)}input{flex:1;min-width:190px}button{cursor:pointer;font-weight:600}button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:760px}th,td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);white-space:nowrap}th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}tbody tr:last-child td{border-bottom:0}.person{display:flex;align-items:center;gap:10px;min-width:170px}.avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;background:#e7edf5;display:grid;place-items:center;color:#667}.name{font-weight:650}.id{font-size:12px;color:var(--muted)}.status{padding:28px 12px;text-align:center;color:var(--muted)}.error{color:#b42318}.foot{font-size:12px;color:var(--muted);margin-top:14px}
-@media(max-width:600px){main{padding:20px 12px}h1{font-size:24px}.panel{padding:12px}}
+:root{color-scheme:light;--bg:#f2f3f4;--card:#fff;--text:#24262b;--muted:#777d87;--line:#e4e7eb;--accent:#2787f5;--soft:#eaf3ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+main{width:100%;max-width:960px;margin:0 auto;padding:clamp(16px,4vw,30px) clamp(12px,3vw,22px) calc(28px + env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
+h1{font-size:clamp(23px,5vw,30px);line-height:1.15;letter-spacing:-.5px;margin:0 0 6px}
+.sub{color:var(--muted);font-size:14px}
+.count{flex-shrink:0;font-weight:750;background:var(--soft);color:#1766bc;padding:8px 11px;border-radius:12px;white-space:nowrap}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:clamp(12px,3vw,18px);box-shadow:0 5px 22px #15243b08}
+.toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:9px;margin-bottom:16px}
+input,select,button{min-height:44px;font:inherit;border-radius:11px;padding:10px 12px;border:1px solid var(--line);background:#fff;color:var(--text);min-width:0}
+input{width:100%}input:focus,select:focus,button:focus-visible,.user-card:focus-visible{outline:2px solid #2787f5;outline-offset:2px}
+button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-color:var(--accent);color:#fff;padding-inline:16px}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.user-card{display:block;min-width:0;padding:15px;color:inherit;text-decoration:none;background:#fff;border:1px solid var(--line);border-radius:15px;transition:border-color .15s,transform .15s,box-shadow .15s}
+.user-card:hover{border-color:#b6d5ff;box-shadow:0 5px 18px #15243b0c}
+.user-card:active{transform:scale(.99)}
+.person{display:flex;align-items:center;gap:11px;min-width:0;margin-bottom:14px}
+.avatar{width:48px;height:48px;flex:0 0 48px;border-radius:50%;object-fit:cover;background:#e7edf5;display:grid;place-items:center;color:#52708e;font-weight:750}
+.person-text{min-width:0}.name{font-size:16px;font-weight:750;line-height:1.25;overflow-wrap:anywhere}.vk-id{font-size:12px;color:var(--accent);margin-top:4px}
+.open-hint{font-size:12px;color:var(--muted);margin-top:3px}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.stat{min-width:0;background:#f7f8fa;border-radius:10px;padding:9px 10px}
+.stat-label{display:block;color:var(--muted);font-size:11px;line-height:1.3;margin-bottom:4px}
+.stat-value{display:block;font-size:13px;font-weight:650;overflow-wrap:anywhere}
+.visits{display:inline-flex;align-items:center;gap:5px;margin-top:11px;padding:5px 9px;border-radius:8px;background:var(--soft);color:#1766bc;font-size:12px;font-weight:750}
+.status{padding:30px 12px;text-align:center;color:var(--muted)}.error{color:#b42318}.foot{font-size:12px;line-height:1.5;color:var(--muted);margin-top:16px}
+@media(max-width:600px){
+ main{padding-top:16px}.top{align-items:flex-start;margin-bottom:16px}.sub{font-size:13px}.count{font-size:13px;padding:7px 9px}
+ .toolbar{grid-template-columns:minmax(0,1fr) auto}.toolbar input{grid-column:1/-1}.toolbar select{width:100%}.primary{padding-inline:13px}
+ .cards{grid-template-columns:minmax(0,1fr);gap:10px}.user-card{padding:13px}.person{margin-bottom:12px}.avatar{width:46px;height:46px;flex-basis:46px}
+ .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(min-width:420px) and (max-width:600px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.user-card{padding:12px}.person{align-items:flex-start;gap:8px}.avatar{width:40px;height:40px;flex-basis:40px}.stats{grid-template-columns:1fr}.stat{padding:8px}.name{font-size:15px}}
+@media(prefers-reduced-motion:reduce){.user-card{transition:none}}
 </style>
 </head>
-<body><main>
-<header class="top"><div><h1>Пользователи Roadnote</h1><div class="sub">Аккаунты, открывавшие приложение через VK Mini Apps</div></div><div class="count" id="count">Загрузка…</div></header>
+<body>
+<main>
+<header class="top">
+ <div><h1>Пользователи Roadnote</h1><div class="sub">Нажми на карточку, чтобы открыть профиль VK</div></div>
+ <div class="count" id="count">Загрузка…</div>
+</header>
 <section class="panel">
-<div class="toolbar"><input id="search" type="search" placeholder="Поиск по имени или VK ID" autocomplete="off"><select id="sort" aria-label="Сортировка"><option value="recent">Последние посещения</option><option value="first">Первые посещения</option><option value="visits">Число посещений</option><option value="name">Имя</option></select><button class="primary" id="refresh">Обновить</button></div>
-<div id="status" class="status">Проверяем доступ…</div>
-<div class="table-wrap" id="table-wrap" hidden><table><thead><tr><th>Пользователь</th><th>VK ID</th><th>Первый вход</th><th>Последний вход</th><th>Посещений</th></tr></thead><tbody id="rows"></tbody></table></div>
-<div class="foot">Доступ ограничен проверенной подписью запуска VK и разрешённым VK ID. Имена и аватары — данные профиля, полученные клиентом; идентификатор подтверждается сервером.</div>
-</section></main>
+ <div class="toolbar">
+  <input id="search" type="search" placeholder="Поиск по имени или VK ID" autocomplete="off" aria-label="Поиск пользователей">
+  <select id="sort" aria-label="Сортировка">
+   <option value="recent">Последние посещения</option>
+   <option value="first">Первые посещения</option>
+   <option value="visits">Число посещений</option>
+   <option value="name">Имя</option>
+  </select>
+  <button class="primary" id="refresh" type="button">Обновить</button>
+ </div>
+ <div id="status" class="status" role="status">Проверяем доступ…</div>
+ <div class="cards" id="cards" hidden></div>
+ <div class="foot">Доступ к списку защищён серверной проверкой подписи VK и разрешённым VK ID. Имена и аватары загружаются из профиля; идентификатор пользователя подтверждается сервером.</div>
+</section>
+</main>
 <script>
 (() => {
  const query = window.location.search.slice(1);
- const auth = 'VK ' + btoa(unescape(encodeURIComponent(query))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+ const auth = 'VK ' + btoa(unescape(encodeURIComponent(query))).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');
  const status = document.getElementById('status');
- const rows = document.getElementById('rows');
+ const cards = document.getElementById('cards');
  const count = document.getElementById('count');
  const search = document.getElementById('search');
  const sort = document.getElementById('sort');
- const table = document.getElementById('table-wrap');
  let users = [];
- const date = value => value ? new Date(value).toLocaleString('ru-RU',{dateStyle:'short',timeStyle:'short'}) : '—';
+ const date = value => value ? new Date(value).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
  const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  function render(){
    const q=search.value.trim().toLowerCase();
    const filtered=users.filter(u=>(u.first_name+' '+u.last_name+' '+u.vk_id).toLowerCase().includes(q));
    filtered.sort((a,b)=>sort.value==='visits'?b.visit_count-a.visit_count:sort.value==='name'?(a.last_name+a.first_name).localeCompare(b.last_name+b.first_name,'ru'):sort.value==='first'?a.first_seen.localeCompare(b.first_seen):b.last_seen.localeCompare(a.last_seen));
-   rows.innerHTML=filtered.map(u=>{const name=(u.first_name+' '+u.last_name).trim()||'Пользователь VK';const avatar=u.photo_url?'<img class="avatar" src="'+esc(u.photo_url)+'" alt="" referrerpolicy="no-referrer">':'<span class="avatar">VK</span>';return '<tr><td><div class="person">'+avatar+'<div><div class="name">'+esc(name)+'</div><div class="id">Участник Roadnote</div></div></div></td><td>'+esc(u.vk_id)+'</td><td>'+esc(date(u.first_seen))+'</td><td>'+esc(date(u.last_seen))+'</td><td>'+esc(u.visit_count)+'</td></tr>'}).join('');
-   status.hidden=filtered.length>0; status.textContent=users.length?'По вашему запросу ничего не найдено':'Пока нет зарегистрированных пользователей';
-   table.hidden=filtered.length===0;
+   cards.innerHTML=filtered.map(u=>{
+     const name=(u.first_name+' '+u.last_name).trim()||'Пользователь VK';
+     const avatar=u.photo_url?'<img class="avatar" src="'+esc(u.photo_url)+'" alt="" referrerpolicy="no-referrer" loading="lazy">':'<span class="avatar" aria-hidden="true">VK</span>';
+     const profile='https://vk.com/id'+encodeURIComponent(u.vk_id);
+     return '<a class="user-card" href="'+profile+'" target="_blank" rel="noopener noreferrer" aria-label="Открыть профиль VK: '+esc(name)+'">'+
+       '<div class="person">'+avatar+'<div class="person-text"><div class="name">'+esc(name)+'</div><div class="vk-id">VK ID: '+esc(u.vk_id)+'</div><div class="open-hint">Открыть профиль ↗</div></div></div>'+
+       '<div class="stats"><div class="stat"><span class="stat-label">Первый вход</span><span class="stat-value">'+esc(date(u.first_seen))+'</span></div>'+
+       '<div class="stat"><span class="stat-label">Последний вход</span><span class="stat-value">'+esc(date(u.last_seen))+'</span></div></div>'+
+       '<div class="visits">Посещений: '+esc(u.visit_count)+'</div></a>';
+   }).join('');
+   status.hidden=filtered.length>0;
+   status.className='status';
+   status.textContent=users.length?'По вашему запросу ничего не найдено':'Пока нет зарегистрированных пользователей';
+   cards.hidden=filtered.length===0;
  }
  async function load(){
    if(!query){status.textContent='Откройте эту страницу из VK Mini App, чтобы проверить подпись запуска.';status.className='status error';return}
-   status.hidden=false;status.className='status';status.textContent='Загрузка списка…';table.hidden=true;
+   status.hidden=false;status.className='status';status.textContent='Загрузка списка…';cards.hidden=true;
    try{
      const response=await fetch('../api/admin/users',{headers:{Authorization:auth},cache:'no-store'});
      const data=await response.json();
@@ -55,6 +107,11 @@ h1{font-size:28px;letter-spacing:-.5px;margin:0 0 4px}.sub{color:var(--muted)}.c
      users=data.users||[];count.textContent='Всего: '+data.total;render();
    }catch(e){status.hidden=false;status.className='status error';status.textContent=e.message;count.textContent='Нет доступа'}
  }
- search.addEventListener('input',render);sort.addEventListener('change',render);document.getElementById('refresh').addEventListener('click',load);load();
+ search.addEventListener('input',render);
+ sort.addEventListener('change',render);
+ document.getElementById('refresh').addEventListener('click',load);
+ load();
 })();
-</script></body></html>
+</script>
+</body>
+</html>
