@@ -36,9 +36,15 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 .entitlement{margin-top:13px;padding-top:13px;border-top:1px solid var(--line)}
 .entitlement-status{font-size:14px;font-weight:750;margin-bottom:10px}
 .entitlement-status small{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:3px}
+.grant-section{margin-top:12px}
+.grant-section-title{font-size:12px;font-weight:750;color:var(--muted);margin-bottom:7px}
+.preset-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.preset-grid button{min-width:0;padding:10px 4px;font-size:13px}
+.preset-grid button span{display:block;font-size:11px;font-weight:500;opacity:.8;margin-top:3px}
 .grant-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:8px}
 .grant-grid input{min-width:0}
 .grant-grid button,.unlimited-toggle{white-space:nowrap}
+@media(max-width:420px){.grant-grid{grid-template-columns:1fr}.preset-grid button{font-size:12px}}
 .unlimited-toggle{width:100%;margin-top:8px;background:#f4f7fb}
 .action-status{font-size:12px;color:var(--muted);min-height:17px;margin-top:6px}
 .action-status.error{color:#b42318}
@@ -112,11 +118,19 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
        '<div class="stat"><span class="stat-label">Последний вход</span><span class="stat-value">'+esc(date(u.last_seen))+'</span></div></div>'+
        '<div class="visits">Посещений: '+esc(u.visit_count)+'</div>'+
        '<div class="entitlement"><div class="entitlement-status">'+esc(entitlementStatus)+subscriptionDetail+'</div>'+
-       '<div class="grant-grid"><input type="number" min="1" max="100000" step="1" value="9" aria-label="Количество сканов" data-pack-input><button class="primary" type="button" data-action="grant-pack">Начислить сканы</button></div>'+
-       '<div class="grant-grid"><input type="number" min="1" max="120" step="1" value="1" aria-label="Количество месяцев" data-months-input><button class="primary" type="button" data-action="grant-months">Начислить месяцы</button></div>'+
+       '<div class="grant-section"><div class="grant-section-title">ПАКЕТЫ СКАНОВ</div><div class="preset-grid">'+
+       '<button class="primary" type="button" data-action="grant-pack" data-amount="9">9 сканов<span>Пакет 9</span></button>'+
+       '<button class="primary" type="button" data-action="grant-pack" data-amount="29">29 сканов<span>Пакет 29</span></button>'+
+       '<button class="primary" type="button" data-action="grant-pack" data-amount="49">49 сканов<span>Пакет 49</span></button></div>'+
+       '<div class="grant-grid"><input type="number" min="1" max="100000" step="1" value="9" aria-label="Своё количество сканов" data-pack-input><button class="primary" type="button" data-action="grant-pack-custom">Начислить своё</button></div></div>'+
+       '<div class="grant-section"><div class="grant-section-title">ПОДПИСКИ</div><div class="preset-grid">'+
+       '<button class="primary" type="button" data-action="grant-months" data-months="1">1 месяц<span>Месяц</span></button>'+
+       '<button class="primary" type="button" data-action="grant-months" data-months="3">3 месяца<span>Квартал</span></button>'+
+       '<button class="primary" type="button" data-action="grant-months" data-months="6">6 месяцев<span>Полгода</span></button></div>'+
+       '<div class="grant-grid"><input type="number" min="1" max="120" step="1" value="1" aria-label="Своё количество месяцев" data-months-input><button class="primary" type="button" data-action="grant-months-custom">Начислить своё</button></div></div>'+
        '<button class="unlimited-toggle" type="button" data-action="toggle-unlimited">'+(u.unlimited?'Отключить безлимит':'Включить безлимит')+'</button>'+
        '<div class="action-status" aria-live="polite"></div></div></article>';
-   }).join('');
+      }).join('');
    status.hidden=filtered.length>0;
    status.className='status';
    status.textContent=users.length?'По вашему запросу ничего не найдено':'Пока нет зарегистрированных пользователей';
@@ -138,12 +152,12 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    const vkId=card.dataset.userCard;
    const message=card.querySelector('.action-status');
    let body;
-   if(button.dataset.action==='grant-pack'){
-     const amount=Number(card.querySelector('[data-pack-input]').value);
+   if(button.dataset.action==='grant-pack'||button.dataset.action==='grant-pack-custom'){
+     const amount=button.dataset.amount!==undefined?Number(button.dataset.amount):Number(card.querySelector('[data-pack-input]').value);
      if(!Number.isSafeInteger(amount)||amount<1||amount>100000){message.className='action-status error';message.textContent='Введите количество сканов от 1 до 100000.';return}
      body={action:'grant_pack',amount};
-   }else if(button.dataset.action==='grant-months'){
-     const months=Number(card.querySelector('[data-months-input]').value);
+   }else if(button.dataset.action==='grant-months'||button.dataset.action==='grant-months-custom'){
+     const months=button.dataset.months!==undefined?Number(button.dataset.months):Number(card.querySelector('[data-months-input]').value);
      if(!Number.isSafeInteger(months)||months<1||months>120){message.className='action-status error';message.textContent='Введите количество месяцев от 1 до 120.';return}
      body={action:'grant_months',months};
    }else{
