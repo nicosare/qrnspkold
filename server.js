@@ -368,6 +368,13 @@ app.get('/proxy', async (req, res) => {
   }
 });
 
+app.use((req, res, next) => {
+  if (/\\.(html|js)$/i.test(req.path)) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  }
+  next();
+});
+
 app.use(express.static(__dirname, { index: 'index.html' }));
 app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
