@@ -31,9 +31,18 @@ db.exec(`
     photo_url TEXT NOT NULL DEFAULT '',
     first_seen TEXT NOT NULL,
     last_seen TEXT NOT NULL,
-    visit_count INTEGER NOT NULL DEFAULT 1
+    visit_count INTEGER NOT NULL DEFAULT 1,
+    scan_balance INTEGER DEFAULT NULL
   );
 `);
+
+// Existing databases predate per-user scan balances. NULL means the balance
+// has not been assigned yet; once configured, zero blocks scanning and each
+// successful scan consumes one unit.
+const userColumns = db.pragma('table_info(users)');
+if (!userColumns.some(column => column.name === 'scan_balance')) {
+  db.exec('ALTER TABLE users ADD COLUMN scan_balance INTEGER DEFAULT NULL');
+}
 
 const upsertUser = db.prepare(`
   INSERT INTO users (vk_id, first_name, last_name, photo_url, first_seen, last_seen, visit_count)
@@ -46,11 +55,20 @@ const upsertUser = db.prepare(`
     visit_count = users.visit_count + 1
 `);
 const listUsers = db.prepare(`
-  SELECT vk_id, first_name, last_name, photo_url, first_seen, last_seen, visit_count
+  SELECT vk_id, first_name, last_name, photo_url, first_seen, last_seen, visit_count, scan_balance
   FROM users
   ORDER BY last_seen DESC
 `);
 const userCount = db.prepare('SELECT COUNT(*) AS count FROM users');
+const getUserScanBalance = db.prepare('SELECT scan_balance FROM users WHERE vk_id = ?');
+const spendUserScan = db.prepare(
+  'UPDATE users SET scan_balance = scan_balance - 1 WHERE vk_id = ? AND scan_balance IS NOT NULL AND scan_balance > 0'
+);
+const ensureUserForScan = db.prepare(`
+  INSERT INTO users (vk_id, first_name, last_name, photo_url, first_seen, last_seen, visit_count, scan_balance)
+  VALUES (?, '', '', '', ?, ?, 1, NULL)
+  ON CONFLICT(vk_id) DO NOTHING
+`);
 
 app.disable('x-powered-by');
 app.use(express.json({ limit: '32kb' }));
@@ -243,6 +261,32 @@ app.post('/api/paytag', async (req, res) => {
     return res.status(400).json({ error: 'Некорректный идентификатор paytagid в QR-коде.' });
   }
 
+  let userId;
+  try {
+    ({ userId } = launchParamsFromRequest(req));
+  } catch (error) {
+    return res.status(401).json({
+      code: 'VK_AUTH_REQUIRED',
+      error: 'Откройте Roadnote внутри VK, чтобы подтвердить пользователя.'
+    });
+  }
+
+  const now = new Date().toISOString();
+  ensureUserForScan.run(userId, now, now);
+  const balanceRow = getUserScanBalance.get(userId);
+  const balanceBefore = balanceRow?.scan_balance === null || balanceRow?.scan_balance === undefined
+    ? null
+    : Number(balanceRow.scan_balance);
+
+  if (balanceBefore !== null && (!Number.isSafeInteger(balanceBefore) || balanceBefore <= 0)) {
+    return res.status(402).json({
+      ok: false,
+      code: 'SCAN_BALANCE_EMPTY',
+      scanBalance: 0,
+      error: 'Баланс сканов исчерпан. Пополните баланс, чтобы продолжить.'
+    });
+  }
+
   let task = paytagFetchesInFlight.get(paytagid);
   if (!task && paytagFetchesInFlight.size >= 5) {
     return res.status(429).json({ error: 'Сервер уже обрабатывает другие QR-коды. Повторите попытку через несколько секунд.' });
@@ -258,7 +302,24 @@ app.post('/api/paytag', async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   try {
     const data = await task;
-    return res.json({ ok: true, data, source: 'direct-api' });
+    let scanBalance = balanceBefore;
+
+    // Charge only after valid transport data was fetched. The conditional UPDATE
+    // prevents concurrent requests from spending the same last scan twice.
+    if (balanceBefore !== null) {
+      const spent = spendUserScan.run(userId);
+      if (spent.changes !== 1) {
+        return res.status(402).json({
+          ok: false,
+          code: 'SCAN_BALANCE_EMPTY',
+          scanBalance: 0,
+          error: 'Баланс сканов исчерпан. Пополните баланс, чтобы продолжить.'
+        });
+      }
+      scanBalance = Number(getUserScanBalance.get(userId).scan_balance);
+    }
+
+    return res.json({ ok: true, data, source: 'direct-api', scanBalance });
   } catch (error) {
     console.error('[api/paytag] ' + paytagid + ': ' + (error?.message || error));
     return res.status(502).json({ error: error?.message || 'Не удалось получить данные QR-кода с НСПК.' });
@@ -279,7 +340,11 @@ app.post('/api/session', (req, res) => {
       photo_url: cleanText(profile.photo_url, 1000),
       now
     });
-    return res.json({ ok: true, isAdmin: userId === adminVkId });
+    const balanceRow = getUserScanBalance.get(userId);
+    const scanBalance = balanceRow && balanceRow.scan_balance !== null
+      ? Number(balanceRow.scan_balance)
+      : null;
+    return res.json({ ok: true, isAdmin: userId === adminVkId, scanBalance });
   } catch (error) {
     return res.status(401).json({ error: 'VK authentication failed' });
   }
