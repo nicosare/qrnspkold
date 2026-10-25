@@ -7,6 +7,7 @@
 <meta name="referrer" content="no-referrer">
 <title>Roadnote — Сканирование</title>
 <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+<script src="scanner.js"></script>
 <script>
 window.addEventListener('DOMContentLoaded', () => {
   if (window.vkBridge && typeof window.vkBridge.send === 'function') {
@@ -57,20 +58,35 @@ h1{font-size:clamp(28px,7vw,35px);line-height:1.12;letter-spacing:-.7px;margin:0
       </svg>
     </div>
     <h1>Сканирование QR-кода</h1>
-    <p class="description">Наведите камеру на QR-код транспорта НСПК. Мы распознаем данные и откроем основную страницу.</p>
+    <p class="description">Откройте встроенный сканер VK и наведите его на QR-код транспорта НСПК. После распознавания данные появятся на основной странице.</p>
     <button class="action" id="scan-button" type="button">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M3 8V4a1 1 0 0 1 1-1h4M16 3h4a1 1 0 0 1 1 1v4M21 16v4a1 1 0 0 1-1 1h-4M8 21H4a1 1 0 0 1-1-1v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="8" y="8" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="2"/></svg>
       Сканировать QR-код
     </button>
+    <div id="scan-status" role="status" aria-live="polite" style="min-height:22px;margin-top:12px;color:#727983;font-size:14px;line-height:1.4"></div>
   </section>
   <div class="footnote">После успешного распознавания данные транспорта загрузятся на основную страницу автоматически.</div>
 </main>
 <script>
-document.getElementById('scan-button').addEventListener('click', () => {
-  const destination = new URL('main.html', window.location.href);
-  const launchParams = window.location.search.slice(1);
-  destination.search = ['scan=1', launchParams].filter(Boolean).join('&');
-  window.location.assign(destination.href);
+const scanButton = document.getElementById('scan-button');
+const scanStatus = document.getElementById('scan-status');
+
+scanButton.addEventListener('click', async () => {
+  if (scanButton.disabled) return;
+  scanButton.disabled = true;
+  scanStatus.textContent = 'Открываем сканер в приложении VK…';
+
+  try {
+    const codeData = await window.roadnoteScanQr();
+    const destination = new URL('main.html', window.location.href);
+    destination.search = window.location.search;
+    destination.searchParams.set('scanned', codeData);
+    window.location.assign(destination.href);
+  } catch (error) {
+    console.warn('Native VK QR scanner failed:', error);
+    scanStatus.textContent = error.message || 'Не удалось открыть встроенный сканер. Откройте мини-приложение в VK на телефоне и попробуйте ещё раз.';
+    scanButton.disabled = false;
+  }
 });
 </script>
 </body>
