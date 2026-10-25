@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import Database from 'better-sqlite3';
 import { chromium } from 'playwright';
+import { chromium } from 'playwright';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,6 +15,8 @@ const appId = String(process.env.VK_APP_ID || '54843054');
 const appSecret = process.env.VK_APP_SECRET || '';
 const adminVkId = String(process.env.ADMIN_VK_ID || '');
 const databasePath = process.env.DATABASE_PATH || '/data/roadnote.sqlite';
+const paytagBrowserTimeoutMs = Math.max(8000, Number(process.env.PAYTAG_BROWSER_TIMEOUT_MS || 25000));
+const paytagFetchesInFlight = new Map();
 const paytagBrowserTimeoutMs = Math.max(8000, Number(process.env.PAYTAG_BROWSER_TIMEOUT_MS || 25000));
 const paytagFetchesInFlight = new Map();
 
