@@ -70,7 +70,6 @@ jobs:
             --exclude='.git/' \
             --exclude='.github/' \
             --exclude='deploy/' \
-            --exclude='*.md' \
             --exclude='.gitignore' \
             -e "ssh -p $PORT -o BatchMode=yes -o StrictHostKeyChecking=yes" \
             ./ "$SERVER_USER@$SERVER_HOST:$TARGET/"
