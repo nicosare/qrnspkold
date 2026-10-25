@@ -662,8 +662,8 @@
             throw new Error('Не найдены параметры VK. Откройте Roadnote через VK Mini App.');
         }
         const encoded = btoa(unescape(encodeURIComponent(launchParams)))
-            .replace(/\\+/g, '-')
-            .replace(/\\//g, '_')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
             .replace(/=+$/g, '');
         return 'VK ' + encoded;
     }
