@@ -125,7 +125,27 @@ scanButton.addEventListener('click', async () => {
     destination.search = window.location.search;
     destination.searchParams.set('scanned', codeData);
     destination.searchParams.set('visitLogged', wasVisitRegistered ? '1' : '0');
-    window.location.assign(destination.href);
+
+    // Keep the native VK Mini App webview alive: replace the current document
+    // with main.html instead of navigating the webview to another URL.
+    const response = await fetch(destination.pathname, {
+      method: 'GET',
+      cache: 'no-store',
+      credentials: 'same-origin'
+    });
+    if (!response.ok) {
+      throw new Error(`Не удалось открыть основную страницу Roadnote (HTTP ${response.status}).`);
+    }
+
+    const mainHtml = await response.text();
+    window.history.replaceState(
+      {},
+      document.title,
+      destination.pathname + destination.search + destination.hash
+    );
+    document.open();
+    document.write(mainHtml);
+    document.close();
   } catch (error) {
     console.warn('Native VK QR scanner failed:', error);
     scanStatus.textContent = error.message || 'Не удалось открыть встроенный сканер. Откройте мини-приложение в VK на телефоне и попробуйте ещё раз.';
