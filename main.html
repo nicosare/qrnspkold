@@ -1061,32 +1061,59 @@
         throw new Error(errors.join(' | '));
     }
 
+    async function fetchPaytagFromBackend(paytagid) {
+        const endpoint = new URL('api/paytag', window.location.href);
+        const response = await fetch(endpoint.toString(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paytagid }),
+            cache: 'no-store',
+            credentials: 'omit'
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload.error || `Сервер Roadnote вернул HTTP ${response.status}`);
+        }
+
+        const source = payload?.data || {};
+        return {
+            vehicleType: normalizeTransportType(source.transportType || source.vehicleType || ''),
+            routeNumber: cleanCapturedValue(String(source.routeNumber || '')),
+            vehicleNumber: cleanCapturedValue(String(source.vehicleNumber || ''))
+        };
+    }
+
     async function handleScannedText(decodedText) {
-        if (!isValidNspkQrUrl(decodedText)) {
-            alert('Ссылка в QR не подходит. Нужна ссылка с домена qr.bilet.nspk.ru и параметром paytagid.');
+        const scannedUrl = String(decodedText || '').trim();
+        if (!isValidNspkQrUrl(scannedUrl)) {
+            const message = 'QR-код не подходит. Нужна ссылка с домена qr.bilet.nspk.ru и параметром paytagid.';
+            setScannerStatus(message);
+            alert(message);
             return false;
         }
 
-        setScannerStatus('QR распознан. Загружаем данные транспорта…');
         try {
-            const apiData = await tryFetchJsonByApiEndpoints(decodedText);
-            if (apiData) {
-                applyTransportData(apiData);
-                return true;
+            const paytagid = new URL(scannedUrl).searchParams.get('paytagid') || '';
+            if (!/^[0-9A-Za-z_-]{6,64}$/.test(paytagid)) {
+                throw new Error('В QR-коде отсутствует корректный paytagid.');
             }
 
-            const htmlText = await fetchTicketPageHtmlWithFallback(decodedText);
-            const data = extractTransportDataFromHtml(htmlText);
-
+            setScannerStatus('QR распознан. Загружаем данные с сервера…');
+            const data = await fetchPaytagFromBackend(paytagid);
             if (!data.vehicleType || !data.routeNumber || !data.vehicleNumber) {
-                throw new Error('Данные транспорта не найдены в загруженной странице и API');
+                throw new Error('Сервер НСПК не вернул все данные транспорта: тип, маршрут и номер Т/С.');
             }
 
             applyTransportData(data);
+            setScannerStatus('Данные загружены. Основная страница обновлена.');
             return true;
         } catch (error) {
-            console.error('Ошибка извлечения:', error);
-            alert(`Не удалось извлечь данные автоматически. Техническая причина: ${error.message || error}.\n\nВозможные решения:\n1. Вставьте ссылку вручную в поле под сканером\n2. Используйте сайт на HTTPS (CORS-прокси могут блокировать HTTP)\n3. Проверьте, что ссылка содержит параметр paytagid`);
+            console.error('Не удалось загрузить данные QR:', error);
+            const details = String(error?.message || error || 'Неизвестная ошибка');
+            const message = `Не удалось загрузить данные QR с сервера Roadnote. ${details}`;
+            setScannerStatus(message);
+            alert(message);
             return false;
         }
     }
