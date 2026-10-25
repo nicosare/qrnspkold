@@ -15,6 +15,8 @@ const adminVkId = String(process.env.ADMIN_VK_ID || '');
 const databasePath = process.env.DATABASE_PATH || '/data/roadnote.sqlite';
 const paytagDirectTimeoutMs = Math.max(3000, Number(process.env.PAYTAG_DIRECT_TIMEOUT_MS || 12000));
 const paytagFetchesInFlight = new Map();
+const liveStreams = new Map();
+const liveTokens = new Map();
 
 if (!appSecret) console.warn('VK_APP_SECRET is not configured: VK-authenticated endpoints will reject requests.');
 if (!adminVkId) console.warn('ADMIN_VK_ID is not configured: admin users page will remain locked.');
