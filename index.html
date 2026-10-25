@@ -869,7 +869,9 @@
     let scanBalanceAssigned = false;
     let currentScanBalance = null;
     let scanAccessUnlimited = false;
-    let entitlementRefreshInterval = null;
+    let entitlementEventSource = null;
+    let entitlementReconnectTimer = null;
+    let entitlementReconnectInProgress = false;
 
     function setScannerStatus(message = '') {
         scannerStatusElement.textContent = message;
@@ -1512,27 +1514,52 @@
       if (session.isAdmin === true) showAdminTools();
       if (!scanBalanceAssigned) setScannerStatus('');
 
-      const refreshEntitlement = async () => {
-        try {
-          const refreshResponse = await fetch(new URL(appBase + 'api/session', window.location.origin), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ launchParams, profile, refreshOnly: true }),
-            cache: 'no-store',
-            credentials: 'omit'
-          });
-          if (!refreshResponse.ok) return;
-          const current = await refreshResponse.json();
-          scanSessionReady = true;
-          updateScanBalance(current.scanBalance, current.subscriptionUntil, current.unlimited, current.subscriptionActive);
-          if (!scanBalanceAssigned) setScannerStatus('');
-        } catch (refreshError) {
-          console.warn('Roadnote entitlement refresh failed:', refreshError);
-        }
+      const connectEntitlementEvents = (token) => {
+        if (entitlementEventSource) entitlementEventSource.close();
+        const eventsUrl = new URL(appBase + 'api/events', window.location.origin);
+        eventsUrl.searchParams.set('token', token);
+        const source = new EventSource(eventsUrl.toString());
+        entitlementEventSource = source;
+        source.addEventListener('entitlement', (event) => {
+          try {
+            const current = JSON.parse(event.data);
+            scanSessionReady = true;
+            updateScanBalance(current.scanBalance, current.subscriptionUntil, current.unlimited, current.subscriptionActive);
+            if (!scanBalanceAssigned) setScannerStatus('');
+          } catch (eventError) {
+            console.warn('Roadnote entitlement event was invalid:', eventError);
+          }
+        });
+        source.onerror = () => {
+          if (entitlementReconnectTimer !== null || entitlementReconnectInProgress) return;
+          source.close();
+          entitlementReconnectTimer = setTimeout(async () => {
+            entitlementReconnectTimer = null;
+            if (entitlementReconnectInProgress) return;
+            entitlementReconnectInProgress = true;
+            try {
+              const refreshResponse = await fetch(new URL(appBase + 'api/session', window.location.origin), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ launchParams, profile, refreshOnly: true }),
+                cache: 'no-store',
+                credentials: 'omit'
+              });
+              if (!refreshResponse.ok) return;
+              const current = await refreshResponse.json();
+              scanSessionReady = true;
+              updateScanBalance(current.scanBalance, current.subscriptionUntil, current.unlimited, current.subscriptionActive);
+              if (!scanBalanceAssigned) setScannerStatus('');
+              if (current.eventsToken) connectEntitlementEvents(current.eventsToken);
+            } catch (refreshError) {
+              console.warn('Roadnote live entitlement reconnect failed:', refreshError);
+            } finally {
+              entitlementReconnectInProgress = false;
+            }
+          }, 3000);
+        };
       };
-      if (entitlementRefreshInterval === null) {
-        entitlementRefreshInterval = setInterval(refreshEntitlement, 3000);
-      }
+      if (session.eventsToken) connectEntitlementEvents(session.eventsToken);
     } catch (error) {
       console.warn('Roadnote session/balance check failed:', error);
       scanSessionReady = false;
