@@ -190,10 +190,15 @@ function normalizePaytagPayload(payload = {}) {
     }
   }
 
+  const rawPrice = pick(['price']);
+  const priceKopecks = rawPrice === '' ? NaN : Number(rawPrice);
+
   return {
     transportType: normalizeTransportType(transportType),
     routeNumber: pick(['routeNumber', 'route_no', 'route_number', 'lineNumber', 'line_number', 'route', 'line']),
-    vehicleNumber: pick(['vehicleNumber', 'vehicle_no', 'vehicle_number', 'transportNumber', 'transport_number', 'carNumber', 'ts'])
+    vehicleNumber: pick(['vehicleNumber', 'vehicle_no', 'vehicle_number', 'transportNumber', 'transport_number', 'carNumber', 'ts']),
+    // The NSPK API represents prices in kopecks; the UI shows rubles.
+    price: Number.isFinite(priceKopecks) && priceKopecks >= 0 ? priceKopecks / 100 : null
   };
 }
 
