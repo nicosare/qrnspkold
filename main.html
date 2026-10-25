@@ -1234,8 +1234,10 @@
         generateQR();
     }
 
-    // Start page logic only after its dependencies are actually available.
-    window.addEventListener('DOMContentLoaded', async function () {
+    // This script is at the end of main.html, so the page markup already exists.
+    // Do not wait for DOMContentLoaded: this document can be injected into the
+    // already-running VK Mini App document, where that event may have fired.
+    (async function bootRoadnoteMainPage() {
         try {
             await window.roadnoteDependenciesReady;
         } catch (error) {
@@ -1246,7 +1248,7 @@
             }
         }
         initializePage();
-    });
+    })();
 </script>
 
 <script>
@@ -1321,7 +1323,9 @@
       console.warn('Roadnote visit registration failed:', error);
     }
   }
-  window.addEventListener('DOMContentLoaded', registerRoadnoteVisit, { once: true });
+  // This script is at the end of the document. Run directly so registration
+  // also works when main.html is loaded into an existing Mini App document.
+  registerRoadnoteVisit();
 })();
 </script>
 
