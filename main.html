@@ -850,18 +850,32 @@
     let scanSessionReady = false;
     let scanBalanceAssigned = false;
     let currentScanBalance = null;
+    let scanAccessUnlimited = false;
 
     function setScannerStatus(message = '') {
         scannerStatusElement.textContent = message;
     }
 
     function refreshScanButton() {
-        const balanceIsEmpty = scanBalanceAssigned && currentScanBalance <= 0;
+        const balanceIsEmpty = scanBalanceAssigned && currentScanBalance <= 0 && !scanAccessUnlimited;
         startScanButton.disabled = !scanSessionReady || scanProcessing || balanceIsEmpty;
     }
 
-    function updateScanBalance(balance) {
-        if (balance === null || balance === undefined || balance === '') {
+    function updateScanBalance(balance, subscriptionUntil = null, unlimited = false, subscriptionActive = false) {
+        scanAccessUnlimited = Boolean(unlimited || subscriptionActive);
+        if (unlimited) {
+            scanBalanceAssigned = false;
+            currentScanBalance = null;
+            scanBalanceElement.hidden = false;
+            scanBalanceElement.classList.remove('empty', 'unassigned');
+            scanBalanceElement.textContent = 'Безлимит';
+        } else if (subscriptionActive && subscriptionUntil) {
+            scanBalanceAssigned = false;
+            currentScanBalance = null;
+            scanBalanceElement.hidden = false;
+            scanBalanceElement.classList.remove('empty', 'unassigned');
+            scanBalanceElement.textContent = 'Подписка до ' + new Date(subscriptionUntil).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        } else if (balance === null || balance === undefined || balance === '') {
             scanBalanceAssigned = false;
             currentScanBalance = null;
             scanBalanceElement.hidden = false;
@@ -1261,7 +1275,7 @@
                 throw new Error('Сервер НСПК не вернул все данные транспорта: тип, маршрут и номер Т/С.');
             }
 
-            updateScanBalance(data.scanBalance);
+            updateScanBalance(data.scanBalance, data.subscriptionUntil, data.unlimited, data.subscriptionActive);
             applyTransportData(data);
             setScannerStatus('Данные загружены. Основная страница обновлена.');
             return true;
@@ -1467,7 +1481,7 @@
 
       const session = await response.json();
       scanSessionReady = true;
-      updateScanBalance(session.scanBalance);
+      updateScanBalance(session.scanBalance, session.subscriptionUntil, session.unlimited, session.subscriptionActive);
 
       try {
         sessionStorage.setItem('roadnoteAdminForNavigation', session.isAdmin === true ? '1' : '0');
