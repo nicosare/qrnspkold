@@ -244,16 +244,9 @@
             color: #424142;
             letter-spacing: 1px;
             line-height: 40px;
-            cursor: pointer;
-            user-select: none;
-            transition: opacity 0.2s;
         }
 
-        .ticket__payment-timer strong:active {
-            opacity: 0.7;
-        }
-
-        .ticket__qrcode {
+.ticket__qrcode {
             margin-bottom: 25px;
             display: flex;
             justify-content: center;
@@ -285,101 +278,8 @@
         }
 
         /* DROPDOWN */
-        .dropdown {
-            position: relative;
-            display: inline-block;
-        }
 
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            background-color: white;
-            min-width: 140px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 1;
-            border-radius: 4px;
-            left: 50%;
-            transform: translateX(-50%);
-            top: 100%;
-            margin-top: 5px;
-        }
-
-        .dropdown-content span {
-            color: #1d1346;
-            padding: 12px 16px;
-            text-decoration: none;
-            display: block;
-            cursor: pointer;
-            text-align: center;
-            font-size: 18px;
-        }
-
-        .dropdown-content span:hover {
-            background-color: #f5f1e8;
-        }
-
-        .dropdown:hover .dropdown-content {
-            display: block;
-        }
-
-        .editable {
-            cursor: pointer;
-            position: relative;
-            display: inline-block;
-        }
-
-        .editable:hover::after {
-            content: '✎';
-            position: absolute;
-            right: -20px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 14px;
-            color: #b5b5b5;
-        }
-
-        .edit-input {
-            font-family: 'Circe', sans-serif;
-            font-size: 20px;
-            font-weight: 600;
-            color: #424142;
-            background: transparent;
-            border: 1px solid #424142;
-            border-radius: 3px;
-            padding: 2px 5px;
-            text-align: center;
-            width: 80px;
-            outline: none;
-        }
-
-        .edit-input-small {
-            font-family: 'Circe', sans-serif;
-            font-size: 16px;
-            color: #424142;
-            background: transparent;
-            border: 1px solid #424142;
-            border-radius: 3px;
-            padding: 1px 3px;
-            text-align: center;
-            width: 60px;
-            outline: none;
-        }
-
-        .edit-input-price {
-            font-family: 'Circe', sans-serif;
-            font-size: 48px;
-            font-weight: bold;
-            color: #424142;
-            background: transparent;
-            border: 1px solid #424142;
-            border-radius: 3px;
-            padding: 2px 5px;
-            text-align: center;
-            width: 100px;
-            outline: none;
-        }
-
-        .admin-tools {
+.admin-tools {
             width: 100%;
             max-width: 480px;
             padding: 0 16px 18px;
@@ -440,6 +340,18 @@
             text-decoration: underline;
         }
 
+        .scan-balance-status {
+            margin-top: 10px;
+            color: #626873;
+            font-size: 14px;
+            line-height: 1.4;
+            text-align: center;
+        }
+        .scan-balance-status.empty {
+            color: #b42318;
+            font-weight: 700;
+        }
+
             .scan-again-button {
             display: inline-flex;
             align-items: center;
@@ -476,19 +388,12 @@
     <div class="ticket">
         <div class="payment-info-details">
             <div class="payment-info-details__vehicle-type">
-                <span class="dropdown" id="vehicle-type-dropdown">
-                    <span class="editable" id="vehicle-type">Трамвай</span>
-                    <div class="dropdown-content">
-                        <span data-value="Трамвай">Трамвай</span>
-                        <span data-value="Автобус">Автобус</span>
-                        <span data-value="Троллейбус">Троллейбус</span>
-                    </div>
-                </span>: 
-                <span class="editable" id="route-number"><span class="route-number-symbol">№</span>15</span>
+                <span id="vehicle-type">Трамвай</span>:
+                <span id="route-number"><span class="route-number-symbol">№</span>15</span>
             </div>
 
             <div class="payment-info-details__price">
-                <span class="editable" id="price-value">42</span>
+                <span id="price-value">42</span>
                 <span class="payment-info-details__rouble">₽</span>
             </div>
 
@@ -498,7 +403,7 @@
 
             <div class="payment-info-details__vehicle-number">
                 <span>Т/С: </span>
-                <span class="editable" id="vehicle-number">541</span>
+                <span id="vehicle-number">541</span>
             </div>
         </div>
 
@@ -519,7 +424,8 @@
         <div class="instructions">
             Предъявите контролеру QR-код.
         </div>
-        <button class="scan-again-button" id="scan-again-button" type="button">Сканировать QR-код</button>
+        <button class="scan-again-button" id="scan-again-button" type="button" disabled>Сканировать QR-код</button>
+        <div id="scan-balance-status" class="scan-balance-status" role="status" aria-live="polite" hidden></div>
         <div id="scan-status" role="status" aria-live="polite" style="min-height:20px;margin-top:10px;color:#626873;font-size:14px;line-height:1.4;text-align:center"></div>
     </div>
 </div>
@@ -547,6 +453,7 @@
     const ticketNumberElement = document.getElementById('ticket-number');
     const priceElement = document.getElementById('price-value');
     const scannerStatusElement = document.getElementById('scan-status');
+    const scanBalanceElement = document.getElementById('scan-balance-status');
     const scanAgainButton = document.getElementById('scan-again-button');
 
     let timerInterval = null;
@@ -640,85 +547,6 @@
         });
     }
 
-    function makeEditable(element, options = {}) {
-        const originalText = element.textContent;
-        const input = document.createElement('input');
-        input.type = 'text';
-        
-        if (element.id === 'price-value') {
-            input.className = 'edit-input-price';
-        } else if (element.id === 'vehicle-number') {
-            input.className = 'edit-input-small';
-        } else {
-            input.className = 'edit-input';
-        }
-        
-        let displayValue = originalText;
-        if (element.id === 'route-number') {
-            displayValue = originalText.replace('№', '').trim();
-        }
-        
-        input.value = displayValue;
-        
-        element.textContent = '';
-        element.appendChild(input);
-        input.focus();
-        input.select();
-        
-        function save() {
-            let newValue = input.value.trim();
-            
-            // Валидация для цены (только числа)
-            if (element.id === 'price-value') {
-                if (!/^\d+$/.test(newValue)) {
-                    alert('Введите только цифры для стоимости');
-                    newValue = originalText;
-                }
-            }
-            
-            if (element.id === 'route-number' && newValue !== '') {
-                newValue = '№' + newValue;
-            }
-            
-            if (element.id === 'route-number') {
-                element.innerHTML = formatRouteNumber(newValue);
-            } else {
-                element.textContent = newValue;
-            }
-            
-            // Сохраняем в localStorage
-            if (element.id === 'price-value') {
-                localStorage.setItem('ticketPrice', newValue);
-            } else if (element.id === 'route-number') {
-                localStorage.setItem('routeNumber', newValue);
-            } else if (element.id === 'vehicle-number') {
-                localStorage.setItem('vehicleNumber', newValue);
-            } else if (element.id === 'vehicle-type') {
-                localStorage.setItem('vehicleType', newValue);
-            }
-            
-            generateQR();
-            
-            // Восстанавливаем обработчики событий
-            if (['route-number', 'vehicle-number', 'price-value'].includes(element.id)) {
-                element.addEventListener('click', handleEditableClick);
-            }
-        }
-        
-        input.addEventListener('blur', save);
-        input.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                save();
-            }
-        });
-    }
-
-    function handleEditableClick(e) {
-        if (e.target === vehicleTypeElement) return;
-        makeEditable(e.target);
-        e.target.removeEventListener('click', handleEditableClick);
-    }
-
     function loadTimer() {
         // Пытаемся загрузить сохраненное время старта
         const savedStartTime = localStorage.getItem('timerStartTime');
@@ -789,9 +617,55 @@
     }
 
     let scanProcessing = false;
+    let scanSessionReady = false;
+    let scanBalanceAssigned = false;
+    let currentScanBalance = null;
 
     function setScannerStatus(message = '') {
         scannerStatusElement.textContent = message;
+    }
+
+    function refreshScanButton() {
+        const balanceIsEmpty = scanBalanceAssigned && currentScanBalance <= 0;
+        scanAgainButton.disabled = !scanSessionReady || scanProcessing || balanceIsEmpty;
+    }
+
+    function updateScanBalance(balance) {
+        if (balance === null || balance === undefined || balance === '') {
+            scanBalanceAssigned = false;
+            currentScanBalance = null;
+            scanBalanceElement.hidden = true;
+            scanBalanceElement.classList.remove('empty');
+        } else {
+            const numericBalance = Number(balance);
+            if (!Number.isSafeInteger(numericBalance)) {
+                scanBalanceAssigned = false;
+                currentScanBalance = null;
+                scanBalanceElement.hidden = true;
+                scanBalanceElement.classList.remove('empty');
+            } else {
+                scanBalanceAssigned = true;
+                currentScanBalance = Math.max(0, numericBalance);
+                scanBalanceElement.hidden = false;
+                scanBalanceElement.classList.toggle('empty', currentScanBalance <= 0);
+                scanBalanceElement.textContent = currentScanBalance <= 0
+                    ? 'Баланс сканов: 0. Сканирование недоступно.'
+                    : 'Осталось сканов: ' + currentScanBalance;
+            }
+        }
+        refreshScanButton();
+    }
+
+    function getVkAuthorizationHeader() {
+        const launchParams = window.location.search.slice(1);
+        if (!launchParams) {
+            throw new Error('Не найдены параметры VK. Откройте Roadnote через VK Mini App.');
+        }
+        const encoded = btoa(unescape(encodeURIComponent(launchParams)))
+            .replace(/\\+/g, '-')
+            .replace(/\\//g, '_')
+            .replace(/=+$/g, '');
+        return 'VK ' + encoded;
     }
 
     function resetPaymentTimer() {
@@ -828,6 +702,11 @@
         if (data.vehicleNumber) {
             vehicleNumberElement.textContent = data.vehicleNumber;
             localStorage.setItem('vehicleNumber', data.vehicleNumber);
+        }
+
+        if (Number.isFinite(data.price)) {
+            priceElement.textContent = String(data.price);
+            localStorage.setItem('ticketPrice', String(data.price));
         }
 
         resetPaymentTimer();
@@ -1098,7 +977,10 @@
         const endpoint = new URL(appBase + 'api/paytag', window.location.origin);
         const response = await fetch(endpoint.toString(), {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': getVkAuthorizationHeader()
+            },
             body: JSON.stringify({ paytagid }),
             cache: 'no-store',
             credentials: 'omit'
@@ -1106,6 +988,10 @@
 
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
+            if (payload.code === 'SCAN_BALANCE_EMPTY') {
+                scanSessionReady = true;
+                updateScanBalance(payload.scanBalance ?? 0);
+            }
             throw new Error(payload.error || `Сервер Roadnote вернул HTTP ${response.status}`);
         }
 
@@ -1113,7 +999,9 @@
         return {
             vehicleType: normalizeTransportType(source.transportType || source.vehicleType || ''),
             routeNumber: cleanCapturedValue(String(source.routeNumber || '')),
-            vehicleNumber: cleanCapturedValue(String(source.vehicleNumber || ''))
+            vehicleNumber: cleanCapturedValue(String(source.vehicleNumber || '')),
+            price: Number.isFinite(source.price) ? source.price : null,
+            scanBalance: Object.prototype.hasOwnProperty.call(payload, 'scanBalance') ? payload.scanBalance : null
         };
     }
 
@@ -1138,6 +1026,7 @@
                 throw new Error('Сервер НСПК не вернул все данные транспорта: тип, маршрут и номер Т/С.');
             }
 
+            updateScanBalance(data.scanBalance);
             applyTransportData(data);
             setScannerStatus('Данные загружены. Основная страница обновлена.');
             return true;
@@ -1154,7 +1043,7 @@
     async function processScannedCode(code) {
         if (scanProcessing) return;
         scanProcessing = true;
-        scanAgainButton.disabled = true;
+        refreshScanButton();
         try {
             const success = await handleScannedText(code);
             if (success) {
@@ -1165,14 +1054,14 @@
             setScannerStatus(error.message || 'Не удалось загрузить данные QR-кода.');
         } finally {
             scanProcessing = false;
-            scanAgainButton.disabled = false;
+            refreshScanButton();
         }
     }
 
     async function scanWithVkBridge() {
         if (scanProcessing) return;
         scanProcessing = true;
-        scanAgainButton.disabled = true;
+        refreshScanButton();
         setScannerStatus('Открываем сканер в приложении VK…');
         try {
             if (typeof window.roadnoteScanQr !== 'function') {
@@ -1188,7 +1077,7 @@
             setScannerStatus(error.message || 'Не удалось открыть сканер VK. Проверьте, что приложение запущено внутри VK на телефоне.');
         } finally {
             scanProcessing = false;
-            scanAgainButton.disabled = false;
+            refreshScanButton();
         }
     }
 
@@ -1196,25 +1085,8 @@
         loadFromLocalStorage();
         loadTimer();
 
-        routeNumberElement.addEventListener('click', handleEditableClick);
-        vehicleNumberElement.addEventListener('click', handleEditableClick);
-        priceElement.addEventListener('click', handleEditableClick);
-
-        const dropdownOptions = document.querySelectorAll('.dropdown-content span');
-        dropdownOptions.forEach(option => {
-            option.addEventListener('click', function() {
-                vehicleTypeElement.textContent = this.getAttribute('data-value');
-                localStorage.setItem('vehicleType', this.getAttribute('data-value'));
-                generateQR();
-            });
-        });
-
-        timerElement.addEventListener('click', () => {
-            resetPaymentTimer();
-            generateQR();
-        });
-
         scanAgainButton.addEventListener('click', scanWithVkBridge);
+        refreshScanButton();
 
         // If the start page handed off a native VK QR result, process it here.
         const launchUrl = new URL(window.location.href);
@@ -1256,26 +1128,18 @@
   }
 
   async function registerRoadnoteVisit() {
-    const launchUrl = new URL(window.location.href);
-    const wasRegisteredOnStartPage = launchUrl.searchParams.get('visitLogged') === '1';
-
-    if (launchUrl.searchParams.has('visitLogged')) {
-      launchUrl.searchParams.delete('visitLogged');
-      window.history.replaceState({}, document.title, launchUrl.pathname + launchUrl.search + launchUrl.hash);
-    }
-
-    if (wasRegisteredOnStartPage) {
-      try {
-        if (sessionStorage.getItem('roadnoteAdminForNavigation') === '1') showAdminTools();
-      } catch (error) {
-        console.warn('Could not restore Roadnote admin state:', error);
-      }
+    if (!window.vkBridge || typeof window.vkBridge.send !== 'function') {
+      setScannerStatus('Откройте Roadnote внутри VK Mini App, чтобы проверить баланс сканов.');
+      refreshScanButton();
       return;
     }
 
-    if (!window.vkBridge || typeof window.vkBridge.send !== 'function') return;
     const launchParams = window.location.search.slice(1);
-    if (!launchParams) return;
+    if (!launchParams) {
+      setScannerStatus('Не найдены параметры VK. Закройте приложение и откройте его заново из VK.');
+      refreshScanButton();
+      return;
+    }
 
     let profile = {};
     try {
@@ -1303,14 +1167,28 @@
         cache: 'no-store',
         credentials: 'omit'
       });
-      if (!response.ok) return;
+
+      if (!response.ok) {
+        scanSessionReady = false;
+        refreshScanButton();
+        setScannerStatus('Не удалось подтвердить пользователя VK и проверить баланс. Перезапустите Mini App.');
+        return;
+      }
+
       const session = await response.json();
+      scanSessionReady = true;
+      updateScanBalance(session.scanBalance);
+
       try {
         sessionStorage.setItem('roadnoteAdminForNavigation', session.isAdmin === true ? '1' : '0');
       } catch (_) {}
       if (session.isAdmin === true) showAdminTools();
+      if (!scanBalanceAssigned) setScannerStatus('');
     } catch (error) {
-      console.warn('Roadnote visit registration failed:', error);
+      console.warn('Roadnote session/balance check failed:', error);
+      scanSessionReady = false;
+      refreshScanButton();
+      setScannerStatus('Не удалось проверить баланс сканов. Проверьте подключение и перезапустите Mini App.');
     }
   }
   // This script is at the end of the document. Run directly so registration
