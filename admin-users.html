@@ -15,25 +15,28 @@ main{width:100%;max-width:none;margin:0;padding:clamp(12px,2vw,24px) clamp(8px,1
 h1{font-size:clamp(23px,5vw,30px);line-height:1.15;letter-spacing:-.5px;margin:0 0 6px}
 .sub{color:var(--muted);font-size:14px}
 .count{flex-shrink:0;font-weight:750;background:var(--soft);color:#1766bc;padding:8px 11px;border-radius:12px;white-space:nowrap}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:clamp(12px,3vw,18px);box-shadow:0 5px 22px #15243b08}
-.toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:9px;margin-bottom:16px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px;box-shadow:0 5px 22px #15243b08}
+.toolbar{position:sticky;top:0;z-index:10;display:grid;grid-template-columns:minmax(180px,1fr) minmax(180px,auto) auto;gap:8px;margin:0 0 10px;padding:8px 0 10px;background:var(--card);border-bottom:1px solid var(--line)}
 input,select,button{min-height:44px;font:inherit;border-radius:11px;padding:10px 12px;border:1px solid var(--line);background:#fff;color:var(--text);min-width:0}
 input{width:100%}input:focus,select:focus,button:focus-visible,.user-card:focus-visible{outline:2px solid #2787f5;outline-offset:2px}
 button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-color:var(--accent);color:#fff;padding-inline:16px}
-.cards{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
-.user-card{display:block;min-width:0;padding:15px;color:inherit;text-decoration:none;background:#fff;border:1px solid var(--line);border-radius:15px;transition:border-color .15s,transform .15s,box-shadow .15s}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));align-items:start;gap:9px}
+.user-card{display:block;min-width:0;padding:11px 12px;color:inherit;text-decoration:none;background:#fff;border:1px solid var(--line);border-radius:12px;transition:border-color .15s,box-shadow .15s}
 .user-card:hover{border-color:#b6d5ff;box-shadow:0 5px 18px #15243b0c}
 .user-card:active{transform:scale(.99)}
-.person{display:flex;align-items:center;gap:11px;min-width:0;margin-bottom:14px}
-.avatar{width:48px;height:48px;flex:0 0 48px;border-radius:50%;object-fit:cover;background:#e7edf5;display:grid;place-items:center;color:#52708e;font-weight:750}
+.person{display:flex;align-items:center;gap:9px;min-width:0;margin-bottom:9px}
+.avatar{width:38px;height:38px;flex:0 0 38px;border-radius:50%;object-fit:cover;background:#e7edf5;display:grid;place-items:center;color:#52708e;font-weight:750}
 .person-text{min-width:0}.name{font-size:16px;font-weight:750;line-height:1.25;overflow-wrap:anywhere}.vk-id{font-size:12px;color:var(--accent);margin-top:4px}
 .open-hint{font-size:12px;color:var(--muted);margin-top:3px}
-.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-.stat{min-width:0;background:#f7f8fa;border-radius:10px;padding:9px 10px}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.stat{min-width:0;background:#f7f8fa;border-radius:8px;padding:7px 8px}
 .stat-label{display:block;color:var(--muted);font-size:11px;line-height:1.3;margin-bottom:4px}
 .stat-value{display:block;font-size:13px;font-weight:650;overflow-wrap:anywhere}
-.visits{display:inline-flex;align-items:center;gap:5px;margin-top:11px;padding:5px 9px;border-radius:8px;background:var(--soft);color:#1766bc;font-size:12px;font-weight:750}
-.entitlement{margin-top:13px;padding-top:13px;border-top:1px solid var(--line)}
+.visits{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:4px 7px;border-radius:7px;background:var(--soft);color:#1766bc;font-size:11px;font-weight:750}
+.entitlement{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+ .manage summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0 1px;font-size:12px;font-weight:750;color:#1766bc;list-style:none}
+ .manage summary::-webkit-details-marker{display:none}.manage summary::after{content:'＋';font-size:15px}.manage[open] summary::after{content:'−'}
+ .manage-body{padding-top:8px}.manage .grant-section{margin-top:9px}.manage .grant-section:first-child{margin-top:0}
 .entitlement-status{font-size:14px;font-weight:750;margin-bottom:10px}
 .entitlement-status small{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:3px}
 .grant-section{margin-top:12px}
@@ -50,9 +53,9 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 .action-status.error{color:#b42318}
 .status{padding:30px 12px;text-align:center;color:var(--muted)}.error{color:#b42318}.foot{font-size:12px;line-height:1.5;color:var(--muted);margin-top:16px}
 @media(max-width:600px){
- main{padding-top:16px}.top{align-items:flex-start;margin-bottom:16px}.sub{font-size:13px}.count{font-size:13px;padding:7px 9px}
- .toolbar{grid-template-columns:minmax(0,1fr) auto}.toolbar input{grid-column:1/-1}.toolbar select{width:100%}.primary{padding-inline:13px}
- .cards{grid-template-columns:minmax(0,1fr);gap:10px}.user-card{padding:13px}.person{margin-bottom:12px}.avatar{width:46px;height:46px;flex-basis:46px}
+ main{padding-top:12px}.top{align-items:flex-start;margin-bottom:12px}.sub{font-size:12px}.count{font-size:12px;padding:6px 8px}
+ .toolbar{grid-template-columns:minmax(0,1fr) auto;top:0}.toolbar input{grid-column:1/-1;grid-row:1}.toolbar select{grid-column:1;grid-row:2;min-width:0}.toolbar button{grid-column:2;grid-row:2}.primary{padding-inline:11px}
+ .cards{grid-template-columns:minmax(0,1fr);gap:8px}.user-card{padding:10px}.person{margin-bottom:8px}.avatar{width:38px;height:38px;flex-basis:38px}
  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(min-width:420px) and (max-width:600px){.cards{grid-template-columns:minmax(0,1fr)}.user-card{padding:12px}.person{align-items:flex-start;gap:8px}.avatar{width:40px;height:40px;flex-basis:40px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.stat{padding:8px}.name{font-size:15px}}
@@ -67,8 +70,11 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 </header>
 <section class="panel">
  <div class="toolbar">
-  <input id="search" type="search" placeholder="Поиск по имени или VK ID" autocomplete="off" aria-label="Поиск пользователей">
+  <input id="search" type="search" placeholder="Имя, VK ID или транспорт №" autocomplete="off" aria-label="Поиск пользователей">
   <select id="sort" aria-label="Сортировка">
+   <option value="scans">Больше сканов</option>
+   <option value="subscription">Скоро истекает подписка</option>
+   <option value="lastscan">Последний скан</option>
    <option value="recent">Последние посещения</option>
    <option value="first">Первые посещения</option>
    <option value="visits">Число посещений</option>
@@ -103,34 +109,51 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  function render(){
    const q=search.value.trim().toLowerCase();
-   const filtered=users.filter(u=>(u.first_name+' '+u.last_name+' '+u.vk_id).toLowerCase().includes(q));
-   filtered.sort((a,b)=>sort.value==='visits'?b.visit_count-a.visit_count:sort.value==='name'?(a.last_name+a.first_name).localeCompare(b.last_name+b.first_name,'ru'):sort.value==='first'?a.first_seen.localeCompare(b.first_seen):b.last_seen.localeCompare(a.last_seen));
+   const filtered=users.filter(u=>(u.first_name+' '+u.last_name+' '+u.vk_id+' '+(u.last_transport_number||'')).toLowerCase().includes(q));
+   filtered.sort((a,b)=>{
+     if(sort.value==='scans') return (b.scan_balance??-1)-(a.scan_balance??-1);
+     if(sort.value==='subscription') {
+       const ae=a.subscription_until&&Date.parse(a.subscription_until)>Date.now()?Date.parse(a.subscription_until):Infinity;
+       const be=b.subscription_until&&Date.parse(b.subscription_until)>Date.now()?Date.parse(b.subscription_until):Infinity;
+       return ae-be;
+     }
+     if(sort.value==='lastscan') return (b.last_scan_at||'').localeCompare(a.last_scan_at||'');
+     if(sort.value==='visits') return b.visit_count-a.visit_count;
+     if(sort.value==='name') return (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name,'ru');
+     return b.last_seen.localeCompare(a.last_seen);
+   });
    cards.innerHTML=filtered.map(u=>{
      const name=(u.first_name+' '+u.last_name).trim()||'Пользователь VK';
      const avatar=u.photo_url?'<img class="avatar" src="'+esc(u.photo_url)+'" alt="" referrerpolicy="no-referrer" loading="lazy">':'<span class="avatar" aria-hidden="true">VK</span>';
      const profile='https://vk.com/id'+encodeURIComponent(u.vk_id);
      const subscriptionActive=Boolean(u.subscription_until && Date.parse(u.subscription_until)>Date.now());
-     const entitlementStatus=u.unlimited?'Безлимит включён':subscriptionActive?'Подписка активна':u.scan_balance===null||u.scan_balance===undefined?'Баланс не назначен':('Баланс: '+u.scan_balance+' '+(Number(u.scan_balance)===1?'скан':Number(u.scan_balance)>=2&&Number(u.scan_balance)<=4?'скана':'сканов'));
+     const entitlementStatus=u.unlimited?'Безлимит':subscriptionActive?'Подписка':u.scan_balance===null||u.scan_balance===undefined?'Баланс не назначен':(''+u.scan_balance+' '+(Number(u.scan_balance)===1?'скан':Number(u.scan_balance)>=2&&Number(u.scan_balance)<=4?'скана':'сканов'));
      const subscriptionDetail=subscriptionActive?'<small>'+esc(remaining(u.subscription_until))+' · до '+esc(new Date(u.subscription_until).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</small>':'';
+     const lastScan=u.last_scan_at?date(u.last_scan_at):'Ещё не сканировал';
+     const transport=u.last_transport_number?'Транспорт № '+u.last_transport_number:'Транспорт № —';
      return '<article class="user-card" data-user-card="'+esc(u.vk_id)+'">'+
-       '<div class="person">'+avatar+'<div class="person-text"><a href="'+profile+'" target="_blank" rel="noopener noreferrer" class="name" style="color:inherit;text-decoration:none">'+esc(name)+'</a><div class="vk-id">VK ID: '+esc(u.vk_id)+'</div><div class="open-hint">Открыть профиль ↗</div></div></div>'+
-       '<div class="stats"><div class="stat"><span class="stat-label">Первый вход</span><span class="stat-value">'+esc(date(u.first_seen))+'</span></div>'+
-       '<div class="stat"><span class="stat-label">Последний вход</span><span class="stat-value">'+esc(date(u.last_seen))+'</span></div></div>'+
-       '<div class="visits">Посещений: '+esc(u.visit_count)+'</div>'+
+       '<div class="person">'+avatar+'<div class="person-text"><a href="'+profile+'" target="_blank" rel="noopener noreferrer" class="name" style="color:inherit;text-decoration:none">'+esc(name)+'</a><div class="vk-id">VK ID: '+esc(u.vk_id)+' · '+esc(u.visit_count)+' посещ.</div></div></div>'+
+       '<div class="stats">'+
+         '<div class="stat"><span class="stat-label">Баланс сканов</span><span class="stat-value">'+esc(u.unlimited?'Безлимит':(u.scan_balance===null||u.scan_balance===undefined?'Не назначен':u.scan_balance))+'</span></div>'+
+         '<div class="stat"><span class="stat-label">Подписка</span><span class="stat-value">'+esc(subscriptionActive?new Date(u.subscription_until).toLocaleDateString('ru-RU'):(u.subscription_until?'Истекла':'Нет'))+'</span></div>'+
+         '<div class="stat"><span class="stat-label">Последний скан</span><span class="stat-value">'+esc(lastScan)+'</span></div>'+
+         '<div class="stat"><span class="stat-label">Последний транспорт</span><span class="stat-value">'+esc(transport)+'</span></div>'+
+       '</div>'+
        '<div class="entitlement"><div class="entitlement-status">'+esc(entitlementStatus)+subscriptionDetail+'</div>'+
-       '<div class="grant-section"><div class="grant-section-title">ПАКЕТЫ СКАНОВ</div><div class="preset-grid">'+
-       '<button class="primary" type="button" data-action="grant-pack" data-amount="9">9 сканов<span>Пакет 9</span></button>'+
-       '<button class="primary" type="button" data-action="grant-pack" data-amount="29">29 сканов<span>Пакет 29</span></button>'+
-       '<button class="primary" type="button" data-action="grant-pack" data-amount="49">49 сканов<span>Пакет 49</span></button></div>'+
-       '<div class="grant-grid"><input type="number" min="1" max="100000" step="1" value="9" aria-label="Своё количество сканов" data-pack-input><button class="primary" type="button" data-action="grant-pack-custom">Начислить своё</button></div></div>'+
-       '<div class="grant-section"><div class="grant-section-title">ПОДПИСКИ</div><div class="preset-grid">'+
-       '<button class="primary" type="button" data-action="grant-months" data-months="1">1 месяц<span>Месяц</span></button>'+
-       '<button class="primary" type="button" data-action="grant-months" data-months="3">3 месяца<span>Квартал</span></button>'+
-       '<button class="primary" type="button" data-action="grant-months" data-months="6">6 месяцев<span>Полгода</span></button></div>'+
-       '<div class="grant-grid"><input type="number" min="1" max="120" step="1" value="1" aria-label="Своё количество месяцев" data-months-input><button class="primary" type="button" data-action="grant-months-custom">Начислить своё</button></div></div>'+
+       '<details class="manage"><summary>Управление доступом</summary><div class="manage-body">'+
+       '<div class="grant-section"><div class="grant-section-title">СКАНЫ</div><div class="preset-grid">'+
+       '<button class="primary" type="button" data-action="grant-pack" data-amount="9">+9</button>'+
+       '<button class="primary" type="button" data-action="grant-pack" data-amount="29">+29</button>'+
+       '<button class="primary" type="button" data-action="grant-pack" data-amount="49">+49</button></div>'+
+       '<div class="grant-grid"><input type="number" min="1" max="100000" step="1" value="9" aria-label="Своё количество сканов" data-pack-input><button class="primary" type="button" data-action="grant-pack-custom">Начислить</button></div></div>'+
+       '<div class="grant-section"><div class="grant-section-title">ПОДПИСКА</div><div class="preset-grid">'+
+       '<button class="primary" type="button" data-action="grant-months" data-months="1">+1 мес.</button>'+
+       '<button class="primary" type="button" data-action="grant-months" data-months="3">+3 мес.</button>'+
+       '<button class="primary" type="button" data-action="grant-months" data-months="6">+6 мес.</button></div>'+
+       '<div class="grant-grid"><input type="number" min="1" max="120" step="1" value="1" aria-label="Своё количество месяцев" data-months-input><button class="primary" type="button" data-action="grant-months-custom">Начислить</button></div></div>'+
        '<button class="unlimited-toggle" type="button" data-action="toggle-unlimited">'+(u.unlimited?'Отключить безлимит':'Включить безлимит')+'</button>'+
-       '<div class="action-status" aria-live="polite"></div></div></article>';
-      }).join('');
+       '<div class="action-status" aria-live="polite"></div></div></details></div></article>';
+     }).join('');
    status.hidden=filtered.length>0;
    status.className='status';
    status.textContent=users.length?'По вашему запросу ничего не найдено':'Пока нет зарегистрированных пользователей';
