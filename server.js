@@ -102,6 +102,13 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_referrals_inviter
     ON referrals(inviter_vk_id, created_at DESC);
+  CREATE TABLE IF NOT EXISTS offer_config (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    draft_json TEXT NOT NULL,
+    published_json TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    published_at TEXT NOT NULL
+  );
 `);
 
 // Existing databases predate per-user scan balances. NULL means the balance
@@ -322,6 +329,154 @@ function cleanText(value, maxLength = 120) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
 }
 
+const DEFAULT_OFFER_CONFIG = {
+  version: 1,
+  headline: 'Предложения',
+  lead: 'Выбирай удобный формат — оплата и подключение появятся чуть позже.',
+  topBadge: 'Скоро',
+  note: 'Цены и подключение появятся здесь позже',
+  showNote: true,
+  sections: [
+    { id: 'scan-packs', title: 'Пакеты сканирований', icon: '↗', description: '', sortOrder: 10, visible: true },
+    { id: 'subscription', title: 'Подписка', icon: '✦', description: '', sortOrder: 20, visible: true }
+  ],
+  offers: [
+    { id: 'scan-9', sectionId: 'scan-packs', type: 'scan_pack', title: 'Старт', description: 'Попробовать и пользоваться время от времени', quantity: 9, unitLabel: 'сканов', price: 69, oldPrice: 99, showPrice: false, badge: 'Скоро', style: 'default', sortOrder: 10, visible: true },
+    { id: 'scan-29', sectionId: 'scan-packs', type: 'scan_pack', title: 'Оптимальный', description: 'Запас сканирований на каждый день', quantity: 29, unitLabel: 'сканов', price: 179, oldPrice: 249, showPrice: false, badge: 'Скоро', style: 'default', sortOrder: 20, visible: true },
+    { id: 'scan-49', sectionId: 'scan-packs', type: 'scan_pack', title: 'Большой запас', description: 'Реже пополнять баланс и не отвлекаться', quantity: 49, unitLabel: 'сканов', price: 279, oldPrice: 369, showPrice: false, badge: 'Скоро', style: 'default', sortOrder: 30, visible: true },
+    { id: 'sub-1', sectionId: 'subscription', type: 'subscription', title: '', description: 'Для регулярного использования', quantity: 1, unitLabel: 'месяц', price: 179, oldPrice: 249, showPrice: false, badge: 'Скоро', style: 'featured', sortOrder: 10, visible: true },
+    { id: 'sub-3', sectionId: 'subscription', type: 'subscription', title: '', description: 'Удобный вариант на сезон', quantity: 3, unitLabel: 'месяца', price: 439, oldPrice: 549, showPrice: false, badge: 'Скоро', style: 'default', sortOrder: 20, visible: true },
+    { id: 'sub-6', sectionId: 'subscription', type: 'subscription', title: '', description: 'Подключить надолго и забыть о пополнении', quantity: 6, unitLabel: 'месяцев', price: 699, oldPrice: 849, showPrice: false, badge: 'Скоро', style: 'default', sortOrder: 30, visible: true }
+  ]
+};
+
+const nowForOfferSeed = new Date().toISOString();
+const defaultOfferJson = JSON.stringify(DEFAULT_OFFER_CONFIG);
+db.prepare(`
+  INSERT OR IGNORE INTO offer_config (id, draft_json, published_json, updated_at, published_at)
+  VALUES (1, ?, ?, ?, ?)
+`).run(defaultOfferJson, defaultOfferJson, nowForOfferSeed, nowForOfferSeed);
+
+function normalizeOfferConfig(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new Error('Переданы некорректные настройки предложений.');
+  }
+  if (!Array.isArray(input.sections) || !Array.isArray(input.offers)) {
+    throw new Error('В настройках должны быть разделы и карточки.');
+  }
+  if (input.sections.length < 1 || input.sections.length > 20) {
+    throw new Error('Добавь от 1 до 20 разделов.');
+  }
+  if (input.offers.length > 100) {
+    throw new Error('Можно настроить не более 100 карточек.');
+  }
+
+  const safeId = (value, label) => {
+    const id = String(value || '').trim();
+    if (!/^[a-zA-Z0-9_-]{1,64}$/.test(id)) throw new Error('Некорректный идентификатор: ' + label + '.');
+    return id;
+  };
+  const priceValue = (value, label) => {
+    if (value === null || value === undefined || value === '') return null;
+    const num = Number(value);
+    if (!Number.isFinite(num) || num < 0 || num > 10000000) {
+      throw new Error('Проверь поле «' + label + '»: цена должна быть от 0 до 10 000 000 ₽.');
+    }
+    return Math.round(num * 100) / 100;
+  };
+  const orderValue = value => {
+    const num = Number(value);
+    return Number.isSafeInteger(num) ? Math.max(0, Math.min(10000, num)) : 0;
+  };
+
+  const sectionIds = new Set();
+  const sections = input.sections.map((section, index) => {
+    const id = safeId(section?.id, 'раздел');
+    if (sectionIds.has(id)) throw new Error('Идентификаторы разделов должны отличаться.');
+    sectionIds.add(id);
+    const title = cleanText(section?.title, 80);
+    if (!title) throw new Error('Укажи название каждого раздела.');
+    return {
+      id,
+      title,
+      icon: cleanText(section?.icon, 8),
+      description: cleanText(section?.description, 180),
+      sortOrder: orderValue(section?.sortOrder ?? (index + 1) * 10),
+      visible: section?.visible !== false
+    };
+  });
+
+  const offerIds = new Set();
+  const offers = input.offers.map((offer, index) => {
+    const id = safeId(offer?.id, 'карточка');
+    if (offerIds.has(id)) throw new Error('Идентификаторы карточек должны отличаться.');
+    offerIds.add(id);
+    const sectionId = safeId(offer?.sectionId, 'раздел карточки');
+    if (!sectionIds.has(sectionId)) throw new Error('У карточки «' + cleanText(offer?.title, 80) + '» выбран несуществующий раздел.');
+    const type = ['scan_pack', 'subscription', 'custom'].includes(offer?.type) ? offer.type : 'custom';
+    const title = cleanText(offer?.title, 80);
+    if (type !== 'subscription' && !title) throw new Error('Укажи название карточки.');
+    const quantity = Number(offer?.quantity);
+    if (!Number.isSafeInteger(quantity) || quantity < 0 || quantity > 1000000) {
+      throw new Error('Количество в карточке должно быть целым числом от 0 до 1 000 000.');
+    }
+    const style = offer?.style === 'featured' ? 'featured' : 'default';
+    const price = priceValue(offer?.price, 'Цена');
+    const oldPrice = priceValue(offer?.oldPrice, 'Прежняя цена');
+    return {
+      id,
+      sectionId,
+      type,
+      title,
+      description: cleanText(offer?.description, 240),
+      quantity,
+      unitLabel: cleanText(offer?.unitLabel, 32),
+      price,
+      oldPrice,
+      showPrice: offer?.showPrice === true,
+      badge: cleanText(offer?.badge, 32),
+      style,
+      sortOrder: orderValue(offer?.sortOrder ?? (index + 1) * 10),
+      visible: offer?.visible !== false
+    };
+  });
+
+  return {
+    version: 1,
+    headline: cleanText(input.headline, 60) || 'Предложения',
+    lead: cleanText(input.lead, 240),
+    topBadge: cleanText(input.topBadge, 32),
+    note: cleanText(input.note, 180),
+    showNote: input.showNote === true,
+    sections,
+    offers
+  };
+}
+
+function parseStoredOfferConfig(value) {
+  try {
+    return normalizeOfferConfig(JSON.parse(value));
+  } catch (error) {
+    console.error('[offers config] Stored configuration is invalid:', error?.message || error);
+    return DEFAULT_OFFER_CONFIG;
+  }
+}
+
+function getStoredOfferConfig() {
+  const row = db.prepare('SELECT draft_json, published_json, updated_at, published_at FROM offer_config WHERE id = 1').get();
+  if (!row) return {
+    draft: DEFAULT_OFFER_CONFIG,
+    published: DEFAULT_OFFER_CONFIG,
+    updatedAt: null,
+    publishedAt: null
+  };
+  return {
+    draft: parseStoredOfferConfig(row.draft_json),
+    published: parseStoredOfferConfig(row.published_json),
+    updatedAt: row.updated_at,
+    publishedAt: row.published_at
+  };
+}
 
 function collectObjects(value, depth = 0, result = []) {
   if (!value || typeof value !== 'object' || depth > 6) return result;
@@ -641,6 +796,65 @@ app.get('/api/events', (req, res) => {
   });
 });
 
+app.get('/api/offers', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const config = getStoredOfferConfig().published;
+  const visibleSections = config.sections
+    .filter(section => section.visible)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  const visibleSectionIds = new Set(visibleSections.map(section => section.id));
+  const visibleOffers = config.offers
+    .filter(offer => offer.visible && visibleSectionIds.has(offer.sectionId))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  const sectionsWithOffers = visibleSections.filter(section =>
+    visibleOffers.some(offer => offer.sectionId === section.id)
+  );
+  const sectionIdsWithOffers = new Set(sectionsWithOffers.map(section => section.id));
+  return res.json({
+    headline: config.headline,
+    lead: config.lead,
+    topBadge: config.topBadge,
+    note: config.note,
+    showNote: config.showNote,
+    sections: sectionsWithOffers,
+    offers: visibleOffers.filter(offer => sectionIdsWithOffers.has(offer.sectionId))
+  });
+});
+
+app.get('/api/admin/offers', requireAdmin, (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const config = getStoredOfferConfig();
+  return res.json(config);
+});
+
+app.put('/api/admin/offers/draft', requireAdmin, (req, res) => {
+  try {
+    const normalized = normalizeOfferConfig(req.body);
+    const updatedAt = new Date().toISOString();
+    db.prepare('UPDATE offer_config SET draft_json = ?, updated_at = ? WHERE id = 1')
+      .run(JSON.stringify(normalized), updatedAt);
+    return res.json({ ok: true, draft: normalized, updatedAt });
+  } catch (error) {
+    return res.status(400).json({ error: error?.message || 'Не удалось сохранить черновик.' });
+  }
+});
+
+app.post('/api/admin/offers/publish', requireAdmin, (_req, res) => {
+  const row = db.prepare('SELECT draft_json FROM offer_config WHERE id = 1').get();
+  if (!row) return res.status(500).json({ error: 'Настройки предложений не найдены.' });
+  const publishedAt = new Date().toISOString();
+  db.prepare('UPDATE offer_config SET published_json = draft_json, published_at = ? WHERE id = 1').run(publishedAt);
+  return res.json({ ok: true, published: parseStoredOfferConfig(row.draft_json), publishedAt });
+});
+
+app.post('/api/admin/offers/reset-draft', requireAdmin, (_req, res) => {
+  const row = db.prepare('SELECT published_json FROM offer_config WHERE id = 1').get();
+  if (!row) return res.status(500).json({ error: 'Настройки предложений не найдены.' });
+  const updatedAt = new Date().toISOString();
+  db.prepare('UPDATE offer_config SET draft_json = published_json, updated_at = ? WHERE id = 1').run(updatedAt);
+  return res.json({ ok: true, draft: parseStoredOfferConfig(row.published_json), updatedAt });
+});
+
 app.get('/api/admin/users', requireAdmin, (_req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const now = Date.now();
@@ -742,6 +956,11 @@ app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
 app.get('/admin/users', (_req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'admin-users.html'));
+});
+
+app.get('/admin/offers', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(__dirname, 'admin-offers.html'));
 });
 
 app.get('/proxy', async (req, res) => {
