@@ -146,7 +146,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{out
     </div>
     <div class="panel">
       <div class="panel-heading"><div><h2>Карточки</h2><div class="muted">Нажми на карточку, чтобы изменить параметры</div></div><button class="primary" id="add-offer" type="button">＋ Карточка</button></div>
-      <div class="help">Цена задаёт только отображение. Оплату и выдачу сканов этот конструктор не включает.</div>
+      <div class="help">«Цена сейчас» — цена к показу, «Прежняя цена» — зачёркнутая. Показ цены включается отдельно. Оплату и выдачу сканов этот конструктор не включает.</div>
       <div id="offers-list" class="list"><div class="editor-empty">Загружаем карточки…</div></div>
     </div>
   </section>
@@ -161,8 +161,8 @@ input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{out
 
   <section id="preview-view" hidden>
     <div class="panel">
-      <div class="panel-heading"><h2>Предпросмотр опубликованного вида</h2></div>
-      <p class="help">Показывает, как карточки будут выглядеть на стартовом экране после публикации текущего черновика.</p>
+      <div class="panel-heading"><h2>Предпросмотр черновика</h2></div>
+      <p class="help">Так карточки будут выглядеть на стартовом экране после публикации текущего черновика.</p>
       <div id="preview"><div class="editor-empty">Загружаем предпросмотр…</div></div>
     </div>
   </section>
@@ -209,7 +209,9 @@ input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{out
     publicationStatus.textContent = 'Есть изменения';
     publicationStatus.style.background = '#fff1d6';
     publicationStatus.style.color = '#875600';
-    say('Есть несохранённые изменения.');
+    status.textContent = 'Есть несохранённые изменения.';
+    status.className = '';
+    stickyStatus.classList.remove('show');
     renderPreview();
   }
   function setClean(label='Черновик сохранён') {
