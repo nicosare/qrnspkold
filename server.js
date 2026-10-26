@@ -71,6 +71,18 @@ db.exec(`
     daily_scan_date TEXT DEFAULT NULL,
     daily_scan_available INTEGER NOT NULL DEFAULT 0
   );
+  CREATE TABLE IF NOT EXISTS scan_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vk_id TEXT NOT NULL,
+    scanned_at TEXT NOT NULL,
+    paytag_id TEXT,
+    transport_type TEXT NOT NULL DEFAULT '',
+    route_number TEXT NOT NULL DEFAULT '',
+    vehicle_number TEXT NOT NULL DEFAULT '',
+    price REAL DEFAULT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_scan_history_user_time
+    ON scan_history(vk_id, scanned_at DESC);
 `);
 
 // Existing databases predate per-user scan balances. NULL means the balance
@@ -125,11 +137,24 @@ const upsertUser = db.prepare(`
     visit_count = users.visit_count + 1
 `);
 const listUsers = db.prepare(`
-  SELECT vk_id, first_name, last_name, photo_url, first_seen, last_seen, visit_count,
-         scan_balance, subscription_until, unlimited, last_scan_at, last_transport_number,
-         welcome_bonus_granted, daily_scan_date, daily_scan_available
-  FROM users
-  ORDER BY last_seen DESC
+  SELECT u.vk_id, u.first_name, u.last_name, u.photo_url, u.first_seen, u.last_seen, u.visit_count,
+         u.scan_balance, u.subscription_until, u.unlimited, u.last_scan_at, u.last_transport_number,
+         u.welcome_bonus_granted, u.daily_scan_date, u.daily_scan_available,
+         (SELECT COUNT(*) FROM scan_history sh WHERE sh.vk_id = u.vk_id) AS scan_count
+  FROM users u
+  ORDER BY u.last_seen DESC
+`);
+const listUserScans = db.prepare(`
+  SELECT id, scanned_at, transport_type, route_number, vehicle_number, price
+  FROM scan_history
+  WHERE vk_id = ?
+  ORDER BY scanned_at DESC, id DESC
+  LIMIT 500
+`);
+const recordScan = db.prepare(`
+  INSERT INTO scan_history
+    (vk_id, scanned_at, paytag_id, transport_type, route_number, vehicle_number, price)
+  VALUES (?, ?, ?, ?, ?, ?, ?)
 `);
 const userCount = db.prepare('SELECT COUNT(*) AS count FROM users');
 const getUserScanBalance = db.prepare('SELECT scan_balance, subscription_until, unlimited, daily_scan_date, daily_scan_available FROM users WHERE vk_id = ?');
@@ -463,8 +488,14 @@ app.post('/api/paytag', async (req, res) => {
     const currentEntitlement = getUserEntitlements.get(userId);
     const scanBalance = getDisplayedScanBalance(currentEntitlement);
 
+    const scannedAt = new Date().toISOString();
     db.prepare('UPDATE users SET last_scan_at = ?, last_transport_number = ? WHERE vk_id = ?')
-      .run(new Date().toISOString(), String(data.vehicleNumber || '').trim() || null, userId);
+      .run(scannedAt, String(data.vehicleNumber || '').trim() || null, userId);
+    recordScan.run(
+      userId, scannedAt, paytagid, String(data.transportType || ''),
+      String(data.routeNumber || ''), String(data.vehicleNumber || ''),
+      Number.isFinite(data.price) ? data.price : null
+    );
 
     return res.json({
       ok: true,
@@ -544,6 +575,20 @@ app.get('/api/admin/users', requireAdmin, (_req, res) => {
     subscriptionActive: Boolean(user.subscription_until && Date.parse(user.subscription_until) > now)
   }));
   res.json({ users, total: userCount.get().count });
+});
+
+app.get('/api/admin/users/:vkId/scans', requireAdmin, (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const vkId = String(req.params.vkId || '');
+  if (!/^[0-9]+$/.test(vkId)) return res.status(400).json({ error: 'Некорректный VK ID.' });
+  if (!db.prepare('SELECT 1 FROM users WHERE vk_id = ?').get(vkId)) {
+    return res.status(404).json({ error: 'Пользователь не найден.' });
+  }
+  const scans = listUserScans.all(vkId).map(scan => ({
+    ...scan,
+    price: scan.price === null ? null : Number(scan.price)
+  }));
+  return res.json({ scans, total: scans.length });
 });
 
 app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
