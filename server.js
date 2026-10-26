@@ -548,13 +548,16 @@ app.post('/api/paytag', async (req, res) => {
       );
 
       const referral = getReferralForInvitee.get(userId);
-      if (referral && !referral.rewarded_at) {
-        const marked = rewardReferralOnce.run(scannedAt, userId);
-        if (marked.changes === 1) {
-          const granted = grantReferralScans.run(referral.inviter_vk_id);
-          if (granted.changes === 1) {
+      if (referral && !referral.rewarded_at && getUserExists.get(referral.inviter_vk_id)) {
+        const granted = grantReferralScans.run(referral.inviter_vk_id);
+        if (granted.changes === 1) {
+          const marked = rewardReferralOnce.run(scannedAt, userId);
+          if (marked.changes === 1) {
             recordScanCredit.run(referral.inviter_vk_id, scannedAt, 3, 'referral', 'Бонус за приглашённого пользователя ' + userId);
             referralRewarded = true;
+          } else {
+            db.prepare('UPDATE users SET scan_balance = scan_balance - 3 WHERE vk_id = ? AND scan_balance >= 3')
+              .run(referral.inviter_vk_id);
           }
         }
       }
