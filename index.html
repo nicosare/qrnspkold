@@ -1249,7 +1249,7 @@
             currentScanBalance = scanBalanceAssigned ? Math.max(0, numericBalance) : null;
             scanBalanceElement.hidden = false;
             scanBalanceElement.classList.remove('empty', 'unassigned');
-            scanBalanceElement.textContent = 'Подписка до ' + new Date(subscriptionUntil).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            scanBalanceElement.textContent = 'Подписка до ' + new Date(subscriptionUntil).toLocaleDateString('ru-RU', { day: 'numeric', month: 'numeric', year: 'numeric' });
         } else if (balance === null || balance === undefined || balance === '') {
             scanBalanceAssigned = false;
             currentScanBalance = null;
