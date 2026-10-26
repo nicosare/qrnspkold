@@ -33,6 +33,17 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 .stat-label{display:block;color:var(--muted);font-size:11px;line-height:1.3;margin-bottom:4px}
 .stat-value{display:block;font-size:13px;font-weight:650;overflow-wrap:anywhere}
 .visits{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:4px 7px;border-radius:7px;background:var(--soft);color:#1766bc;font-size:11px;font-weight:750}
+.scan-history{margin-top:8px;border-top:1px solid var(--line);padding-top:4px}
+.scan-history summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;color:#1766bc;font-size:12px;font-weight:750;list-style:none}
+.scan-history summary::-webkit-details-marker{display:none}
+.scan-history summary::after{content:'＋';font-size:15px}
+.scan-history[open] summary::after{content:'−'}
+.scan-history-list{display:grid;gap:7px;padding:4px 0 2px}
+.scan-row{padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:#fafbfc}
+.scan-row-main{font-size:13px;font-weight:750}
+.scan-row-meta{font-size:12px;color:var(--muted);margin-top:3px}
+.scan-history-empty{font-size:12px;color:var(--muted);padding:6px 0}
+
 .entitlement{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
  .manage summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0 1px;font-size:12px;font-weight:750;color:#1766bc;list-style:none}
  .manage summary::-webkit-details-marker{display:none}.manage summary::after{content:'＋';font-size:15px}.manage[open] summary::after{content:'−'}
@@ -132,13 +143,14 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
      const lastScan=u.last_scan_at?date(u.last_scan_at):'Ещё не сканировал';
      const transport=u.last_transport_number?'Транспорт № '+u.last_transport_number:'Транспорт № —';
      return '<article class="user-card" data-user-card="'+esc(u.vk_id)+'">'+
-       '<div class="person">'+avatar+'<div class="person-text"><a href="'+profile+'" target="_blank" rel="noopener noreferrer" class="name" style="color:inherit;text-decoration:none">'+esc(name)+'</a><div class="vk-id">VK ID: '+esc(u.vk_id)+' · '+esc(u.visit_count)+' посещ.</div></div></div>'+
+       '<div class="person">'+avatar+'<div class="person-text"><a href="'+profile+'" target="_blank" rel="noopener noreferrer" class="name" style="color:inherit;text-decoration:none">'+esc(name)+'</a><div class="vk-id">VK ID: '+esc(u.vk_id)+' · '+esc(u.visit_count)+' посещ. · '+esc(u.scan_count||0)+' сканов</div></div></div>'+
        '<div class="stats">'+
          '<div class="stat"><span class="stat-label">Баланс сканов</span><span class="stat-value">'+esc(u.unlimited?'Безлимит':(u.scan_balance===null||u.scan_balance===undefined?'Не назначен':u.scan_balance))+'</span></div>'+
          '<div class="stat"><span class="stat-label">Подписка</span><span class="stat-value">'+esc(subscriptionActive?new Date(u.subscription_until).toLocaleDateString('ru-RU'):(u.subscription_until?'Истекла':'Нет'))+'</span></div>'+
          '<div class="stat"><span class="stat-label">Последний скан</span><span class="stat-value">'+esc(lastScan)+'</span></div>'+
          '<div class="stat"><span class="stat-label">Последний транспорт</span><span class="stat-value">'+esc(transport)+'</span></div>'+
        '</div>'+
+       '<details class="scan-history" data-scan-history="'+esc(u.vk_id)+'"><summary>История сканов · '+esc(u.scan_count||0)+'</summary><div class="scan-history-list"><div class="scan-history-empty">Нажмите, чтобы загрузить историю.</div></div></details>'+
        '<div class="entitlement"><div class="entitlement-status">'+esc(entitlementStatus)+subscriptionDetail+'</div>'+
        '<details class="manage"><summary>Управление доступом</summary><div class="manage-body">'+
        '<div class="grant-section"><div class="grant-section-title">СКАНЫ</div><div class="preset-grid">'+
@@ -196,7 +208,30 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    }catch(error){message.className='action-status error';message.textContent=error.message}
    finally{button.disabled=false}
  }
+ cards.addEventListener('toggle', event => {
+   const details=event.target.closest('details[data-scan-history]');
+   if(!details || !details.open || details.dataset.loaded==='1' || details.dataset.loading==='1')return;
+   details.dataset.loading='1';
+   const list=details.querySelector('.scan-history-list');
+   list.innerHTML='<div class="scan-history-empty">Загружаем историю…</div>';
+   fetch('../api/admin/users/'+encodeURIComponent(details.dataset.scanHistory)+'/scans',{headers:{Authorization:auth},cache:'no-store'})
+     .then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error||'Не удалось загрузить историю.');return data;})
+     .then(data=>{
+       details.dataset.loaded='1';
+       if(!data.scans.length){list.innerHTML='<div class="scan-history-empty">Сканов пока нет.</div>';return;}
+       list.innerHTML=data.scans.map(scan=>{
+         const type=[scan.transport_type,scan.route_number?'№ '+scan.route_number:''].filter(Boolean).join(' ');
+         const vehicle=scan.vehicle_number?'Т/С № '+scan.vehicle_number:'Номер Т/С не указан';
+         const price=scan.price===null?'':' · '+Number(scan.price).toLocaleString('ru-RU',{maximumFractionDigits:2})+' ₽';
+         return '<div class="scan-row"><div class="scan-row-main">'+esc(type||'Скан QR-кода')+' · '+esc(vehicle)+'</div><div class="scan-row-meta">'+esc(date(scan.scanned_at)+price)+'</div></div>';
+       }).join('');
+     })
+     .catch(error=>{list.innerHTML='<div class="scan-history-empty error">'+esc(error.message)+' <button type="button" data-action="retry-scans">Повторить</button></div>';})
+     .finally(()=>{delete details.dataset.loading;});
+ },true);
  cards.addEventListener('click',event=>{
+   const retry=event.target.closest('button[data-action="retry-scans"]');
+   if(retry){const details=retry.closest('details[data-scan-history]');if(details){details.dataset.loaded='0';details.open=false;details.open=true;}return;}
    const button=event.target.closest('button[data-action]');
    if(button)performEntitlement(button);
  });
