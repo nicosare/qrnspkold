@@ -2104,7 +2104,7 @@
               '<span class="start-offer-current-price">' + esc(rubles(item.price)) + ' ₽</span></div>';
           }
           const badgeMarkup = item.badge ? '<span class="start-offer-badge">' + esc(item.badge) + '</span>' : '';
-          const requestMarkup = '<button class="start-offer-request" type="button" data-request-offer="' + esc(item.id) + '">Запросить тариф</button>';
+          const requestMarkup = '<button class="start-offer-request" type="button" data-request-offer="' + esc(item.id) + '">Запросить</button>';
           return '<article class="start-offer ' + (subscription ? 'start-offer-subscription ' : '') + (featured ? 'start-offer-featured' : '') + '">' +
             top + titleMarkup + descriptionMarkup + priceMarkup + badgeMarkup + requestMarkup + '</article>';
         }).join('') + '</div></div>';
@@ -2182,7 +2182,7 @@
       groups.querySelectorAll('[data-request-offer]').forEach(item => {
         if (item.dataset.requestOffer === selectedOffer.id) {
           item.disabled = true;
-          item.textContent = 'Запрос отправлен';
+          item.textContent = 'Запрошено';
         }
       });
     } catch (error) {
