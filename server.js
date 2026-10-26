@@ -555,9 +555,6 @@ app.post('/api/paytag', async (req, res) => {
           if (marked.changes === 1) {
             recordScanCredit.run(referral.inviter_vk_id, scannedAt, 3, 'referral', 'Бонус за приглашённого пользователя ' + userId);
             referralRewarded = true;
-          } else {
-            db.prepare('UPDATE users SET scan_balance = scan_balance - 3 WHERE vk_id = ? AND scan_balance >= 3')
-              .run(referral.inviter_vk_id);
           }
         }
       }
