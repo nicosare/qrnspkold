@@ -929,6 +929,9 @@
             <button class="start-button start-button-secondary" id="start-faq-button" type="button">
                 Частые вопросы
             </button>
+            <button class="start-button start-button-secondary" id="start-admin-users-button" type="button" hidden>
+                Пользователи
+            </button>
             <div id="scan-status" class="start-status" role="status" aria-live="polite"></div>
         </div>
 
@@ -1719,7 +1722,8 @@
         document.body.classList.add('start-overlay-open');
       });
     }
-const panelBack = document.getElementById('admin-panel-back');
+    bindAdminButton('start-admin-users-button', 'users', 'Пользователи');
+    const panelBack = document.getElementById('admin-panel-back');
     if (panelBack && panelBack.dataset.bound !== '1') {
       panelBack.dataset.bound = '1';
       panelBack.addEventListener('click', function () {
