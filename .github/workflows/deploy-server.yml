@@ -21,6 +21,28 @@ jobs:
       - name: Check out server branch
         uses: actions/checkout@v4
 
+      - name: Validate JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check server.js
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import vm from 'node:vm';
+
+          for (const file of ['index.html', 'admin-offers.html', 'admin-users.html']) {
+            const html = fs.readFileSync(file, 'utf8');
+            const scripts = [...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)]
+              .map(match => match[1])
+              .filter(script => script.trim());
+
+            scripts.forEach((script, index) => {
+              new vm.Script(script, { filename: file + ':inline-script-' + (index + 1) });
+            });
+            console.log('Syntax OK: ' + file + ' (' + scripts.length + ' inline scripts)');
+          }
+          NODE
+
       - name: Validate deployment secrets
         env:
           SERVER_HOST: ${{ secrets.QRNSPKOLD_SERVER_HOST }}
