@@ -331,7 +331,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{out
             return '<article class="preview-card '+(offer.style==='featured'?'featured':'')+'">'+top+
               (offer.title?'<div class="preview-title">'+esc(offer.title)+'</div>':'')+
               (offer.description?'<div class="preview-description">'+esc(offer.description)+'</div>':'')+price+
-              (offer.badge?'<span class="preview-badge">'+esc(offer.badge)+'</span>':'')+'<button class="preview-request" type="button" disabled>Запросить тариф</button></article>';
+              (offer.badge?'<span class="preview-badge">'+esc(offer.badge)+'</span>':'')+'<button class="preview-request" type="button" disabled>Запросить</button></article>';
           }).join('')+'</div></div>';
       }).join('')+
       '<div class="preview-note '+(!config.showNote?'hidden':'')+'">'+esc(config.note||'')+'</div></section>';
