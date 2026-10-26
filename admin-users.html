@@ -43,6 +43,11 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 .scan-row-main{font-size:13px;font-weight:750}
 .scan-row-meta{font-size:12px;color:var(--muted);margin-top:3px}
 .scan-history-empty{font-size:12px;color:var(--muted);padding:6px 0}
+.credit-history{margin-top:4px;border-top:1px solid var(--line);padding-top:4px}
+.credit-history summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;color:#16804a;font-size:12px;font-weight:750;list-style:none}
+.credit-history summary::-webkit-details-marker{display:none}
+.credit-history summary::after{content:'＋';font-size:15px}
+.credit-history[open] summary::after{content:'−'}
 
 .entitlement{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
  .manage summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0 1px;font-size:12px;font-weight:750;color:#1766bc;list-style:none}
@@ -151,6 +156,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
          '<div class="stat"><span class="stat-label">Последний транспорт</span><span class="stat-value">'+esc(transport)+'</span></div>'+
        '</div>'+
        '<details class="scan-history" data-scan-history="'+esc(u.vk_id)+'"><summary>История сканов · '+esc(u.scan_count||0)+'</summary><div class="scan-history-list"><div class="scan-history-empty">Нажмите, чтобы загрузить историю.</div></div></details>'+
+       '<details class="credit-history" data-credit-history="'+esc(u.vk_id)+'"><summary>История начислений</summary><div class="scan-history-list"><div class="scan-history-empty">Нажмите, чтобы загрузить историю.</div></div></details>'+
        '<div class="entitlement">'+
        '<details class="manage"><summary>Управление доступом</summary><div class="manage-body">'+
        '<div class="grant-section"><div class="grant-section-title">СКАНЫ</div><div class="preset-grid">'+
@@ -229,9 +235,33 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
      .catch(error=>{list.innerHTML='<div class="scan-history-empty error">'+esc(error.message)+' <button type="button" data-action="retry-scans">Повторить</button></div>';})
      .finally(()=>{delete details.dataset.loading;});
  },true);
+ cards.addEventListener('toggle', event => {
+   const details=event.target.closest('details[data-credit-history]');
+   if(!details || !details.open || details.dataset.loaded==='1' || details.dataset.loading==='1')return;
+   details.dataset.loading='1';
+   const list=details.querySelector('.scan-history-list');
+   list.innerHTML='<div class="scan-history-empty">Загружаем историю…</div>';
+   fetch('../api/admin/users/'+encodeURIComponent(details.dataset.creditHistory)+'/credits',{headers:{Authorization:auth},cache:'no-store'})
+     .then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error||'Не удалось загрузить историю начислений.');return data;})
+     .then(data=>{
+       details.dataset.loaded='1';
+       if(!data.credits.length){list.innerHTML='<div class="scan-history-empty">Начислений пока нет.</div>';return;}
+       list.innerHTML=data.credits.map(item=>{
+         const source=item.source==='welcome'?'Приветственный бонус':item.source==='admin'?'Ручное начисление':'Начисление';
+         const note=item.note?' · '+item.note:'';
+         const amount=Number(item.amount);
+         const plural=amount===1?'скан':amount>=2&&amount<=4?'скана':'сканов';
+         return '<div class="scan-row"><div class="scan-row-main">+'+esc(amount)+' '+plural+'</div><div class="scan-row-meta">'+esc(source+note)+'<br>'+esc(date(item.credited_at))+'</div></div>';
+       }).join('');
+     })
+     .catch(error=>{list.innerHTML='<div class="scan-history-empty error">'+esc(error.message)+' <button type="button" data-action="retry-credits">Повторить</button></div>';})
+     .finally(()=>{delete details.dataset.loading;});
+ },true);
  cards.addEventListener('click',event=>{
    const retry=event.target.closest('button[data-action="retry-scans"]');
    if(retry){const details=retry.closest('details[data-scan-history]');if(details){details.dataset.loaded='0';details.open=false;details.open=true;}return;}
+   const retryCredits=event.target.closest('button[data-action="retry-credits"]');
+   if(retryCredits){const details=retryCredits.closest('details[data-credit-history]');if(details){details.dataset.loaded='0';details.open=false;details.open=true;}return;}
    const button=event.target.closest('button[data-action]');
    if(button)performEntitlement(button);
  });
