@@ -1739,6 +1739,7 @@
     }
 
     const launchParams = window.location.search.slice(1);
+    const referralCode = new URL(window.location.href).searchParams.get('ref') || '';
     if (!launchParams) {
       setScannerStatus('Не найдены параметры VK. Закройте приложение и откройте его заново из VK.');
       refreshScanButton();
@@ -1775,7 +1776,7 @@
       const response = await fetch(new URL(appBase + 'api/session', window.location.origin), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ launchParams, profile }),
+        body: JSON.stringify({ launchParams, profile, referralCode }),
         cache: 'no-store',
         credentials: 'omit'
       });
@@ -1825,7 +1826,7 @@
               const refreshResponse = await fetch(new URL(appBase + 'api/session', window.location.origin), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ launchParams, profile, refreshOnly: true }),
+                body: JSON.stringify({ launchParams, profile, refreshOnly: true, referralCode }),
                 cache: 'no-store',
                 credentials: 'omit'
               });
