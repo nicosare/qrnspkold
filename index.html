@@ -12,9 +12,16 @@
     (function () {
         try {
             if (window.vkBridge && typeof window.vkBridge.send === "function") {
-                Promise.resolve(window.vkBridge.send("VKWebAppInit")).catch(function (error) {
-                    console.warn("VK Mini App initialization failed:", error);
-                });
+                Promise.resolve(window.vkBridge.send("VKWebAppInit"))
+                    .then(function () {
+                        return window.vkBridge.send("VKWebAppAllowMessagesFromGroup", { group_id: 242494208 });
+                    })
+                    .then(function () {
+                        console.info("Roadnote community messages permission granted or already enabled.");
+                    })
+                    .catch(function (error) {
+                        console.info("Roadnote community messages permission was not granted or is unavailable:", error);
+                    });
             }
         } catch (error) {
             console.warn("VK Mini App initialization failed:", error);
@@ -622,6 +629,7 @@
             font-size: 15px;
             font-weight: 850;
         }
+        .start-offer-price-caption { margin-top: 4px; color: #7b8591; font-size: 9px; line-height: 1.25; font-weight: 650; }
         .start-offer-badge {
             display: inline-flex;
             align-items: center;
@@ -729,10 +737,6 @@
             .start-balance-card { padding: 17px 19px; }
             .start-offers-card { padding: 15px 17px; margin-bottom: 18px; }
         }
-
-
-        .start-offer-request { width:100%; min-height:36px; margin-top:8px; padding:7px 8px; border:0; border-radius:10px; background:#2787f5; color:#fff; font:inherit; font-size:11px; font-weight:800; line-height:1.2; cursor:pointer; }
-        .start-offer-request:disabled { opacity:.62; cursor:default; }
         .info-overlay { position:fixed; inset:0; z-index:1300; display:grid; place-items:center; padding:18px; background:rgba(13,23,36,.55); backdrop-filter:blur(5px); }
         .info-overlay[hidden] { display:none !important; }
         .info-sheet { width:min(100%,640px); max-height:min(88dvh,820px); overflow:auto; overscroll-behavior:contain; padding:22px; border:1px solid #e5ebf2; border-radius:22px; background:#fff; color:#25303d; box-shadow:0 24px 80px #10243c30; }
@@ -747,20 +751,6 @@
         .faq-list details ol { padding-left:19px; }
         .faq-support-link { display:flex; align-items:center; justify-content:center; min-height:46px; margin-top:13px; padding:11px 14px; border-radius:13px; background:#2787f5; color:#fff; text-decoration:none; text-align:center; font-size:14px; font-weight:800; }
         .faq-support-note { margin:10px 2px 0; color:#8792a0; font-size:12px; line-height:1.45; }
-        .offer-request-summary { padding:14px; border:1px solid #dfebfa; border-radius:15px; background:#f5f9ff; }
-        .offer-request-name { color:#243244; font-size:16px; font-weight:850; line-height:1.35; }
-        .offer-request-details { margin-top:5px; color:#6c7b8d; font-size:13px; line-height:1.5; }
-        .offer-request-price { margin-top:9px; color:#1d6fd0; font-size:15px; font-weight:850; }
-        .offer-request-explainer { margin:14px 0; color:#657284; font-size:13px; line-height:1.55; }
-        .offer-request-actions { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:16px; }
-        .offer-request-actions button { min-height:45px; padding:10px; border:0; border-radius:12px; font:inherit; font-size:13px; font-weight:800; cursor:pointer; }
-        .offer-request-cancel { background:#eef2f7; color:#4d5c6d; }
-        .offer-request-submit { background:#2787f5; color:#fff; }
-        .offer-request-submit:disabled { opacity:.62; cursor:default; }
-        .offer-request-status { min-height:0; margin-top:12px; font-size:13px; line-height:1.45; }
-        .offer-request-status:empty { display:none; }
-        .offer-request-status.success { color:#16764a; }
-        .offer-request-status.error { color:#b42318; }
         @media(max-width:540px) {
             .info-overlay { align-items:end; padding:0; }
             .info-sheet { width:100%; max-height:92dvh; padding:21px 16px calc(18px + env(safe-area-inset-bottom)); border-radius:22px 22px 0 0; border-bottom:0; }
@@ -846,61 +836,19 @@
         </header>
         <div class="faq-list">
             <details open>
-                <summary>Как пользоваться приложением?</summary>
-                <ol>
-                    <li>Нажми «Сканировать новый QR-код» на стартовой странице.</li>
-                    <li>Разреши доступ к камере или открой сканер VK, если приложение предложит его.</li>
-                    <li>Наведи камеру на QR-код билета и дождись загрузки данных.</li>
-                </ol>
+                <summary>Как отсканировать QR-код?</summary>
+                <ol><li>Нажми «Сканировать новый QR-код».</li><li>Разреши доступ к камере или используй сканер VK, если он доступен.</li><li>Полностью наведи камеру на QR-код и дождись загрузки данных.</li></ol>
             </details>
-            <details>
-                <summary>Что делать, если QR-код не распознаётся?</summary>
-                <p>Проверь, что QR-код целиком попадает в кадр, билет хорошо виден, а интернет работает. Закрой и заново открой сканер. Если ошибка повторяется, отправь сообщение в поддержку.</p>
-            </details>
-            <details>
-                <summary>Что означают сканы и баланс?</summary>
-                <p>Сканирование использует доступный лимит. Остаток показывается в карточке «Твой баланс» на стартовой странице. Доступность конкретных возможностей зависит от активного тарифа.</p>
-            </details>
-            <details>
-                <summary>Как оформить тариф?</summary>
-                <p>Выбери карточку предложения и нажми «Запросить тариф». Запрос не списывает деньги и не начисляет доступ автоматически. Администратор увидит его и оформит тариф вручную; до обработки это не покупка.</p>
-            </details>
-            <details>
-                <summary>Где узнать цену и условия?</summary>
-                <p>Цена отображается в карточке, если она опубликована. Если цены нет или нужны уточнения, отправь запрос на тариф и дождись ответа администратора перед оплатой.</p>
-            </details>
-            <details>
-                <summary>Безопасность и назначение приложения</summary>
-                <p>Roadnote предназначен для работы с данными транспортных QR-кодов и демонстрации возможностей приложения. Он не является сервисом покупки билетов и не предназначен для реальной оплаты проезда.</p>
-            </details>
+            <details><summary>Почему QR-код не считывается?</summary><p>Убедись, что QR-код целиком попадает в кадр, изображение чёткое и есть интернет. Попробуй закрыть и снова открыть сканер. Если ошибка повторяется, напиши в поддержку.</p></details>
+            <details><summary>Сколько сканирований входит в пакет?</summary><p>В пакет входит указанное на карточке количество сканирований. После расходования лимита можно выбрать другой пакет. Активная подписка даёт безлимит на весь оплаченный срок.</p></details>
+            <details><summary>Как работает подписка?</summary><p>Подписка даёт безлимит на 1, 3 или 6 месяцев в зависимости от выбранного тарифа. Срок и доступ отображаются в карточке баланса.</p></details>
+            <details><summary>Какая цена действует при первой покупке?</summary><p>В карточках показаны две цены: зачёркнутая — обычная, выделенная — цена первой покупки. Акционная цена предназначена для первого приобретения соответствующего предложения.</p></details>
+            <details><summary>Можно ли купить билет или оплатить проезд в Roadnote?</summary><p>Нет. Roadnote предназначен для сканирования и отображения данных транспортных QR-кодов. Приложение не продаёт билеты и не принимает оплату за проезд.</p></details>
         </div>
-        <a class="faq-support-link" id="faq-support-link" href="#" target="_blank" rel="noopener noreferrer" hidden>Написать в поддержку VK</a>
-        <p class="faq-support-note" id="faq-support-fallback">Для помощи напиши разработчику через VK. Контакт поддержки пока не настроен.</p>
+        <a class="faq-support-link" id="faq-support-link" href="https://vk.com/im?sel=-242494208" target="_blank" rel="noopener noreferrer">Написать в поддержку VK</a>
     </div>
 </section>
 
-<section class="info-overlay" id="offer-request-overlay" role="dialog" aria-modal="true" aria-labelledby="offer-request-title" hidden>
-    <div class="info-sheet">
-        <header class="info-sheet-header">
-            <div>
-                <h2 class="info-sheet-title" id="offer-request-title">Запросить тариф</h2>
-                <p class="info-sheet-subtitle">Перед отправкой проверь выбранное предложение.</p>
-            </div>
-            <button class="info-sheet-close" id="offer-request-close" type="button" aria-label="Закрыть">×</button>
-        </header>
-        <div class="offer-request-summary">
-            <div class="offer-request-name" id="offer-request-name"></div>
-            <div class="offer-request-details" id="offer-request-details"></div>
-            <div class="offer-request-price" id="offer-request-price" hidden></div>
-        </div>
-        <p class="offer-request-explainer">Это не покупка и не автоматическое начисление. Запрос сохранится в приложении, а администратор оформит тариф вручную.</p>
-        <div class="offer-request-status" id="offer-request-status" role="status" aria-live="polite"></div>
-        <div class="offer-request-actions">
-            <button class="offer-request-cancel" id="offer-request-cancel" type="button">Не сейчас</button>
-            <button class="offer-request-submit" id="offer-request-submit" type="button">Отправить запрос</button>
-        </div>
-    </div>
-</section>
 
 <section class="admin-panel-overlay" id="admin-panel-overlay" role="dialog" aria-modal="true" aria-labelledby="admin-panel-title" hidden>
     <header class="admin-panel-header">
@@ -934,62 +882,20 @@
         </div>
 
         <section class="start-offers-section" aria-labelledby="start-offers-title">
-            <div class="start-offers-section-heading">
-                <div>
-                    <div class="start-section-kicker">ROADNOTE PLUS</div>
-                    <h3 id="start-offers-title">Предложения</h3>
-                </div>
-                <span class="start-coming-soon" id="start-offers-badge">Ручное оформление</span>
-            </div>
-            <p class="start-offers-lead" id="start-offers-lead">Выбери тариф и отправь запрос — оформление происходит вручную.</p>
-
+            <div class="start-offers-section-heading"><div><div class="start-section-kicker">ROADNOTE PLUS</div><h3 id="start-offers-title">Тарифы</h3></div></div>
+            <p class="start-offers-lead" id="start-offers-lead">Выбери пакет сканирований или безлимитную подписку.</p>
             <div id="start-offers-groups">
-            <div class="start-offer-group">
-                <div class="start-offer-group-title"><span class="start-offer-group-icon">↗</span><span>Пакеты сканирований</span></div>
-                <div class="start-offer-grid">
-                    <article class="start-offer">
-                        <div class="start-offer-top"><span class="start-offer-count">9</span><span class="start-offer-unit">сканов</span></div>
-                        <div class="start-offer-name">Старт</div>
-                        <div class="start-offer-description">Попробовать и пользоваться время от времени</div>
-                        <span class="start-offer-badge">Запрос доступен</span>
-                    </article>
-                    <article class="start-offer">
-                        <div class="start-offer-top"><span class="start-offer-count">29</span><span class="start-offer-unit">сканов</span></div>
-                        <div class="start-offer-name">Оптимальный</div>
-                        <div class="start-offer-description">Запас сканирований на каждый день</div>
-                        <span class="start-offer-badge">Запрос доступен</span>
-                    </article>
-                    <article class="start-offer">
-                        <div class="start-offer-top"><span class="start-offer-count">49</span><span class="start-offer-unit">сканов</span></div>
-                        <div class="start-offer-name">Большой запас</div>
-                        <div class="start-offer-description">Реже пополнять баланс и не отвлекаться</div>
-                        <span class="start-offer-badge">Запрос доступен</span>
-                    </article>
-                </div>
+                <div class="start-offer-group"><div class="start-offer-group-title"><span class="start-offer-group-icon">↗</span><span>Пакеты сканирований</span></div><div class="start-offer-grid">
+                    <article class="start-offer"><div class="start-offer-top"><span class="start-offer-count">9</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-name">Старт</div><div class="start-offer-description">Попробовать сервис</div><div class="start-offer-pricing"><span class="start-offer-old-price">99 ₽</span><span class="start-offer-current-price">69 ₽</span></div><div class="start-offer-price-caption">обычная / первая покупка</div></article>
+                    <article class="start-offer"><div class="start-offer-top"><span class="start-offer-count">29</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-name">Оптимальный</div><div class="start-offer-description">Запас на каждый день</div><div class="start-offer-pricing"><span class="start-offer-old-price">249 ₽</span><span class="start-offer-current-price">179 ₽</span></div><div class="start-offer-price-caption">обычная / первая покупка</div></article>
+                    <article class="start-offer"><div class="start-offer-top"><span class="start-offer-count">49</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-name">Большой запас</div><div class="start-offer-description">Реже пополнять баланс</div><div class="start-offer-pricing"><span class="start-offer-old-price">369 ₽</span><span class="start-offer-current-price">279 ₽</span></div><div class="start-offer-price-caption">обычная / первая покупка</div></article>
+                </div></div>
+                <div class="start-offer-group start-subscription-group"><div class="start-offer-group-title"><span class="start-offer-group-icon">✦</span><span>Безлимитные подписки</span></div><div class="start-offer-grid start-subscription-grid">
+                    <article class="start-offer start-offer-subscription start-offer-featured"><div class="start-offer-duration">1 <span>месяц</span></div><div class="start-offer-description">Для регулярного использования</div><div class="start-offer-pricing"><span class="start-offer-old-price">349 ₽</span><span class="start-offer-current-price">249 ₽</span></div><div class="start-offer-price-caption">обычная / первая покупка</div></article>
+                    <article class="start-offer start-offer-subscription"><div class="start-offer-duration">3 <span>месяца</span></div><div class="start-offer-description">Выгоднее при длительном использовании</div><div class="start-offer-pricing"><span class="start-offer-old-price">799 ₽</span><span class="start-offer-current-price">599 ₽</span></div><div class="start-offer-price-caption">обычная / первая покупка</div></article>
+                    <article class="start-offer start-offer-subscription"><div class="start-offer-duration">6 <span>месяцев</span></div><div class="start-offer-description">Максимальная выгода на длительный срок</div><div class="start-offer-pricing"><span class="start-offer-old-price">1 299 ₽</span><span class="start-offer-current-price">949 ₽</span></div><div class="start-offer-price-caption">обычная / первая покупка</div></article>
+                </div></div>
             </div>
-
-            <div class="start-offer-group start-subscription-group">
-                <div class="start-offer-group-title"><span class="start-offer-group-icon">✦</span><span>Подписка</span></div>
-                <div class="start-offer-grid start-subscription-grid">
-                    <article class="start-offer start-offer-subscription start-offer-featured">
-                        <div class="start-offer-duration">1 <span>месяц</span></div>
-                        <div class="start-offer-description">Для регулярного использования</div>
-                        <span class="start-offer-badge">Запрос доступен</span>
-                    </article>
-                    <article class="start-offer start-offer-subscription">
-                        <div class="start-offer-duration">3 <span>месяца</span></div>
-                        <div class="start-offer-description">Удобный вариант на сезон</div>
-                        <span class="start-offer-badge">Запрос доступен</span>
-                    </article>
-                    <article class="start-offer start-offer-subscription">
-                        <div class="start-offer-duration">6 <span>месяцев</span></div>
-                        <div class="start-offer-description">Подключить надолго и забыть о пополнении</div>
-                        <span class="start-offer-badge">Запрос доступен</span>
-                    </article>
-                </div>
-            </div>
-            </div>
-            <div class="start-offers-note" id="start-offers-note"><span aria-hidden="true">✧</span> Запрос не означает автоматическую оплату или начисление — тариф оформляется вручную.</div>
         </section>
 
         <div class="start-actions">
@@ -1008,12 +914,6 @@
             </button>
             <button class="start-button start-button-secondary" id="start-admin-users-button" type="button" hidden>
                 Пользователи
-            </button>
-            <button class="start-button start-button-secondary" id="start-admin-offers-button" type="button" hidden>
-                Конструктор предложений
-            </button>
-            <button class="start-button start-button-secondary" id="start-admin-requests-button" type="button" hidden>
-                Запросы тарифов
             </button>
             <div id="scan-status" class="start-status" role="status" aria-live="polite"></div>
         </div>
@@ -1806,10 +1706,7 @@
       });
     }
     bindAdminButton('start-admin-users-button', 'users', 'Пользователи Roadnote');
-    bindAdminButton('start-admin-offers-button', 'offers', 'Конструктор предложений');
-    bindAdminButton('start-admin-requests-button', 'requests', 'Запросы тарифов');
-
-    const panelBack = document.getElementById('admin-panel-back');
+const panelBack = document.getElementById('admin-panel-back');
     if (panelBack && panelBack.dataset.bound !== '1') {
       panelBack.dataset.bound = '1';
       panelBack.addEventListener('click', function () {
@@ -2051,148 +1948,6 @@
 
 
 <script>
-/* Offer cards are served from the published configuration, separately from its admin draft. */
-(function () {
-  const section = document.getElementById('start-offers-section') || document.querySelector('.start-offers-section');
-  const groups = document.getElementById('start-offers-groups');
-  if (!section || !groups) return;
-  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const rubles = value => Number(value).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
-  const quantity = value => String(value);
-  let publishedOfferConfig = null;
-  let selectedOffer = null;
-  function render(config) {
-    publishedOfferConfig = config;
-    const supportLink = document.getElementById('faq-support-link');
-    const supportFallback = document.getElementById('faq-support-fallback');
-    if (supportLink && config.supportUrl) { supportLink.href = config.supportUrl; supportLink.hidden = false; }
-    if (supportFallback) supportFallback.hidden = Boolean(config.supportUrl);
-    const title = document.getElementById('start-offers-title');
-    const lead = document.getElementById('start-offers-lead');
-    const badge = document.getElementById('start-offers-badge');
-    const note = document.getElementById('start-offers-note');
-    if (title) title.textContent = config.headline || 'Предложения';
-    if (lead) { lead.textContent = config.lead || ''; lead.hidden = !config.lead; }
-    if (badge) { badge.textContent = config.topBadge || ''; badge.hidden = !config.topBadge; }
-    if (note) {
-      note.innerHTML = '<span aria-hidden="true">✧</span> ' + esc(config.note || '');
-      note.hidden = config.showNote !== true || !config.note;
-    }
-    const sections = (config.sections || []).slice().sort((a,b) => Number(a.sortOrder)-Number(b.sortOrder));
-    const offers = config.offers || [];
-    groups.innerHTML = sections.map(section => {
-      const items = offers.filter(item => item.sectionId === section.id).slice().sort((a,b) => Number(a.sortOrder)-Number(b.sortOrder));
-      if (!items.length) return '';
-      const subscriptionGroup = items.some(item => item.type === 'subscription');
-      return '<div class="start-offer-group ' + (subscriptionGroup ? 'start-subscription-group' : '') + '">' +
-        '<div class="start-offer-group-title"><span class="start-offer-group-icon">' + esc(section.icon || '◇') + '</span><span>' + esc(section.title) + '</span></div>' +
-        (section.description ? '<div class="start-offer-group-description">' + esc(section.description) + '</div>' : '') +
-        '<div class="start-offer-grid ' + (items.every(item => item.type === 'subscription') ? 'start-subscription-grid' : '') + '">' +
-        items.map(item => {
-          const subscription = item.type === 'subscription';
-          const featured = item.style === 'featured';
-          const count = quantity(item.quantity);
-          const top = subscription
-            ? '<div class="start-offer-duration">' + esc(count) + ' <span>' + esc(item.unitLabel || 'месяц') + '</span></div>'
-            : '<div class="start-offer-top"><span class="start-offer-count">' + esc(count) + '</span><span class="start-offer-unit">' + esc(item.unitLabel || '') + '</span></div>';
-          const titleMarkup = item.title ? '<div class="start-offer-name">' + esc(item.title) + '</div>' : '';
-          const descriptionMarkup = item.description ? '<div class="start-offer-description">' + esc(item.description) + '</div>' : '';
-          let priceMarkup = '';
-          if (item.showPrice === true && item.price !== null && item.price !== undefined && item.price !== '') {
-            priceMarkup = '<div class="start-offer-pricing">' +
-              (item.oldPrice !== null && item.oldPrice !== undefined && item.oldPrice !== '' ? '<span class="start-offer-old-price">' + esc(rubles(item.oldPrice)) + ' ₽</span>' : '') +
-              '<span class="start-offer-current-price">' + esc(rubles(item.price)) + ' ₽</span></div>';
-          }
-          const badgeMarkup = item.badge ? '<span class="start-offer-badge">' + esc(item.badge) + '</span>' : '';
-          const requestMarkup = '<button class="start-offer-request" type="button" data-request-offer="' + esc(item.id) + '">Запросить</button>';
-          return '<article class="start-offer ' + (subscription ? 'start-offer-subscription ' : '') + (featured ? 'start-offer-featured' : '') + '">' +
-            top + titleMarkup + descriptionMarkup + priceMarkup + badgeMarkup + requestMarkup + '</article>';
-        }).join('') + '</div></div>';
-    }).join('');
-  }
-  const pathname = window.location.pathname;
-  const appBase = pathname.endsWith('/')
-    ? pathname
-    : (pathname.slice(pathname.lastIndexOf('/') + 1).includes('.')
-        ? pathname.slice(0, pathname.lastIndexOf('/') + 1)
-        : pathname + '/');
-  const faqOverlay = document.getElementById('faq-overlay');
-  const requestOverlay = document.getElementById('offer-request-overlay');
-  const requestName = document.getElementById('offer-request-name');
-  const requestDetails = document.getElementById('offer-request-details');
-  const requestPrice = document.getElementById('offer-request-price');
-  const requestStatus = document.getElementById('offer-request-status');
-  const requestSubmit = document.getElementById('offer-request-submit');
-  function closeInfoOverlay(overlay) { if (overlay) overlay.hidden = true; }
-  function openRequest(offer) {
-    selectedOffer = offer;
-    requestName.textContent = offer.title || (offer.type === 'subscription'
-      ? quantity(offer.quantity) + ' ' + (offer.unitLabel || 'месяц')
-      : quantity(offer.quantity) + ' ' + (offer.unitLabel || 'сканов'));
-    requestDetails.textContent = [offer.description, offer.type === 'subscription' ? '' : 'Количество: ' + quantity(offer.quantity) + ' ' + (offer.unitLabel || 'сканов')].filter(Boolean).join(' · ');
-    const hasPrice = offer.showPrice === true && offer.price !== null && offer.price !== undefined && offer.price !== '';
-    requestPrice.hidden = !hasPrice;
-    requestPrice.textContent = hasPrice ? rubles(offer.price) + ' ₽' : '';
-    requestStatus.textContent = '';
-    requestStatus.className = 'offer-request-status';
-    requestSubmit.disabled = false;
-    requestSubmit.textContent = 'Отправить запрос';
-    requestOverlay.hidden = false;
-  }
-  document.getElementById('offer-request-close')?.addEventListener('click', () => closeInfoOverlay(requestOverlay));
-  document.getElementById('offer-request-cancel')?.addEventListener('click', () => closeInfoOverlay(requestOverlay));
-  if (requestOverlay) requestOverlay.addEventListener('click', event => { if (event.target === requestOverlay) closeInfoOverlay(requestOverlay); });
-  document.addEventListener('keydown', event => {
-    if (event.key === 'Escape') closeInfoOverlay(requestOverlay);
-  });
-  groups.addEventListener('click', event => {
-    const button = event.target.closest('[data-request-offer]');
-    if (!button || !publishedOfferConfig) return;
-    const offer = publishedOfferConfig.offers.find(item => item.id === button.dataset.requestOffer);
-    if (offer) openRequest(offer);
-  });
-  requestSubmit.addEventListener('click', async () => {
-    if (!selectedOffer) return;
-    requestSubmit.disabled = true;
-    requestSubmit.textContent = 'Отправляем…';
-    requestStatus.className = 'offer-request-status';
-    requestStatus.textContent = 'Сохраняем запрос…';
-    const query = window.location.search.slice(1);
-    const auth = 'VK ' + btoa(unescape(encodeURIComponent(query))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-    try {
-      const response = await fetch(new URL(appBase + 'api/offer-requests', window.location.origin), {
-        method: 'POST',
-        headers: { Authorization: auth, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ offerId: selectedOffer.id }),
-        cache: 'no-store'
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Не удалось отправить запрос.');
-      requestStatus.className = 'offer-request-status success';
-      requestStatus.textContent = data.message || 'Запрос отправлен. Тариф оформляется вручную.';
-      requestSubmit.textContent = 'Запрос отправлен';
-      groups.querySelectorAll('[data-request-offer]').forEach(item => {
-        if (item.dataset.requestOffer === selectedOffer.id) {
-          item.disabled = true;
-          item.textContent = 'Запрошено';
-        }
-      });
-    } catch (error) {
-      requestStatus.className = 'offer-request-status error';
-      requestStatus.textContent = error.message || 'Не удалось отправить запрос.';
-      requestSubmit.disabled = false;
-      requestSubmit.textContent = 'Повторить';
-    }
-  });
-
-  fetch(new URL(appBase + 'api/offers', window.location.origin), { cache: 'no-store', credentials: 'omit' })
-    .then(response => { if (!response.ok) throw new Error('Offers configuration unavailable'); return response.json(); })
-    .then(render)
-    .catch(error => console.warn('[Roadnote offers] Keeping embedded fallback cards:', error));
-})();
-</script>
-
-<script>
 /*
  * Referral controls are deliberately wired independently from initializePage().
  * A failure elsewhere in the main-page initialization must not leave these
@@ -2279,7 +2034,7 @@
 
 
 <script>
-/* FAQ/support controls must work even if the offers API or offer markup is unavailable. */
+/* FAQ and support controls are independent from tariff rendering. */
 (function () {
   const faqOverlay = document.getElementById('faq-overlay');
   const faqButton = document.getElementById('start-faq-button');
