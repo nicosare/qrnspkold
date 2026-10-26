@@ -1698,37 +1698,77 @@
   }
 
   async function copyReferralLink() {
-    if (!currentReferralLink) return;
+    if (!currentReferralLink) {
+      if (referralStatus) referralStatus.textContent = 'Ссылка ещё загружается. Попробуй через секунду.';
+      return;
+    }
+
+    // VK's native clipboard action works in the Mini App WebView even when
+    // the browser Clipboard API is blocked by iframe permissions.
+    if (window.vkBridge && typeof window.vkBridge.send === 'function') {
+      try {
+        await window.vkBridge.send('VKWebAppCopyText', { text: currentReferralLink });
+        if (referralStatus) referralStatus.textContent = 'Ссылка скопирована';
+        return;
+      } catch (error) {
+        console.warn('VK native copy unavailable:', error);
+      }
+    }
+
     try {
       if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
         await navigator.clipboard.writeText(currentReferralLink);
       } else {
-        referralLinkInput.focus();
-        referralLinkInput.select();
-        if (!document.execCommand('copy')) throw new Error('copy unavailable');
+        throw new Error('Clipboard API unavailable');
       }
       if (referralStatus) referralStatus.textContent = 'Ссылка скопирована';
-    } catch (_) {
-      if (referralLinkInput) {
-        referralLinkInput.focus();
-        referralLinkInput.select();
-      }
-      if (referralStatus) referralStatus.textContent = 'Выдели ссылку и скопируй её вручную';
+      return;
+    } catch (error) {
+      console.warn('Browser clipboard unavailable:', error);
     }
-  }
 
-  async function shareReferralLink() {
-    if (!currentReferralLink) return;
+    // Older VK/WebView versions may block both clipboard APIs. Try the
+    // legacy copy command before asking the user to copy the selected text.
     try {
-      if (window.vkBridge && typeof window.vkBridge.send === 'function') {
-        await window.vkBridge.send('VKWebAppShare', { link: currentReferralLink });
-        if (referralStatus) referralStatus.textContent = 'Открылось меню отправки ссылки';
+      if (!referralLinkInput) throw new Error('Referral input missing');
+      referralLinkInput.focus();
+      referralLinkInput.select();
+      referralLinkInput.setSelectionRange(0, referralLinkInput.value.length);
+      if (document.execCommand('copy')) {
+        if (referralStatus) referralStatus.textContent = 'Ссылка скопирована';
         return;
       }
     } catch (error) {
-      console.warn('VK share unavailable:', error);
+      console.warn('Legacy copy unavailable:', error);
     }
-    await copyReferralLink();
+
+    if (referralLinkInput) {
+      referralLinkInput.focus();
+      referralLinkInput.select();
+      referralLinkInput.setSelectionRange(0, referralLinkInput.value.length);
+    }
+    if (referralStatus) referralStatus.textContent = 'Ссылка выделена — нажми «Копировать» в меню устройства';
+  }
+
+  async function shareReferralLink() {
+    if (!currentReferralLink) {
+      if (referralStatus) referralStatus.textContent = 'Ссылка ещё загружается. Попробуй через секунду.';
+      return;
+    }
+
+    // Open VK's standard native share sheet; do not silently substitute copy.
+    if (!window.vkBridge || typeof window.vkBridge.send !== 'function') {
+      if (referralStatus) referralStatus.textContent = 'Открой Roadnote внутри VK, чтобы поделиться через меню VK.';
+      return;
+    }
+
+    try {
+      await window.vkBridge.send('VKWebAppShare', { link: currentReferralLink });
+      if (referralStatus) referralStatus.textContent = '';
+    } catch (error) {
+      console.error('VK native share failed:', error);
+      if (referralStatus) referralStatus.textContent = 'VK не открыло меню отправки. Закрой и заново открой Mini App.';
+    }
   }
 
   async function registerRoadnoteVisit() {
