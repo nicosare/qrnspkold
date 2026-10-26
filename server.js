@@ -93,6 +93,15 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_scan_credit_history_user_time
     ON scan_credit_history(vk_id, credited_at DESC, id DESC);
+  CREATE TABLE IF NOT EXISTS referrals (
+    invitee_vk_id TEXT PRIMARY KEY,
+    inviter_vk_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    rewarded_at TEXT DEFAULT NULL,
+    CHECK (invitee_vk_id <> inviter_vk_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_referrals_inviter
+    ON referrals(inviter_vk_id, created_at DESC);
 `);
 
 // Existing databases predate per-user scan balances. NULL means the balance
@@ -179,6 +188,19 @@ const recordScan = db.prepare(`
     (vk_id, scanned_at, paytag_id, transport_type, route_number, vehicle_number, price)
   VALUES (?, ?, ?, ?, ?, ?, ?)
 `);
+const getReferralForInvitee = db.prepare(
+  'SELECT inviter_vk_id, rewarded_at FROM referrals WHERE invitee_vk_id = ?'
+);
+const insertReferral = db.prepare(
+  'INSERT OR IGNORE INTO referrals (invitee_vk_id, inviter_vk_id, created_at) VALUES (?, ?, ?)'
+);
+const rewardReferralOnce = db.prepare(
+  'UPDATE referrals SET rewarded_at = ? WHERE invitee_vk_id = ? AND rewarded_at IS NULL'
+);
+const grantReferralScans = db.prepare(
+  'UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + 3 WHERE vk_id = ?'
+);
+const getUserExists = db.prepare('SELECT 1 FROM users WHERE vk_id = ?');
 const userCount = db.prepare('SELECT COUNT(*) AS count FROM users');
 const getUserScanBalance = db.prepare('SELECT scan_balance, subscription_until, unlimited, daily_scan_date, daily_scan_available FROM users WHERE vk_id = ?');
 const grantPack = db.prepare('UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + ? WHERE vk_id = ?');
@@ -517,11 +539,27 @@ app.post('/api/paytag', async (req, res) => {
     const scannedAt = new Date().toISOString();
     db.prepare('UPDATE users SET last_scan_at = ?, last_transport_number = ? WHERE vk_id = ?')
       .run(scannedAt, String(data.vehicleNumber || '').trim() || null, userId);
-    recordScan.run(
-      userId, scannedAt, paytagid, String(data.transportType || ''),
-      String(data.routeNumber || ''), String(data.vehicleNumber || ''),
-      Number.isFinite(data.price) ? data.price : null
-    );
+    let referralRewarded = false;
+    db.transaction(() => {
+      recordScan.run(
+        userId, scannedAt, paytagid, String(data.transportType || ''),
+        String(data.routeNumber || ''), String(data.vehicleNumber || ''),
+        Number.isFinite(data.price) ? data.price : null
+      );
+
+      const referral = getReferralForInvitee.get(userId);
+      if (referral && !referral.rewarded_at) {
+        const marked = rewardReferralOnce.run(scannedAt, userId);
+        if (marked.changes === 1) {
+          const granted = grantReferralScans.run(referral.inviter_vk_id);
+          if (granted.changes === 1) {
+            recordScanCredit.run(referral.inviter_vk_id, scannedAt, 3, 'referral', 'Бонус за приглашённого пользователя ' + userId);
+            referralRewarded = true;
+          }
+        }
+      }
+    })();
+    if (referralRewarded) sendLiveEntitlement(getReferralForInvitee.get(userId)?.inviter_vk_id);
 
     return res.json({
       ok: true,
@@ -547,14 +585,22 @@ app.post('/api/session', (req, res) => {
     if (req.body?.refreshOnly !== true) {
       const now = new Date().toISOString();
       const existed = Boolean(db.prepare('SELECT 1 FROM users WHERE vk_id = ?').get(userId));
-      upsertUser.run({
-        vk_id: userId,
-        first_name: cleanText(profile.first_name),
-        last_name: cleanText(profile.last_name),
-        photo_url: cleanText(profile.photo_url, 1000),
-        now
-      });
-      if (!existed) recordScanCredit.run(userId, now, 3, 'welcome', 'Приветственные сканы');
+      const referralCode = String(req.body?.referralCode || '').trim();
+      db.transaction(() => {
+        upsertUser.run({
+          vk_id: userId,
+          first_name: cleanText(profile.first_name),
+          last_name: cleanText(profile.last_name),
+          photo_url: cleanText(profile.photo_url, 1000),
+          now
+        });
+        if (!existed) {
+          recordScanCredit.run(userId, now, 3, 'welcome', 'Приветственные сканы');
+          if (/^\\d{1,20}$/.test(referralCode) && referralCode !== userId && getUserExists.get(referralCode)) {
+            insertReferral.run(userId, referralCode, now);
+          }
+        }
+      })();
     }
     ensureDailyScan(userId);
     const balanceRow = getUserScanBalance.get(userId);
@@ -569,6 +615,7 @@ app.post('/api/session', (req, res) => {
       subscriptionUntil,
       subscriptionActive,
       unlimited,
+      referralLink: 'https://vk.com/app' + appId + '?ref=' + encodeURIComponent(userId),
       eventsToken: makeLiveToken(userId)
     });
   } catch (error) {
