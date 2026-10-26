@@ -24,6 +24,8 @@ h1{font-size:clamp(23px,5vw,31px);line-height:1.12;letter-spacing:-.5px;margin:0
 .nav{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
 .nav a,.tab{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:#354150;font-weight:750;font-size:13px}
 .nav a.active,.tab.active{background:#eaf3ff;border-color:#bfdaff;color:#1766bc}
+.manual-note{margin:0 0 12px;padding:10px 12px;border:1px solid #dbeafe;border-radius:12px;background:#f6faff;color:#52677f;font-size:12px;line-height:1.5}
+.preview-request{width:100%;min-height:34px;margin-top:8px;padding:7px 8px;border:0;border-radius:9px;background:#2787f5;color:#fff;font-size:11px;font-weight:800}
 .tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:0 0 12px}
 .tab{width:100%;padding-inline:5px;white-space:nowrap}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:14px;margin:0 0 12px;box-shadow:0 5px 22px #15243b07}
@@ -124,7 +126,9 @@ input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{out
   <nav class="nav" aria-label="Разделы админки">
     <a id="users-link" href="#">Пользователи</a>
     <a class="active" href="#" aria-current="page">Предложения</a>
+    <a id="requests-link" href="#">Запросы</a>
   </nav>
+  <p class="manual-note">Публикация обновляет карточки в приложении. Пользователь отправляет запрос, а оплату и начисление тарифа ты оформляешь отдельно вручную.</p>
   <div class="tabs" role="tablist" aria-label="Редактор предложений">
     <button class="tab active" type="button" data-tab="cards" aria-selected="true">Карточки</button>
     <button class="tab" type="button" data-tab="sections" aria-selected="false">Разделы</button>
@@ -327,7 +331,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{out
             return '<article class="preview-card '+(offer.style==='featured'?'featured':'')+'">'+top+
               (offer.title?'<div class="preview-title">'+esc(offer.title)+'</div>':'')+
               (offer.description?'<div class="preview-description">'+esc(offer.description)+'</div>':'')+price+
-              (offer.badge?'<span class="preview-badge">'+esc(offer.badge)+'</span>':'')+'</article>';
+              (offer.badge?'<span class="preview-badge">'+esc(offer.badge)+'</span>':'')+'<button class="preview-request" type="button" disabled>Запросить тариф</button></article>';
           }).join('')+'</div></div>';
       }).join('')+
       '<div class="preview-note '+(!config.showNote?'hidden':'')+'">'+esc(config.note||'')+'</div></section>';
@@ -496,6 +500,8 @@ input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{out
   window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
   const usersLink=document.getElementById('users-link');
   usersLink.href='/roadnote/admin/users'+window.location.search;
+  const requestsLink=document.getElementById('requests-link');
+  requestsLink.href='/roadnote/admin/requests'+window.location.search;
   load();
 })();
 </script>
