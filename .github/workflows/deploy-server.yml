@@ -30,7 +30,7 @@ jobs:
           import fs from 'node:fs';
           import vm from 'node:vm';
 
-          for (const file of ['index.html', 'admin-offers.html', 'admin-users.html', 'admin-requests.html']) {
+          for (const file of ['index.html', 'admin-users.html']) {
             const html = fs.readFileSync(file, 'utf8');
             const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)]
               .map(match => match[1])
@@ -76,7 +76,7 @@ jobs:
           printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
 
-      - name: Deploy without deleting remote files
+      - name: Remove retired tariff pages and deploy current static files
         env:
           SERVER_HOST: ${{ secrets.QRNSPKOLD_SERVER_HOST }}
           SERVER_USER: ${{ secrets.QRNSPKOLD_SERVER_USER }}
@@ -87,7 +87,9 @@ jobs:
           PORT="${SERVER_PORT:-22}"
           TARGET="/var/www/roadnote"
 
-          # Dedicated target only. No --delete and no service restarts.
+          # Dedicated target only. Remove only the two retired tariff pages; preserve unrelated remote files.
+          ssh -p "$PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$SERVER_USER@$SERVER_HOST" \
+            'rm -f /var/www/roadnote/admin-offers.html /var/www/roadnote/admin-requests.html'
           rsync -az --chmod=D755,F644 \
             --exclude='.git/' \
             --exclude='.github/' \
