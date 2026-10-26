@@ -141,7 +141,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
      const entitlementStatus=u.unlimited?'Безлимит':subscriptionActive?'Подписка':u.scan_balance===null||u.scan_balance===undefined?'Баланс не назначен':(''+u.scan_balance+' '+(Number(u.scan_balance)===1?'скан':Number(u.scan_balance)>=2&&Number(u.scan_balance)<=4?'скана':'сканов'));
      const subscriptionDetail=subscriptionActive?'<small>'+esc(remaining(u.subscription_until))+' · до '+esc(new Date(u.subscription_until).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</small>':'';
      const lastScan=u.last_scan_at?date(u.last_scan_at):'Ещё не сканировал';
-     const transport=u.last_transport_number?'Транспорт № '+u.last_transport_number:'Транспорт № —';
+     const transport=[u.last_transport_type, u.last_route_number?'№ '+u.last_route_number:''].filter(Boolean).join(' ')||'—';
      return '<article class="user-card" data-user-card="'+esc(u.vk_id)+'">'+
        '<div class="person">'+avatar+'<div class="person-text"><a href="'+profile+'" target="_blank" rel="noopener noreferrer" class="name" style="color:inherit;text-decoration:none">'+esc(name)+'</a><div class="vk-id">VK ID: '+esc(u.vk_id)+' · '+esc(u.visit_count)+' посещ. · '+esc(u.scan_count||0)+' сканов</div></div></div>'+
        '<div class="stats">'+
@@ -151,7 +151,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
          '<div class="stat"><span class="stat-label">Последний транспорт</span><span class="stat-value">'+esc(transport)+'</span></div>'+
        '</div>'+
        '<details class="scan-history" data-scan-history="'+esc(u.vk_id)+'"><summary>История сканов · '+esc(u.scan_count||0)+'</summary><div class="scan-history-list"><div class="scan-history-empty">Нажмите, чтобы загрузить историю.</div></div></details>'+
-       '<div class="entitlement"><div class="entitlement-status">'+esc(entitlementStatus)+subscriptionDetail+'</div>'+
+       '<div class="entitlement">'+
        '<details class="manage"><summary>Управление доступом</summary><div class="manage-body">'+
        '<div class="grant-section"><div class="grant-section-title">СКАНЫ</div><div class="preset-grid">'+
        '<button class="primary" type="button" data-action="grant-pack" data-amount="9">+9</button>'+
