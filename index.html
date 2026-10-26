@@ -445,10 +445,10 @@
         .start-intro h2 {
             margin: 0 0 10px;
             color: #232a33;
-            font-size: clamp(30px, 7.8vw, 36px);
-            line-height: 1.12;
-            letter-spacing: -.6px;
-            font-weight: 700;
+            font-size: 22px;
+            line-height: 1.2;
+            letter-spacing: -.35px;
+            font-weight: 800;
         }
         .start-intro p { max-width: 360px; color: #727983; font-size: 16px; line-height: 1.5; }
 
@@ -592,7 +592,7 @@
         .start-offer-badge {
             display: inline-flex;
             align-items: center;
-            margin-top: 10px;
+            margin-top: auto;
             padding: 4px 7px;
             border-radius: 7px;
             background: #f1f5f9;
@@ -781,7 +781,7 @@
 
         <div class="start-intro">
             <h2 id="start-title">С чего начнём?</h2>
-            <p>Вернись к текущему билету или отсканируй новый QR-код НСПК.</p>
+            <p id="start-mood-message" aria-live="polite">Пусть сегодня случится что-то хорошее.</p>
         </div>
 
         <div class="start-balance-card">
@@ -865,7 +865,6 @@
             <div id="scan-status" class="start-status" role="status" aria-live="polite"></div>
         </div>
 
-        <div class="start-footer">Текущий билет сохраняется на этом устройстве.</div>
     </div>
 </section>
 
@@ -1561,6 +1560,26 @@
     }
 
     function initializePage() {
+        const moodMessages = [
+            'Пусть сегодня случится что-то хорошее.',
+            'Ты уже молодец — не забывай об этом.',
+            'Пусть всё сложится чуть лучше, чем ожидалось.',
+            'Не спеши. Хорошие вещи тоже любят свой темп.',
+            'Желаю тебе побольше поводов улыбнуться.',
+            'Даже маленький шаг — всё равно движение вперёд.',
+            'Пусть день принесёт приятную неожиданность.',
+            'Ты справишься. А пока можно просто выдохнуть.',
+            'Пусть рядом сегодня будет немного больше доброты.',
+            'Иногда обычный день становится хорошим с мелочи.',
+            'Пусть сегодня будет легче, чем вчера.',
+            'Береги себя — ты тоже важная часть своих планов.',
+            'Желаю спокойной головы и тёплых моментов.',
+            'Пусть нужные вещи приходят в нужное время.',
+            'Не обязательно быть идеальным, чтобы всё получалось.'
+        ];
+        const moodMessage = document.getElementById('start-mood-message');
+        if (moodMessage) moodMessage.textContent = moodMessages[Math.floor(Math.random() * moodMessages.length)];
+
         loadFromLocalStorage();
         loadTimer();
 
