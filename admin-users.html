@@ -67,6 +67,9 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 .unlimited-toggle{width:100%;margin-top:8px;background:#f4f7fb}
 .action-status{font-size:12px;color:var(--muted);min-height:17px;margin-top:6px}
 .action-status.error{color:#b42318}
+.admin-nav{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px}
+.admin-nav a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:#354150;font-size:13px;font-weight:750}
+.admin-nav a.active{background:#eaf3ff;border-color:#bfdaff;color:#1766bc}
 .status{padding:30px 12px;text-align:center;color:var(--muted)}.error{color:#b42318}.foot{font-size:12px;line-height:1.5;color:var(--muted);margin-top:16px}
 @media(max-width:600px){
  main{padding-top:12px}.top{align-items:flex-start;margin-bottom:12px}.sub{font-size:12px}.count{font-size:12px;padding:6px 8px}
@@ -84,6 +87,10 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  <div><h1>Пользователи Roadnote</h1><div class="sub">Нажми на карточку, чтобы открыть профиль VK</div></div>
  <div class="count" id="count">Загрузка…</div>
 </header>
+<nav class="admin-nav" aria-label="Разделы админки">
+ <a class="active" href="#" aria-current="page">Пользователи</a>
+ <a id="offers-link" href="#">Предложения</a>
+</nav>
 <section class="panel">
  <div class="toolbar">
   <input id="search" type="search" placeholder="Имя, VK ID или транспорт №" autocomplete="off" aria-label="Поиск пользователей">
@@ -107,6 +114,8 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 (() => {
  const query = window.location.search.slice(1);
  const auth = 'VK ' + btoa(unescape(encodeURIComponent(query))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+ const offersLink = document.getElementById('offers-link');
+ if (offersLink) offersLink.href = '/roadnote/admin/offers' + window.location.search;
  const status = document.getElementById('status');
  const cards = document.getElementById('cards');
  const count = document.getElementById('count');
