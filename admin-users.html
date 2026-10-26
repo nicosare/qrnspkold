@@ -125,7 +125,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  const search = document.getElementById('search');
  const sort = document.getElementById('sort');
  let users = [];
- const date = value => value ? new Date(value).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+ const date = value => value ? new Date(value).toLocaleString('ru-RU',{day:'numeric',month:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}) : '—';
  const remaining = value => {
    const ms=Date.parse(value)-Date.now();
    if(!Number.isFinite(ms)||ms<=0)return 'Подписка истекла';
@@ -156,7 +156,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
      const profile='https://vk.com/id'+encodeURIComponent(u.vk_id);
      const subscriptionActive=Boolean(u.subscription_until && Date.parse(u.subscription_until)>Date.now());
      const entitlementStatus=u.unlimited?'Безлимит':subscriptionActive?'Подписка':u.scan_balance===null||u.scan_balance===undefined?'Баланс не назначен':(''+u.scan_balance+' '+(Number(u.scan_balance)===1?'скан':Number(u.scan_balance)>=2&&Number(u.scan_balance)<=4?'скана':'сканов'));
-     const subscriptionDetail=subscriptionActive?'<small>'+esc(remaining(u.subscription_until))+' · до '+esc(new Date(u.subscription_until).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</small>':'';
+     const subscriptionDetail=subscriptionActive?'<small>'+esc(remaining(u.subscription_until))+' · до '+esc(new Date(u.subscription_until).toLocaleString('ru-RU',{day:'numeric',month:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}))+'</small>':'';
      const lastScan=u.last_scan_at?date(u.last_scan_at):'Ещё не сканировал';
      const transport=[u.last_transport_type, u.last_route_number?'№ '+u.last_route_number:''].filter(Boolean).join(' ')||'—';
      return '<article class="user-card" data-user-card="'+esc(u.vk_id)+'">'+
