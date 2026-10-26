@@ -426,33 +426,39 @@ app.post('/api/paytag', async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   try {
     const data = await task;
+    // Re-read entitlements after the upstream request: another tab or request
+    // may have consumed a scan while this QR was being resolved.
+    const currentBeforeCharge = getUserScanBalance.get(userId);
+    const currentSubscriptionActive = Boolean(
+      currentBeforeCharge?.subscription_until &&
+      Date.parse(currentBeforeCharge.subscription_until) > Date.now()
+    );
+    const currentUnlimited = Number(currentBeforeCharge?.unlimited || 0) === 1 || currentSubscriptionActive;
+
     // Paid/package scans are consumed first. The daily scan is separate and
     // only consumed when the paid balance is empty. Charge only after valid data.
-    if (!hasUnlimited) {
-      if (balanceBefore > 0) {
+    if (!currentUnlimited) {
+      const currentPaidBalance = Number(currentBeforeCharge?.scan_balance || 0);
+      if (currentPaidBalance > 0) {
         const spent = spendUserScan.run(userId);
         if (spent.changes !== 1) {
-          const latest = getUserScanBalance.get(userId);
-          if (Number(latest?.scan_balance || 0) <= 0) {
-            ensureDailyScan(userId);
-            const refreshed = getUserScanBalance.get(userId);
-            const dailyNowAvailable = refreshed?.daily_scan_date === moscowDayKey() && Number(refreshed?.daily_scan_available || 0) === 1;
-            if (!dailyNowAvailable || spendDailyScan.run(userId, moscowDayKey()).changes !== 1) {
-              return res.status(402).json({ ok: false, code: 'SCAN_BALANCE_EMPTY', scanBalance: 0, error: 'Бесплатный скан на сегодня уже использован. Пополните баланс или возвращайтесь завтра.' });
-            }
-          } else {
-            spendUserScan.run(userId);
-          }
+          return res.status(402).json({
+            ok: false,
+            code: 'SCAN_BALANCE_EMPTY',
+            scanBalance: getDisplayedScanBalance(getUserScanBalance.get(userId)),
+            error: 'Баланс сканов изменился. Повторите попытку.'
+          });
         }
       } else {
-        const dailySpent = spendDailyScan.run(userId, dayKey);
+        ensureDailyScan(userId);
+        const dailySpent = spendDailyScan.run(userId, moscowDayKey());
         if (dailySpent.changes !== 1) {
-          const latest = getUserScanBalance.get(userId);
-          if (Number(latest?.scan_balance || 0) > 0) {
-            spendUserScan.run(userId);
-          } else {
-            return res.status(402).json({ ok: false, code: 'SCAN_BALANCE_EMPTY', scanBalance: 0, error: 'Бесплатный скан на сегодня уже использован. Пополните баланс или возвращайтесь завтра.' });
-          }
+          return res.status(402).json({
+            ok: false,
+            code: 'SCAN_BALANCE_EMPTY',
+            scanBalance: getDisplayedScanBalance(getUserScanBalance.get(userId)),
+            error: 'Бесплатный скан на сегодня уже использован. Пополните баланс или возвращайтесь завтра.'
+          });
         }
       }
       ensureDailyScan(userId);
