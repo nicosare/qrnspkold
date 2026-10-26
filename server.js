@@ -32,7 +32,7 @@ function getLiveEntitlement(userId) {
   const subscriptionActive = Boolean(row?.subscription_until && Date.parse(row.subscription_until) > Date.now());
   const unlimited = Number(row?.unlimited || 0) === 1;
   const paidBalance = row && row.scan_balance !== null ? Number(row.scan_balance) : 0;
-  const dailyAvailable = row?.daily_scan_date === moscowDayKey() && Number(row?.daily_scan_available || 0) === 1;
+  const dailyAvailable = row?.daily_scan_date === yekaterinburgDayKey() && Number(row?.daily_scan_available || 0) === 1;
   return {
     scanBalance: paidBalance > 0 ? paidBalance : dailyAvailable ? 1 : 0,
     subscriptionUntil: row?.subscription_until || null,
@@ -149,9 +149,9 @@ const ensureUserForScan = db.prepare(`
   ON CONFLICT(vk_id) DO NOTHING
 `);
 
-function moscowDayKey(date = new Date()) {
+function yekaterinburgDayKey(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Moscow',
+    timeZone: 'Asia/Yekaterinburg',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
@@ -160,9 +160,12 @@ function moscowDayKey(date = new Date()) {
   return values.year + '-' + values.month + '-' + values.day;
 }
 
+// The daily bonus is a regular scan added to the ordinary balance.
+// It is granted at most once per Yekaterinburg calendar day, only when the
+// user's ordinary balance is empty and they have no active subscription.
 const grantDailyScan = db.prepare(`
   UPDATE users
-  SET daily_scan_date = ?, daily_scan_available = 1
+  SET scan_balance = 1, daily_scan_date = ?, daily_scan_available = 0
   WHERE vk_id = ?
     AND COALESCE(scan_balance, 0) <= 0
     AND COALESCE(unlimited, 0) = 0
@@ -171,17 +174,15 @@ const grantDailyScan = db.prepare(`
 `);
 
 function ensureDailyScan(userId, now = new Date()) {
-  const dayKey = moscowDayKey(now);
+  const dayKey = yekaterinburgDayKey(now);
   const nowIso = now.toISOString();
   grantDailyScan.run(dayKey, String(userId), nowIso, dayKey);
   return dayKey;
 }
 
 function getDisplayedScanBalance(row) {
-  if (!row) return 0;
-  const paidBalance = row.scan_balance === null || row.scan_balance === undefined ? 0 : Number(row.scan_balance);
-  if (paidBalance > 0) return paidBalance;
-  return row.daily_scan_date === moscowDayKey() && Number(row.daily_scan_available || 0) === 1 ? 1 : 0;
+  if (!row || row.scan_balance === null || row.scan_balance === undefined) return 0;
+  return Math.max(0, Number(row.scan_balance) || 0);
 }
 
 app.disable('x-powered-by');
@@ -399,10 +400,9 @@ app.post('/api/paytag', async (req, res) => {
     : Number(balanceRow.scan_balance);
   const subscriptionActive = Boolean(balanceRow?.subscription_until && Date.parse(balanceRow.subscription_until) > Date.now());
   const hasUnlimited = Number(balanceRow?.unlimited || 0) === 1 || subscriptionActive;
-  const dayKey = moscowDayKey();
-  const dailyAvailable = balanceRow?.daily_scan_date === dayKey && Number(balanceRow?.daily_scan_available || 0) === 1;
+  const dayKey = yekaterinburgDayKey();
 
-  if (!hasUnlimited && (!Number.isSafeInteger(balanceBefore) || balanceBefore <= 0) && !dailyAvailable) {
+  if (!hasUnlimited && (!Number.isSafeInteger(balanceBefore) || balanceBefore <= 0)) {
     return res.status(402).json({
       ok: false,
       code: 'SCAN_BALANCE_EMPTY',
@@ -450,16 +450,12 @@ app.post('/api/paytag', async (req, res) => {
           });
         }
       } else {
-        ensureDailyScan(userId);
-        const dailySpent = spendDailyScan.run(userId, moscowDayKey());
-        if (dailySpent.changes !== 1) {
-          return res.status(402).json({
-            ok: false,
-            code: 'SCAN_BALANCE_EMPTY',
-            scanBalance: getDisplayedScanBalance(getUserScanBalance.get(userId)),
-            error: 'Бесплатный скан на сегодня уже использован. Пополните баланс или возвращайтесь завтра.'
-          });
-        }
+        return res.status(402).json({
+          ok: false,
+          code: 'SCAN_BALANCE_EMPTY',
+          scanBalance: getDisplayedScanBalance(getUserScanBalance.get(userId)),
+          error: 'Бесплатный скан на сегодня уже использован. Пополните баланс или возвращайтесь завтра.'
+        });
       }
       ensureDailyScan(userId);
       sendLiveEntitlement(userId);
