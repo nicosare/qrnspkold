@@ -378,6 +378,42 @@ db.prepare(`
   VALUES (1, ?, ?, ?, ?)
 `).run(defaultOfferJson, defaultOfferJson, nowForOfferSeed, nowForOfferSeed);
 
+// Migrate only the previous built-in copy; preserve all custom editor content.
+function migrateLegacyOfferCopy(raw) {
+  let config;
+  try { config = JSON.parse(raw); } catch { return raw; }
+  let changed = false;
+  if (config.lead === 'Выбирай удобный формат — оплата и подключение появятся чуть позже.') {
+    config.lead = 'Выбери тариф и отправь запрос — оформление происходит вручную.';
+    changed = true;
+  }
+  if (config.topBadge === 'Скоро' && config.headline === 'Предложения') {
+    config.topBadge = 'Ручное оформление';
+    changed = true;
+  }
+  if (config.note === 'Цены и подключение появятся здесь позже') {
+    config.note = 'Запрос не означает автоматическую оплату или начисление — тариф оформляется вручную.';
+    changed = true;
+  }
+  const builtInOfferIds = new Set(['scan-9', 'scan-29', 'scan-49', 'sub-1', 'sub-3', 'sub-6']);
+  for (const offer of config.offers || []) {
+    if (builtInOfferIds.has(offer.id) && offer.badge === 'Скоро') {
+      offer.badge = 'Запрос доступен';
+      changed = true;
+    }
+  }
+  return changed ? JSON.stringify(config) : raw;
+}
+const savedOfferCopy = db.prepare('SELECT draft_json, published_json FROM offer_config WHERE id = 1').get();
+if (savedOfferCopy) {
+  const draftCopy = migrateLegacyOfferCopy(savedOfferCopy.draft_json);
+  const publishedCopy = migrateLegacyOfferCopy(savedOfferCopy.published_json);
+  if (draftCopy !== savedOfferCopy.draft_json || publishedCopy !== savedOfferCopy.published_json) {
+    db.prepare('UPDATE offer_config SET draft_json = ?, published_json = ? WHERE id = 1')
+      .run(draftCopy, publishedCopy);
+  }
+}
+
 function normalizeOfferConfig(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     throw new Error('Переданы некорректные настройки предложений.');
