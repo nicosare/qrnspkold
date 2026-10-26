@@ -109,6 +109,27 @@ db.exec(`
     updated_at TEXT NOT NULL,
     published_at TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS offer_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vk_id TEXT NOT NULL,
+    offer_id TEXT NOT NULL,
+    offer_title TEXT NOT NULL,
+    offer_type TEXT NOT NULL,
+    offer_quantity INTEGER NOT NULL DEFAULT 1,
+    offer_unit_label TEXT NOT NULL DEFAULT '',
+    offer_description TEXT NOT NULL DEFAULT '',
+    offer_price REAL DEFAULT NULL,
+    offer_old_price REAL DEFAULT NULL,
+    requested_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending'
+  );
+  CREATE INDEX IF NOT EXISTS idx_offer_requests_status_date
+    ON offer_requests(status, requested_at DESC, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_offer_requests_user
+    ON offer_requests(vk_id, requested_at DESC);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_offer_requests_one_pending
+    ON offer_requests(vk_id, offer_id) WHERE status = 'pending';
 `);
 
 // Existing databases predate per-user scan balances. NULL means the balance
@@ -332,21 +353,21 @@ function cleanText(value, maxLength = 120) {
 const DEFAULT_OFFER_CONFIG = {
   version: 1,
   headline: 'Предложения',
-  lead: 'Выбирай удобный формат — оплата и подключение появятся чуть позже.',
-  topBadge: 'Скоро',
-  note: 'Цены и подключение появятся здесь позже',
+  lead: 'Выбери тариф и отправь запрос — оформление происходит вручную.',
+  topBadge: 'Ручное оформление',
+  note: 'Запрос не означает автоматическую оплату или начисление — тариф оформляется вручную.',
   showNote: true,
   sections: [
     { id: 'scan-packs', title: 'Пакеты сканирований', icon: '↗', description: '', sortOrder: 10, visible: true },
     { id: 'subscription', title: 'Подписка', icon: '✦', description: '', sortOrder: 20, visible: true }
   ],
   offers: [
-    { id: 'scan-9', sectionId: 'scan-packs', type: 'scan_pack', title: 'Старт', description: 'Попробовать и пользоваться время от времени', quantity: 9, unitLabel: 'сканов', price: 69, oldPrice: 99, showPrice: false, badge: 'Скоро', style: 'default', sortOrder: 10, visible: true },
-    { id: 'scan-29', sectionId: 'scan-packs', type: 'scan_pack', title: 'Оптимальный', description: 'Запас сканирований на каждый день', quantity: 29, unitLabel: 'сканов', price: 179, oldPrice: 249, showPrice: false, badge: 'Скоро', style: 'default', sortOrder: 20, visible: true },
-    { id: 'scan-49', sectionId: 'scan-packs', type: 'scan_pack', title: 'Большой запас', description: 'Реже пополнять баланс и не отвлекаться', quantity: 49, unitLabel: 'сканов', price: 279, oldPrice: 369, showPrice: false, badge: 'Скоро', style: 'default', sortOrder: 30, visible: true },
-    { id: 'sub-1', sectionId: 'subscription', type: 'subscription', title: '', description: 'Для регулярного использования', quantity: 1, unitLabel: 'месяц', price: 179, oldPrice: 249, showPrice: false, badge: 'Скоро', style: 'featured', sortOrder: 10, visible: true },
-    { id: 'sub-3', sectionId: 'subscription', type: 'subscription', title: '', description: 'Удобный вариант на сезон', quantity: 3, unitLabel: 'месяца', price: 439, oldPrice: 549, showPrice: false, badge: 'Скоро', style: 'default', sortOrder: 20, visible: true },
-    { id: 'sub-6', sectionId: 'subscription', type: 'subscription', title: '', description: 'Подключить надолго и забыть о пополнении', quantity: 6, unitLabel: 'месяцев', price: 699, oldPrice: 849, showPrice: false, badge: 'Скоро', style: 'default', sortOrder: 30, visible: true }
+    { id: 'scan-9', sectionId: 'scan-packs', type: 'scan_pack', title: 'Старт', description: 'Попробовать и пользоваться время от времени', quantity: 9, unitLabel: 'сканов', price: 69, oldPrice: 99, showPrice: false, badge: 'Запрос доступен', style: 'default', sortOrder: 10, visible: true },
+    { id: 'scan-29', sectionId: 'scan-packs', type: 'scan_pack', title: 'Оптимальный', description: 'Запас сканирований на каждый день', quantity: 29, unitLabel: 'сканов', price: 179, oldPrice: 249, showPrice: false, badge: 'Запрос доступен', style: 'default', sortOrder: 20, visible: true },
+    { id: 'scan-49', sectionId: 'scan-packs', type: 'scan_pack', title: 'Большой запас', description: 'Реже пополнять баланс и не отвлекаться', quantity: 49, unitLabel: 'сканов', price: 279, oldPrice: 369, showPrice: false, badge: 'Запрос доступен', style: 'default', sortOrder: 30, visible: true },
+    { id: 'sub-1', sectionId: 'subscription', type: 'subscription', title: '', description: 'Для регулярного использования', quantity: 1, unitLabel: 'месяц', price: 179, oldPrice: 249, showPrice: false, badge: 'Запрос доступен', style: 'featured', sortOrder: 10, visible: true },
+    { id: 'sub-3', sectionId: 'subscription', type: 'subscription', title: '', description: 'Удобный вариант на сезон', quantity: 3, unitLabel: 'месяца', price: 439, oldPrice: 549, showPrice: false, badge: 'Запрос доступен', style: 'default', sortOrder: 20, visible: true },
+    { id: 'sub-6', sectionId: 'subscription', type: 'subscription', title: '', description: 'Подключить надолго и забыть о пополнении', quantity: 6, unitLabel: 'месяцев', price: 699, oldPrice: 849, showPrice: false, badge: 'Запрос доступен', style: 'default', sortOrder: 30, visible: true }
   ]
 };
 
@@ -816,9 +837,85 @@ app.get('/api/offers', (_req, res) => {
     topBadge: config.topBadge,
     note: config.note,
     showNote: config.showNote,
+    supportUrl: adminVkId ? 'https://vk.com/im?sel=' + encodeURIComponent(adminVkId) : '',
     sections: sectionsWithOffers,
     offers: visibleOffers.filter(offer => sectionIdsWithOffers.has(offer.sectionId))
   });
+});
+
+
+app.post('/api/offer-requests', (req, res) => {
+  let userId;
+  let params;
+  try {
+    ({ userId, params } = launchParamsFromRequest(req));
+  } catch {
+    return res.status(401).json({ error: 'Открой приложение внутри VK, чтобы отправить запрос.' });
+  }
+
+  const offerId = String(req.body?.offerId || '').trim();
+  if (!/^[a-zA-Z0-9_-]{1,64}$/.test(offerId)) {
+    return res.status(400).json({ error: 'Не удалось определить выбранный тариф.' });
+  }
+
+  const config = getStoredOfferConfig().published;
+  const offer = config.offers.find(item => item.id === offerId && item.visible);
+  const section = offer && config.sections.find(item => item.id === offer.sectionId && item.visible);
+  if (!offer || !section) {
+    return res.status(404).json({ error: 'Этот тариф больше не доступен. Обнови приложение и попробуй снова.' });
+  }
+
+  const now = new Date().toISOString();
+  if (!getUserExists.get(userId)) {
+    const profile = {
+      vk_id: userId,
+      first_name: cleanText(params.get('vk_first_name'), 80),
+      last_name: cleanText(params.get('vk_last_name'), 80),
+      photo_url: cleanText(params.get('vk_photo_100') || params.get('vk_photo_200'), 1000),
+      now
+    };
+    db.transaction(() => {
+      upsertUser.run(profile);
+      recordScanCredit.run(userId, now, 3, 'welcome', 'Приветственные сканы');
+    })();
+  }
+
+  try {
+    const saveRequest = db.transaction(() => {
+      const existing = db.prepare(
+        "SELECT id FROM offer_requests WHERE vk_id = ? AND offer_id = ? AND status = 'pending'"
+      ).get(userId, offer.id);
+      if (existing) return { id: Number(existing.id), alreadyRequested: true };
+
+      const result = db.prepare(`
+        INSERT INTO offer_requests
+          (vk_id, offer_id, offer_title, offer_type, offer_quantity, offer_unit_label,
+           offer_description, offer_price, offer_old_price, requested_at, updated_at, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+      `).run(
+        userId, offer.id, offer.title || (offer.type === 'subscription' ? 'Подписка' : 'Пакет сканирований'),
+        offer.type, Number(offer.quantity) || 1, offer.unitLabel || '', offer.description || '',
+        offer.price === '' || offer.price === undefined ? null : offer.price,
+        offer.oldPrice === '' || offer.oldPrice === undefined ? null : offer.oldPrice,
+        now, now
+      );
+      return { id: Number(result.lastInsertRowid), alreadyRequested: false };
+    });
+    const saved = saveRequest();
+    return res.status(saved.alreadyRequested ? 200 : 201).json({
+      ok: true,
+      ...saved,
+      message: saved.alreadyRequested
+        ? 'У тебя уже есть активный запрос на этот тариф.'
+        : 'Запрос отправлен. Администратор оформит тариф вручную.'
+    });
+  } catch (error) {
+    if (String(error?.code || '').startsWith('SQLITE_CONSTRAINT')) {
+      return res.status(409).json({ error: 'У тебя уже есть активный запрос на этот тариф.' });
+    }
+    console.error('[offer request]', error);
+    return res.status(500).json({ error: 'Не удалось сохранить запрос. Попробуй ещё раз.' });
+  }
 });
 
 app.get('/api/admin/offers', requireAdmin, (_req, res) => {
@@ -853,6 +950,41 @@ app.post('/api/admin/offers/reset-draft', requireAdmin, (_req, res) => {
   const updatedAt = new Date().toISOString();
   db.prepare('UPDATE offer_config SET draft_json = published_json, updated_at = ? WHERE id = 1').run(updatedAt);
   return res.json({ ok: true, draft: parseStoredOfferConfig(row.published_json), updatedAt });
+});
+
+
+app.get('/api/admin/offer-requests', requireAdmin, (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const requests = db.prepare(`
+    SELECT r.id, r.vk_id, r.offer_id, r.offer_title, r.offer_type, r.offer_quantity,
+           r.offer_unit_label, r.offer_description, r.offer_price, r.offer_old_price,
+           r.requested_at, r.updated_at, r.status,
+           u.first_name, u.last_name, u.photo_url
+    FROM offer_requests r
+    LEFT JOIN users u ON u.vk_id = r.vk_id
+    ORDER BY CASE WHEN r.status = 'pending' THEN 0 ELSE 1 END,
+             r.requested_at DESC, r.id DESC
+  `).all();
+  return res.json({
+    requests,
+    total: requests.length,
+    pending: requests.filter(item => item.status === 'pending').length
+  });
+});
+
+app.patch('/api/admin/offer-requests/:id', requireAdmin, (req, res) => {
+  const id = Number(req.params.id);
+  const status = String(req.body?.status || '');
+  if (!Number.isSafeInteger(id) || id < 1) {
+    return res.status(400).json({ error: 'Некорректный номер запроса.' });
+  }
+  if (!['processed', 'declined', 'pending'].includes(status)) {
+    return res.status(400).json({ error: 'Неизвестный статус запроса.' });
+  }
+  const result = db.prepare('UPDATE offer_requests SET status = ?, updated_at = ? WHERE id = ?')
+    .run(status, new Date().toISOString(), id);
+  if (!result.changes) return res.status(404).json({ error: 'Запрос не найден.' });
+  return res.json({ ok: true, id, status });
 });
 
 app.get('/api/admin/users', requireAdmin, (_req, res) => {
@@ -956,6 +1088,11 @@ app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
 app.get('/admin/users', (_req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'admin-users.html'));
+});
+
+app.get('/admin/requests', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(__dirname, 'admin-requests.html'));
 });
 
 app.get('/admin/offers', (_req, res) => {
