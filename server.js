@@ -83,6 +83,16 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_scan_history_user_time
     ON scan_history(vk_id, scanned_at DESC);
+  CREATE TABLE IF NOT EXISTS scan_credit_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vk_id TEXT NOT NULL,
+    credited_at TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    source TEXT NOT NULL,
+    note TEXT NOT NULL DEFAULT ''
+  );
+  CREATE INDEX IF NOT EXISTS idx_scan_credit_history_user_time
+    ON scan_credit_history(vk_id, credited_at DESC, id DESC);
 `);
 
 // Existing databases predate per-user scan balances. NULL means the balance
@@ -152,6 +162,17 @@ const listUserScans = db.prepare(`
   WHERE vk_id = ?
   ORDER BY scanned_at DESC, id DESC
   LIMIT 500
+`);
+const listUserCredits = db.prepare(`
+  SELECT id, credited_at, amount, source, note
+  FROM scan_credit_history
+  WHERE vk_id = ?
+  ORDER BY credited_at DESC, id DESC
+  LIMIT 500
+`);
+const recordScanCredit = db.prepare(`
+  INSERT INTO scan_credit_history (vk_id, credited_at, amount, source, note)
+  VALUES (?, ?, ?, ?, ?)
 `);
 const recordScan = db.prepare(`
   INSERT INTO scan_history
@@ -419,7 +440,10 @@ app.post('/api/paytag', async (req, res) => {
   }
 
   const now = new Date().toISOString();
-  ensureUserForScan.run(userId, now, now);
+  const insertedUser = ensureUserForScan.run(userId, now, now);
+  if (insertedUser.changes === 1) {
+    recordScanCredit.run(userId, now, 3, 'welcome', 'Приветственные сканы');
+  }
   ensureDailyScan(userId);
   const balanceRow = getUserScanBalance.get(userId);
   const balanceBefore = balanceRow?.scan_balance === null || balanceRow?.scan_balance === undefined
@@ -522,6 +546,7 @@ app.post('/api/session', (req, res) => {
     const profile = req.body?.profile || {};
     if (req.body?.refreshOnly !== true) {
       const now = new Date().toISOString();
+      const existed = Boolean(db.prepare('SELECT 1 FROM users WHERE vk_id = ?').get(userId));
       upsertUser.run({
         vk_id: userId,
         first_name: cleanText(profile.first_name),
@@ -529,6 +554,7 @@ app.post('/api/session', (req, res) => {
         photo_url: cleanText(profile.photo_url, 1000),
         now
       });
+      if (!existed) recordScanCredit.run(userId, now, 3, 'welcome', 'Приветственные сканы');
     }
     ensureDailyScan(userId);
     const balanceRow = getUserScanBalance.get(userId);
@@ -593,6 +619,17 @@ app.get('/api/admin/users/:vkId/scans', requireAdmin, (req, res) => {
   return res.json({ scans, total: scans.length });
 });
 
+app.get('/api/admin/users/:vkId/credits', requireAdmin, (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const vkId = String(req.params.vkId || '');
+  if (!/^[0-9]+$/.test(vkId)) return res.status(400).json({ error: 'Некорректный VK ID.' });
+  if (!db.prepare('SELECT 1 FROM users WHERE vk_id = ?').get(vkId)) {
+    return res.status(404).json({ error: 'Пользователь не найден.' });
+  }
+  const credits = listUserCredits.all(vkId);
+  return res.json({ credits, total: credits.length });
+});
+
 app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
   const vkId = String(req.params.vkId || '');
   if (!/^[0-9]+$/.test(vkId)) return res.status(400).json({ error: 'Некорректный VK ID.' });
@@ -607,7 +644,12 @@ app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
       if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100000) {
         return res.status(400).json({ error: 'Укажите количество сканов от 1 до 100000.' });
       }
-      grantPack.run(amount, vkId);
+      const creditedAt = new Date().toISOString();
+      const grant = db.transaction(() => {
+        grantPack.run(amount, vkId);
+        recordScanCredit.run(vkId, creditedAt, amount, 'admin', 'Ручное начисление администратором');
+      });
+      grant();
     } else if (action === 'grant_months') {
       const months = Number(req.body?.months);
       if (!Number.isSafeInteger(months) || months < 1 || months > 120) {
