@@ -1697,6 +1697,10 @@
     if (referralCopyButton) referralCopyButton.disabled = !currentReferralLink;
   }
 
+  // The session bootstrap lives in a separate script/IIFE. Expose only this
+  // narrow setter so its response updates the same closure used by the buttons.
+  window.setRoadnoteReferralLink = setReferralLink;
+
   async function copyReferralLink() {
     if (!currentReferralLink) {
       if (referralStatus) referralStatus.textContent = 'Ссылка ещё загружается. Попробуй через секунду.';
@@ -1829,7 +1833,11 @@
       }
 
       const session = await response.json();
-      setReferralLink(session.referralLink);
+      if (typeof window.setRoadnoteReferralLink === 'function') {
+        window.setRoadnoteReferralLink(session.referralLink);
+      } else {
+        console.error('Roadnote referral controls were not initialized.');
+      }
       scanSessionReady = true;
       updateScanBalance(session.scanBalance, session.subscriptionUntil, session.unlimited, session.subscriptionActive);
 
