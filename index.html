@@ -662,23 +662,13 @@
             box-shadow: 0 8px 22px rgba(39,135,245,.12);
         }
         .start-offer { position:relative; overflow:hidden; transition:transform .18s ease, box-shadow .18s ease; }
-        .start-offer-badge { margin-top:9px; padding:5px 7px; border-radius:8px; background:#eaf7ef; color:#17834b; font-size:9px; font-weight:850; }
-        .start-offer-featured .start-offer-badge { background:#2787f5; color:#fff; }
-        .start-offer-unit-price { margin-top:5px; color:#1766bc; font-size:10px; line-height:1.3; font-weight:850; }
-        .start-offer-savings { margin-top:5px; color:#16824b; font-size:10px; line-height:1.3; font-weight:800; }
-        .start-offer-featured::before { content:'ВЫГОДНЕЕ'; position:absolute; top:7px; right:-24px; transform:rotate(35deg); padding:3px 24px; background:#2787f5; color:#fff; font-size:8px; font-weight:900; letter-spacing:.4px; }
-        .start-offers-note {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 7px;
-            margin-top: 16px;
-            padding-top: 12px;
-            border-top: 1px solid #edf0f4;
-            color: #8993a0;
-            font-size: 11px;
-            text-align: center;
-        }
+        .start-offer-meta { display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:7px; }
+        .start-offer-discount { padding:3px 6px; border-radius:6px; background:#eaf7ef; color:#16824b; font-size:9px; line-height:1.2; font-weight:850; }
+        .start-offer-unit-price { color:#6d7886; font-size:9px; line-height:1.2; font-weight:700; }
+        .start-offer-monthly { border-color:#c8dcf8; background:linear-gradient(160deg,#f0f7ff 0%,#fff 90%); box-shadow:0 5px 15px rgba(39,135,245,.08); }
+        .start-offer-monthly .start-offer-current-price { color:#1766bc; }
+        .start-offers-note { display:block; margin-top:13px; padding:10px 2px 0; border-top:1px solid #edf0f4; color:#7b8591; font-size:11px; line-height:1.4; text-align:center; }
+
         @media (max-width: 360px) {
             .start-offers-section { padding: 16px 11px 13px; }
             .start-offer-grid { gap: 5px; }
@@ -872,7 +862,7 @@
             </div>
             <div>
                 <div class="start-brand-name">Roadnote</div>
-                <div class="start-brand-caption">Транспортные данные в одном месте</div>
+                <div class="start-brand-caption">Все данные поездки — одним сканированием</div>
             </div>
         </div>
 
@@ -889,19 +879,20 @@
 
         <section class="start-offers-section" aria-labelledby="start-offers-title">
             <div class="start-offers-section-heading"><div><div class="start-section-kicker">ROADNOTE PLUS</div><h3 id="start-offers-title">Тарифы</h3></div></div>
-            <p class="start-offers-lead" id="start-offers-lead">Выбери пакет сканирований или безлимитную подписку.</p>
+            <p class="start-offers-lead" id="start-offers-lead">Больше свободы — меньше действий.</p>
             <div id="start-offers-groups">
                 <div class="start-offer-group"><div class="start-offer-group-title"><span class="start-offer-group-icon">↗</span><span>Пакеты сканирований</span></div><div class="start-offer-grid">
-                    <article class="start-offer"><div class="start-offer-top"><span class="start-offer-count">9</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-name">Старт</div><div class="start-offer-description">Попробовать сервис</div><div class="start-offer-pricing"><span class="start-offer-old-price">99 ₽</span><span class="start-offer-current-price">69 ₽</span></div><div class="start-offer-savings">Экономия 30 ₽ · −30%</div><div class="start-offer-unit-price">7,67 ₽ за скан</div><div class="start-offer-badge">Цена первой покупки</div></article>
-                    <article class="start-offer start-offer-featured"><div class="start-offer-top"><span class="start-offer-count">29</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-name">Оптимальный</div><div class="start-offer-description">Запас на каждый день</div><div class="start-offer-pricing"><span class="start-offer-old-price">249 ₽</span><span class="start-offer-current-price">179 ₽</span></div><div class="start-offer-savings">Экономия 70 ₽ · −28%</div><div class="start-offer-unit-price">6,17 ₽ за скан</div><div class="start-offer-badge">Популярный выбор</div></article>
-                    <article class="start-offer"><div class="start-offer-top"><span class="start-offer-count">49</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-name">Большой запас</div><div class="start-offer-description">Реже пополнять баланс</div><div class="start-offer-pricing"><span class="start-offer-old-price">369 ₽</span><span class="start-offer-current-price">279 ₽</span></div><div class="start-offer-savings">Экономия 90 ₽ · −24%</div><div class="start-offer-unit-price">5,69 ₽ за скан</div><div class="start-offer-badge">Минимальная цена скана</div></article>
+                    <article class="start-offer"><div class="start-offer-top"><span class="start-offer-count">9</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-pricing"><span class="start-offer-old-price">99 ₽</span><span class="start-offer-current-price">69 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−30%</span><span class="start-offer-unit-price">7,67 ₽ / скан</span></div></article>
+                    <article class="start-offer"><div class="start-offer-top"><span class="start-offer-count">29</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-pricing"><span class="start-offer-old-price">249 ₽</span><span class="start-offer-current-price">179 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−28%</span><span class="start-offer-unit-price">6,17 ₽ / скан</span></div></article>
+                    <article class="start-offer"><div class="start-offer-top"><span class="start-offer-count">49</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-pricing"><span class="start-offer-old-price">369 ₽</span><span class="start-offer-current-price">279 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−24%</span><span class="start-offer-unit-price">5,69 ₽ / скан</span></div></article>
                 </div></div>
                 <div class="start-offer-group start-subscription-group"><div class="start-offer-group-title"><span class="start-offer-group-icon">✦</span><span>Безлимитные подписки</span></div><div class="start-offer-grid start-subscription-grid">
-                    <article class="start-offer start-offer-subscription"><div class="start-offer-duration">1 <span>месяц</span></div><div class="start-offer-description">Безлимит на месяц</div><div class="start-offer-pricing"><span class="start-offer-old-price">349 ₽</span><span class="start-offer-current-price">249 ₽</span></div><div class="start-offer-savings">Экономия 100 ₽ · −29%</div><div class="start-offer-unit-price">249 ₽ в месяц</div><div class="start-offer-badge">Первая покупка</div></article>
-                    <article class="start-offer start-offer-subscription"><div class="start-offer-duration">3 <span>месяца</span></div><div class="start-offer-description">Безлимит на весь сезон</div><div class="start-offer-pricing"><span class="start-offer-old-price">799 ₽</span><span class="start-offer-current-price">599 ₽</span></div><div class="start-offer-savings">Экономия 200 ₽ · −25%</div><div class="start-offer-unit-price">≈ 200 ₽ в месяц</div><div class="start-offer-badge">Первая покупка</div></article>
-                    <article class="start-offer start-offer-subscription start-offer-featured"><div class="start-offer-duration">6 <span>месяцев</span></div><div class="start-offer-description">Полгода без ограничений</div><div class="start-offer-pricing"><span class="start-offer-old-price">1 299 ₽</span><span class="start-offer-current-price">949 ₽</span></div><div class="start-offer-savings">Экономия 350 ₽ · −27%</div><div class="start-offer-unit-price">≈ 158 ₽ в месяц</div><div class="start-offer-badge">Максимальная выгода</div></article>
+                    <article class="start-offer start-offer-subscription start-offer-monthly"><div class="start-offer-duration">1 <span>месяц</span></div><div class="start-offer-description">Безлимит</div><div class="start-offer-pricing"><span class="start-offer-old-price">349 ₽</span><span class="start-offer-current-price">249 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−29%</span></div></article>
+                    <article class="start-offer start-offer-subscription"><div class="start-offer-duration">3 <span>месяца</span></div><div class="start-offer-description">Безлимит</div><div class="start-offer-pricing"><span class="start-offer-old-price">799 ₽</span><span class="start-offer-current-price">599 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−25%</span><span class="start-offer-unit-price">≈ 200 ₽ / мес.</span></div></article>
+                    <article class="start-offer start-offer-subscription"><div class="start-offer-duration">6 <span>месяцев</span></div><div class="start-offer-description">Безлимит</div><div class="start-offer-pricing"><span class="start-offer-old-price">1 299 ₽</span><span class="start-offer-current-price">949 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−27%</span><span class="start-offer-unit-price">≈ 158 ₽ / мес.</span></div></article>
                 </div></div>
             </div>
+            <p class="start-offers-note">Цена со скидкой — только для первой покупки. При повторной покупке действует обычная цена.</p>
         </section>
 
         <div class="start-actions">
