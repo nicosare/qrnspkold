@@ -661,7 +661,14 @@
             background: linear-gradient(155deg, #edf6ff 0%, #ffffff 82%);
             box-shadow: 0 8px 22px rgba(39,135,245,.12);
         }
-        .start-offer { position:relative; overflow:hidden; transition:transform .18s ease, box-shadow .18s ease; }
+        .start-offer { position:relative; overflow:hidden; min-height:158px; padding:30px 10px 13px; border-radius:16px; transition:transform .18s ease, box-shadow .18s ease; }
+        .start-offer-ribbon { position:absolute; top:0; right:0; padding:5px 9px 6px 11px; border-radius:0 14px 0 10px; background:#edf3fa; color:#53667b; font-size:9px; line-height:1.1; font-weight:850; letter-spacing:.15px; }
+        .start-offer-ribbon-value { background:#e8f7ee; color:#187747; }
+        .start-offer-ribbon-hit { background:#2787f5; color:#fff; }
+        .start-offer-monthly { border-color:#c8dcf8; background:linear-gradient(160deg,#f0f7ff 0%,#fff 90%); box-shadow:0 5px 15px rgba(39,135,245,.08); }
+        .start-offer-monthly .start-offer-current-price { color:#1766bc; }
+        .start-offer-subscription { min-height:165px; }
+
         .start-offer-meta { display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:7px; }
         .start-offer-discount { padding:3px 6px; border-radius:6px; background:#eaf7ef; color:#16824b; font-size:9px; line-height:1.2; font-weight:850; }
         .start-offer-unit-price { color:#6d7886; font-size:9px; line-height:1.2; font-weight:700; }
@@ -741,11 +748,21 @@
         .info-sheet-title { margin:0; font-size:22px; line-height:1.2; font-weight:850; letter-spacing:-.3px; }
         .info-sheet-subtitle { margin:7px 0 17px; color:#778392; font-size:13px; line-height:1.5; }
         .info-sheet-close { flex:0 0 auto; width:38px; min-height:38px; padding:0; border:1px solid #e5eaf0; border-radius:12px; background:#f7f9fc; color:#596778; font:inherit; font-size:23px; line-height:1; cursor:pointer; }
+        .faq-kicker { display:block; margin-bottom:7px; color:#2787f5; font-size:10px; font-weight:850; letter-spacing:1.5px; }
         .faq-list { display:flex; flex-direction:column; gap:8px; }
-        .faq-list details { padding:13px 14px; border:1px solid #e5eaf0; border-radius:14px; background:#fbfcfe; }
-        .faq-list summary { color:#303b48; font-size:14px; font-weight:800; line-height:1.35; cursor:pointer; }
-        .faq-list details p,.faq-list details ol { margin:9px 0 0; color:#687586; font-size:13px; line-height:1.55; }
-        .faq-list details ol { padding-left:19px; }
+        .faq-list details { overflow:hidden; padding:0; border:1px solid #e5eaf0; border-radius:15px; background:#fbfcfe; transition:border-color .18s ease, background .18s ease; }
+        .faq-list details[open] { border-color:#c9ddf8; background:#fff; }
+        .faq-list summary { display:flex; align-items:center; gap:11px; min-height:52px; padding:12px 13px; list-style:none; color:#303b48; font-size:14px; font-weight:800; line-height:1.35; cursor:pointer; }
+        .faq-list summary::-webkit-details-marker { display:none; }
+        .faq-list summary::after { content:'+'; flex:0 0 auto; margin-left:auto; color:#2787f5; font-size:21px; font-weight:500; }
+        .faq-list details[open] summary::after { content:'−'; }
+        .faq-number { display:grid; place-items:center; flex:0 0 28px; width:28px; height:28px; border-radius:9px; background:#edf4fd; color:#2876c8; font-size:10px; font-weight:850; }
+        .faq-answer { padding:0 14px 14px 52px; color:#687586; font-size:13px; line-height:1.6; }
+        .faq-answer p,.faq-answer ol { margin:0; }
+        .faq-answer ol { padding-left:18px; }
+        .faq-footer { margin:16px 2px 0; padding-top:13px; border-top:1px solid #edf0f4; color:#8a94a1; font-size:11px; line-height:1.45; text-align:center; }
+
+
         .faq-support-link { display:flex; align-items:center; justify-content:center; min-height:46px; margin-top:13px; padding:11px 14px; border-radius:13px; background:#2787f5; color:#fff; text-decoration:none; text-align:center; font-size:14px; font-weight:800; }
         .faq-support-note { margin:10px 2px 0; color:#8792a0; font-size:12px; line-height:1.45; }
         @media(max-width:540px) {
@@ -826,22 +843,25 @@
     <div class="info-sheet">
         <header class="info-sheet-header">
             <div>
+                <span class="faq-kicker">ROADNOTE · СПРАВКА</span>
                 <h2 class="info-sheet-title" id="faq-title">Частые вопросы</h2>
-                <p class="info-sheet-subtitle">Короткие ответы о сканировании, балансе и тарифах Roadnote.</p>
+                <p class="info-sheet-subtitle">Ответы о сканировании, тарифах и правилах использования.</p>
             </div>
             <button class="info-sheet-close" id="faq-close" type="button" aria-label="Закрыть FAQ">×</button>
         </header>
         <div class="faq-list">
-            <details open>
-                <summary>Как отсканировать QR-код?</summary>
-                <ol><li>Нажми «Сканировать новый QR-код».</li><li>Разреши доступ к камере или используй сканер VK, если он доступен.</li><li>Полностью наведи камеру на QR-код и дождись загрузки данных.</li></ol>
-            </details>
-            <details><summary>Почему QR-код не считывается?</summary><p>Убедись, что QR-код целиком попадает в кадр, изображение чёткое и есть интернет. Попробуй закрыть и снова открыть сканер. Если ошибка повторяется, напиши в поддержку.</p></details>
-            <details><summary>Сколько сканирований входит в пакет?</summary><p>В пакет входит указанное на карточке количество сканирований. После расходования лимита можно выбрать другой пакет. Активная подписка даёт безлимит на весь оплаченный срок.</p></details>
-            <details><summary>Как работает подписка?</summary><p>Подписка даёт безлимит на 1, 3 или 6 месяцев в зависимости от выбранного тарифа. Срок и доступ отображаются в карточке баланса.</p></details>
-            <details><summary>Какая цена действует при первой покупке?</summary><p>В карточках показаны две цены: зачёркнутая — обычная, выделенная — цена первой покупки. Акционная цена предназначена для первого приобретения соответствующего предложения.</p></details>
-            <details><summary>Можно ли купить билет или оплатить проезд в Roadnote?</summary><p>Нет. Roadnote предназначен для сканирования и отображения данных транспортных QR-кодов. Приложение не продаёт билеты и не принимает оплату за проезд.</p></details>
+            <details open><summary><span class="faq-number">01</span><span>Как отсканировать QR-код?</span></summary><div class="faq-answer"><ol><li>Нажми «Сканировать новый QR-код».</li><li>Разреши доступ к камере и наведи её на QR-код целиком.</li><li>Дождись загрузки данных. Для сканирования нужен интернет.</li></ol></div></details>
+            <details><summary><span class="faq-number">02</span><span>Почему QR-код не считывается?</span></summary><div class="faq-answer"><p>Проверь резкость изображения, освещение и интернет. QR-код должен целиком попадать в кадр. Если ошибка повторяется, попробуй открыть сканер заново. Roadnote зависит от доступности внешнего сервиса, поэтому отдельные коды могут временно не обрабатываться.</p></div></details>
+            <details><summary><span class="faq-number">03</span><span>Как начисляются бесплатные сканы?</span></summary><div class="faq-answer"><p>При первом создании аккаунта начисляются 3 приветственных скана. Также доступен один бесплатный скан в день. Пакетные сканы расходуются прежде дневного бесплатного скана. Неиспользованные приветственные и пакетные сканы не сгорают по ежедневному лимиту.</p></div></details>
+            <details><summary><span class="faq-number">04</span><span>Как работают пакеты сканирований?</span></summary><div class="faq-answer"><p>После подтверждённого начисления покупки в баланс добавляется указанное в пакете число сканов. Один успешный разбор QR-кода расходует один пакетный скан, если у тебя нет активного безлимита. Неудачная попытка получить данные не должна списывать скан.</p></div></details>
+            <details><summary><span class="faq-number">05</span><span>Что даёт подписка?</span></summary><div class="faq-answer"><p>Подписка открывает безлимитное сканирование на выбранный срок — 1, 3 или 6 месяцев. Пока подписка активна, пакетные сканы не расходуются. Дата окончания отображается в карточке баланса. Если продлить активную подписку, новый срок добавляется к оставшемуся.</p></div></details>
+            <details><summary><span class="faq-number">06</span><span>Как работает реферальная система?</span></summary><div class="faq-answer"><p>Поделись своей ссылкой из блока «Пригласи друга». Если новый пользователь впервые откроет Roadnote по твоей ссылке, его аккаунт будет связан с тобой. После первого успешного сканирования друга тебе начислят 3 бонусных скана. Повторные сканирования этого пользователя новых бонусов не дают.</p></div></details>
+            <details><summary><span class="faq-number">07</span><span>Почему цена со скидкой может быть недоступна?</span></summary><div class="faq-answer"><p>Цена со скидкой предназначена только для первой покупки соответствующего предложения. При последующих покупках действует обычная цена, указанная зачёркнутой на карточке. Сейчас карточки показывают условия тарифов, но не проверяют историю покупок автоматически.</p></div></details>
+            <details><summary><span class="faq-number">08</span><span>Можно ли оплатить проезд через Roadnote?</span></summary><div class="faq-answer"><p>Нет. Roadnote не продаёт билеты, не принимает оплату за проезд и не является платёжным средством. Приложение предназначено для считывания и отображения информации из транспортных QR-кодов.</p></div></details>
+            <details><summary><span class="faq-number">09</span><span>Насколько точны данные?</span></summary><div class="faq-answer"><p>Roadnote показывает данные, полученные от внешнего сервиса, и не гарантирует их постоянную доступность, полноту или точность. Используй приложение на свой страх и риск и самостоятельно проверяй важную информацию. Roadnote не заменяет официальный билет или подтверждение оплаты.</p></div></details>
+            <details><summary><span class="faq-number">10</span><span>Что важно знать о безопасности и ответственности?</span></summary><div class="faq-answer"><p>Не используй отображённую информацию как единственное подтверждение оплаты. За фактическую оплату проезда отвечают официальные транспортные сервисы и перевозчик. Roadnote — информационный инструмент; использование приложения не создаёт платёжных обязательств и не гарантирует принятие QR-кода перевозчиком.</p></div></details>
         </div>
+        <p class="faq-footer">Roadnote — информационный инструмент, а не сервис оплаты проезда.</p>
     </div>
 </section>
 
@@ -879,20 +899,20 @@
 
         <section class="start-offers-section" aria-labelledby="start-offers-title">
             <div class="start-offers-section-heading"><div><div class="start-section-kicker">ROADNOTE PLUS</div><h3 id="start-offers-title">Тарифы</h3></div></div>
-            <p class="start-offers-lead" id="start-offers-lead">Больше свободы — меньше действий.</p>
+            <p class="start-offers-lead" id="start-offers-lead">Выбирай удобный формат: отдельные сканирования или безлимит.</p>
             <div id="start-offers-groups">
                 <div class="start-offer-group"><div class="start-offer-group-title"><span class="start-offer-group-icon">↗</span><span>Пакеты сканирований</span></div><div class="start-offer-grid">
-                    <article class="start-offer"><div class="start-offer-top"><span class="start-offer-count">9</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-pricing"><span class="start-offer-old-price">99 ₽</span><span class="start-offer-current-price">69 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−30%</span><span class="start-offer-unit-price">7,67 ₽ / скан</span></div></article>
-                    <article class="start-offer"><div class="start-offer-top"><span class="start-offer-count">29</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-pricing"><span class="start-offer-old-price">249 ₽</span><span class="start-offer-current-price">179 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−28%</span><span class="start-offer-unit-price">6,17 ₽ / скан</span></div></article>
-                    <article class="start-offer"><div class="start-offer-top"><span class="start-offer-count">49</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-pricing"><span class="start-offer-old-price">369 ₽</span><span class="start-offer-current-price">279 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−24%</span><span class="start-offer-unit-price">5,69 ₽ / скан</span></div></article>
+                    <article class="start-offer"><div class="start-offer-ribbon" aria-label="Для знакомства">Старт</div><div class="start-offer-top"><span class="start-offer-count">9</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-pricing"><span class="start-offer-old-price">99 ₽</span><span class="start-offer-current-price">69 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−30%</span><span class="start-offer-unit-price">7,67 ₽ / скан</span></div></article>
+                    <article class="start-offer"><div class="start-offer-ribbon start-offer-ribbon-value">Выгодно</div><div class="start-offer-top"><span class="start-offer-count">29</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-pricing"><span class="start-offer-old-price">249 ₽</span><span class="start-offer-current-price">179 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−28%</span><span class="start-offer-unit-price">6,17 ₽ / скан</span></div></article>
+                    <article class="start-offer"><div class="start-offer-ribbon start-offer-ribbon-value">Лучшая цена</div><div class="start-offer-top"><span class="start-offer-count">49</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-pricing"><span class="start-offer-old-price">369 ₽</span><span class="start-offer-current-price">279 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−24%</span><span class="start-offer-unit-price">5,69 ₽ / скан</span></div></article>
                 </div></div>
                 <div class="start-offer-group start-subscription-group"><div class="start-offer-group-title"><span class="start-offer-group-icon">✦</span><span>Безлимитные подписки</span></div><div class="start-offer-grid start-subscription-grid">
-                    <article class="start-offer start-offer-subscription start-offer-monthly"><div class="start-offer-duration">1 <span>месяц</span></div><div class="start-offer-description">Безлимит</div><div class="start-offer-pricing"><span class="start-offer-old-price">349 ₽</span><span class="start-offer-current-price">249 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−29%</span></div></article>
+                    <article class="start-offer start-offer-subscription start-offer-monthly"><div class="start-offer-ribbon start-offer-ribbon-hit">Хит</div><div class="start-offer-duration">1 <span>месяц</span></div><div class="start-offer-description">Безлимит</div><div class="start-offer-pricing"><span class="start-offer-old-price">349 ₽</span><span class="start-offer-current-price">249 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−29%</span></div></article>
                     <article class="start-offer start-offer-subscription"><div class="start-offer-duration">3 <span>месяца</span></div><div class="start-offer-description">Безлимит</div><div class="start-offer-pricing"><span class="start-offer-old-price">799 ₽</span><span class="start-offer-current-price">599 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−25%</span><span class="start-offer-unit-price">≈ 200 ₽ / мес.</span></div></article>
                     <article class="start-offer start-offer-subscription"><div class="start-offer-duration">6 <span>месяцев</span></div><div class="start-offer-description">Безлимит</div><div class="start-offer-pricing"><span class="start-offer-old-price">1 299 ₽</span><span class="start-offer-current-price">949 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−27%</span><span class="start-offer-unit-price">≈ 158 ₽ / мес.</span></div></article>
                 </div></div>
             </div>
-            <p class="start-offers-note">Цена со скидкой — только для первой покупки. При повторной покупке действует обычная цена.</p>
+            <p class="start-offers-note">Цена со скидкой действует только при первой покупке. При последующих покупках — обычная цена.</p>
         </section>
 
         <div class="start-actions">
