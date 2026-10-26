@@ -263,7 +263,7 @@ function getDisplayedScanBalance(row) {
 }
 
 app.disable('x-powered-by');
-app.use(express.json({ limit: '32kb' }));
+app.use(express.json({ limit: '256kb' }));
 
 function parseLaunchParams(raw) {
   if (typeof raw !== 'string' || !raw || raw.length > 12000) {
