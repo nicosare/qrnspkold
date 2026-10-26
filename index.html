@@ -1614,8 +1614,6 @@
 
         startScanButton.addEventListener('click', scanWithVkBridge);
         continueCurrentScanButton.addEventListener('click', closeStartOverlay);
-        if (referralShareButton) referralShareButton.addEventListener('click', shareReferralLink);
-        if (referralCopyButton) referralCopyButton.addEventListener('click', copyReferralLink);
         refreshScanButton();
 
         // The start overlay is shown on launch. Returning to the ticket puts
@@ -1692,13 +1690,13 @@
 
   function setReferralLink(link) {
     currentReferralLink = String(link || '');
+    window.roadnoteReferralLink = currentReferralLink;
     if (referralLinkInput) referralLinkInput.value = currentReferralLink || 'Не удалось получить ссылку';
     if (referralShareButton) referralShareButton.disabled = !currentReferralLink;
     if (referralCopyButton) referralCopyButton.disabled = !currentReferralLink;
   }
 
-  // The session bootstrap lives in a separate script/IIFE. Expose only this
-  // narrow setter so its response updates the same closure used by the buttons.
+  // Expose the current URL for the independent referral-button controller.
   window.setRoadnoteReferralLink = setReferralLink;
 
   async function copyReferralLink() {
@@ -1904,6 +1902,92 @@
   // This script is at the end of the document. Run directly so registration
   // also works when main.html is loaded into an existing Mini App document.
   registerRoadnoteVisit();
+})();
+</script>
+
+
+<script>
+/*
+ * Referral controls are deliberately wired independently from initializePage().
+ * A failure elsewhere in the main-page initialization must not leave these
+ * visible buttons inert.
+ */
+(function () {
+  const shareButton = document.getElementById('start-referral-share');
+  const copyButton = document.getElementById('start-referral-copy');
+  const linkInput = document.getElementById('start-referral-link');
+  const status = document.getElementById('start-referral-status');
+
+  function currentLink() {
+    return String(window.roadnoteReferralLink || (linkInput && linkInput.value) || '').trim();
+  }
+  function report(message) {
+    if (status) status.textContent = message;
+  }
+
+  if (shareButton) {
+    shareButton.disabled = false;
+    shareButton.addEventListener('click', async function (event) {
+      event.preventDefault();
+      const link = currentLink();
+      if (!/^https:\/\/vk\.com\/app\d+\?ref=/.test(link)) {
+        report('Ссылка ещё загружается. Закрой и заново открой приложение.');
+        return;
+      }
+      if (!window.vkBridge || typeof window.vkBridge.send !== 'function') {
+        report('Не удалось открыть меню VK: приложение запущено вне VK.');
+        return;
+      }
+      shareButton.disabled = true;
+      report('Открываю меню VK…');
+      try {
+        await window.vkBridge.send('VKWebAppShare', { link: link });
+        report('');
+      } catch (error) {
+        console.error('[Roadnote referral share]', error);
+        report('VK не открыло меню отправки. Попробуй ещё раз.');
+      } finally {
+        shareButton.disabled = false;
+      }
+    });
+  }
+
+  if (copyButton) {
+    copyButton.disabled = false;
+    copyButton.addEventListener('click', async function (event) {
+      event.preventDefault();
+      const link = currentLink();
+      if (!/^https:\/\/vk\.com\/app\d+\?ref=/.test(link)) {
+        report('Ссылка ещё загружается. Закрой и заново открой приложение.');
+        return;
+      }
+      copyButton.disabled = true;
+      report('Копирую ссылку…');
+      try {
+        if (window.vkBridge && typeof window.vkBridge.send === 'function') {
+          await window.vkBridge.send('VKWebAppCopyText', { text: link });
+          report('Ссылка скопирована');
+          return;
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(link);
+          report('Ссылка скопирована');
+          return;
+        }
+        throw new Error('No supported clipboard API');
+      } catch (error) {
+        console.error('[Roadnote referral copy]', error);
+        if (linkInput) {
+          linkInput.value = link;
+          linkInput.focus();
+          linkInput.select();
+        }
+        report('Ссылка выделена. Скопируй её через меню устройства.');
+      } finally {
+        copyButton.disabled = false;
+      }
+    });
+  }
 })();
 </script>
 
