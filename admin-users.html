@@ -90,6 +90,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 <nav class="admin-nav" aria-label="Разделы админки">
  <a class="active" href="#" aria-current="page">Пользователи</a>
  <a id="offers-link" href="#">Предложения</a>
+ <a id="requests-link" href="#">Запросы</a>
 </nav>
 <section class="panel">
  <div class="toolbar">
@@ -116,6 +117,8 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  const auth = 'VK ' + btoa(unescape(encodeURIComponent(query))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
  const offersLink = document.getElementById('offers-link');
  if (offersLink) offersLink.href = '/roadnote/admin/offers' + window.location.search;
+ const requestsLink = document.getElementById('requests-link');
+ if (requestsLink) requestsLink.href = '/roadnote/admin/requests' + window.location.search;
  const status = document.getElementById('status');
  const cards = document.getElementById('cards');
  const count = document.getElementById('count');
