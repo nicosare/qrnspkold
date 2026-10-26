@@ -30,7 +30,7 @@ jobs:
           import fs from 'node:fs';
           import vm from 'node:vm';
 
-          for (const file of ['index.html', 'admin-offers.html', 'admin-users.html']) {
+          for (const file of ['index.html', 'admin-offers.html', 'admin-users.html', 'admin-requests.html']) {
             const html = fs.readFileSync(file, 'utf8');
             const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)]
               .map(match => match[1])
