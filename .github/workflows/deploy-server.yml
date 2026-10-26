@@ -32,7 +32,7 @@ jobs:
 
           for (const file of ['index.html', 'admin-offers.html', 'admin-users.html']) {
             const html = fs.readFileSync(file, 'utf8');
-            const scripts = [...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)]
+            const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)]
               .map(match => match[1])
               .filter(script => script.trim());
 
