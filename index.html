@@ -597,6 +597,31 @@
             font-size: 10px;
             line-height: 1.35;
         }
+        .start-offer-group-description {
+            margin: -3px 0 9px;
+            color: #7b8591;
+            font-size: 10px;
+            line-height: 1.35;
+        }
+        .start-offer-pricing {
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 5px;
+            line-height: 1.15;
+        }
+        .start-offer-old-price {
+            color: #8b929c;
+            font-size: 10px;
+            font-weight: 600;
+            text-decoration: line-through;
+        }
+        .start-offer-current-price {
+            color: #202b38;
+            font-size: 15px;
+            font-weight: 850;
+        }
         .start-offer-badge {
             display: inline-flex;
             align-items: center;
@@ -810,10 +835,11 @@
                     <div class="start-section-kicker">ROADNOTE PLUS</div>
                     <h3 id="start-offers-title">Предложения</h3>
                 </div>
-                <span class="start-coming-soon">Скоро</span>
+                <span class="start-coming-soon" id="start-offers-badge">Скоро</span>
             </div>
-            <p class="start-offers-lead">Выбирай удобный формат — оплата и подключение появятся чуть позже.</p>
+            <p class="start-offers-lead" id="start-offers-lead">Выбирай удобный формат — оплата и подключение появятся чуть позже.</p>
 
+            <div id="start-offers-groups">
             <div class="start-offer-group">
                 <div class="start-offer-group-title"><span class="start-offer-group-icon">↗</span><span>Пакеты сканирований</span></div>
                 <div class="start-offer-grid">
@@ -858,7 +884,8 @@
                     </article>
                 </div>
             </div>
-            <div class="start-offers-note"><span aria-hidden="true">✧</span> Цены и подключение появятся здесь позже</div>
+            <div class="start-offers-note" id="start-offers-note"><span aria-hidden="true">✧</span> Цены и подключение появятся здесь позже</div>
+            </div>
         </section>
 
         <div class="start-actions">
@@ -874,6 +901,9 @@
             </button>
             <button class="start-button start-button-secondary" id="start-admin-users-button" type="button" hidden>
                 Пользователи
+            </button>
+            <button class="start-button start-button-secondary" id="start-admin-offers-button" type="button" hidden>
+                Конструктор предложений
             </button>
             <div id="scan-status" class="start-status" role="status" aria-live="polite"></div>
         </div>
@@ -1647,26 +1677,31 @@
 <script>
 (function () {
   function showAdminTools() {
-    const adminButton = document.getElementById('start-admin-users-button');
-    if (!adminButton) return;
-    adminButton.hidden = false;
-    if (adminButton.dataset.bound !== '1') {
-      adminButton.dataset.bound = '1';
-      adminButton.addEventListener('click', function () {
-        const panel = document.getElementById('admin-panel-overlay');
-        const frame = document.getElementById('admin-panel-frame');
+    const panel = document.getElementById('admin-panel-overlay');
+    const frame = document.getElementById('admin-panel-frame');
+    const panelTitle = document.getElementById('admin-panel-title');
+    function bindAdminButton(buttonId, route, title) {
+      const button = document.getElementById(buttonId);
+      if (!button) return;
+      button.hidden = false;
+      if (button.dataset.bound === '1') return;
+      button.dataset.bound = '1';
+      button.addEventListener('click', function () {
         if (!panel || !frame) return;
-        frame.src = '/roadnote/admin/users' + window.location.search;
+        if (panelTitle) panelTitle.textContent = title;
+        frame.title = title;
+        frame.src = '/roadnote/admin/' + route + window.location.search;
         panel.hidden = false;
         document.body.classList.add('start-overlay-open');
       });
     }
+    bindAdminButton('start-admin-users-button', 'users', 'Пользователи Roadnote');
+    bindAdminButton('start-admin-offers-button', 'offers', 'Конструктор предложений');
+
     const panelBack = document.getElementById('admin-panel-back');
     if (panelBack && panelBack.dataset.bound !== '1') {
       panelBack.dataset.bound = '1';
       panelBack.addEventListener('click', function () {
-        const panel = document.getElementById('admin-panel-overlay');
-        const frame = document.getElementById('admin-panel-frame');
         if (panel) panel.hidden = true;
         if (frame) frame.src = 'about:blank';
         document.body.classList.remove('start-overlay-open');
@@ -1903,6 +1938,71 @@
 })();
 </script>
 
+
+<script>
+/* Offer cards are served from the published configuration, separately from its admin draft. */
+(function () {
+  const section = document.getElementById('start-offers-section') || document.querySelector('.start-offers-section');
+  const groups = document.getElementById('start-offers-groups');
+  if (!section || !groups) return;
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const rubles = value => Number(value).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+  const quantity = value => String(value);
+  function render(config) {
+    const title = document.getElementById('start-offers-title');
+    const lead = document.getElementById('start-offers-lead');
+    const badge = document.getElementById('start-offers-badge');
+    const note = document.getElementById('start-offers-note');
+    if (title) title.textContent = config.headline || 'Предложения';
+    if (lead) { lead.textContent = config.lead || ''; lead.hidden = !config.lead; }
+    if (badge) { badge.textContent = config.topBadge || ''; badge.hidden = !config.topBadge; }
+    if (note) {
+      note.innerHTML = '<span aria-hidden="true">✧</span> ' + esc(config.note || '');
+      note.hidden = config.showNote !== true || !config.note;
+    }
+    const sections = (config.sections || []).slice().sort((a,b) => Number(a.sortOrder)-Number(b.sortOrder));
+    const offers = config.offers || [];
+    groups.innerHTML = sections.map(section => {
+      const items = offers.filter(item => item.sectionId === section.id).slice().sort((a,b) => Number(a.sortOrder)-Number(b.sortOrder));
+      if (!items.length) return '';
+      const subscriptionGroup = items.some(item => item.type === 'subscription');
+      return '<div class="start-offer-group ' + (subscriptionGroup ? 'start-subscription-group' : '') + '">' +
+        '<div class="start-offer-group-title"><span class="start-offer-group-icon">' + esc(section.icon || '◇') + '</span><span>' + esc(section.title) + '</span></div>' +
+        (section.description ? '<div class="start-offer-group-description">' + esc(section.description) + '</div>' : '') +
+        '<div class="start-offer-grid ' + (items.every(item => item.type === 'subscription') ? 'start-subscription-grid' : '') + '">' +
+        items.map(item => {
+          const subscription = item.type === 'subscription';
+          const featured = item.style === 'featured';
+          const count = quantity(item.quantity);
+          const top = subscription
+            ? '<div class="start-offer-duration">' + esc(count) + ' <span>' + esc(item.unitLabel || 'месяц') + '</span></div>'
+            : '<div class="start-offer-top"><span class="start-offer-count">' + esc(count.padStart(2, '0')) + '</span><span class="start-offer-unit">' + esc(item.unitLabel || '') + '</span></div>';
+          const titleMarkup = item.title ? '<div class="start-offer-name">' + esc(item.title) + '</div>' : '';
+          const descriptionMarkup = item.description ? '<div class="start-offer-description">' + esc(item.description) + '</div>' : '';
+          let priceMarkup = '';
+          if (item.showPrice === true && item.price !== null && item.price !== undefined && item.price !== '') {
+            priceMarkup = '<div class="start-offer-pricing">' +
+              (item.oldPrice !== null && item.oldPrice !== undefined && item.oldPrice !== '' ? '<span class="start-offer-old-price">' + esc(rubles(item.oldPrice)) + ' ₽</span>' : '') +
+              '<span class="start-offer-current-price">' + esc(rubles(item.price)) + ' ₽</span></div>';
+          }
+          const badgeMarkup = item.badge ? '<span class="start-offer-badge">' + esc(item.badge) + '</span>' : '';
+          return '<article class="start-offer ' + (subscription ? 'start-offer-subscription ' : '') + (featured ? 'start-offer-featured' : '') + '">' +
+            top + titleMarkup + descriptionMarkup + priceMarkup + badgeMarkup + '</article>';
+        }).join('') + '</div></div>';
+    }).join('');
+  }
+  const pathname = window.location.pathname;
+  const appBase = pathname.endsWith('/')
+    ? pathname
+    : (pathname.slice(pathname.lastIndexOf('/') + 1).includes('.')
+        ? pathname.slice(0, pathname.lastIndexOf('/') + 1)
+        : pathname + '/');
+  fetch(new URL(appBase + 'api/offers', window.location.origin), { cache: 'no-store', credentials: 'omit' })
+    .then(response => { if (!response.ok) throw new Error('Offers configuration unavailable'); return response.json(); })
+    .then(render)
+    .catch(error => console.warn('[Roadnote offers] Keeping embedded fallback cards:', error));
+})();
+</script>
 
 <script>
 /*
