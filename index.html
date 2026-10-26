@@ -2139,19 +2139,11 @@
     requestSubmit.textContent = 'Отправить запрос';
     requestOverlay.hidden = false;
   }
-  const faqButton = document.getElementById('start-faq-button');
-  if (faqButton) faqButton.addEventListener('click', () => { faqOverlay.hidden = false; });
-  document.getElementById('faq-close')?.addEventListener('click', () => closeInfoOverlay(faqOverlay));
   document.getElementById('offer-request-close')?.addEventListener('click', () => closeInfoOverlay(requestOverlay));
   document.getElementById('offer-request-cancel')?.addEventListener('click', () => closeInfoOverlay(requestOverlay));
-  [faqOverlay, requestOverlay].forEach(overlay => {
-    if (overlay) overlay.addEventListener('click', event => { if (event.target === overlay) closeInfoOverlay(overlay); });
-  });
+  if (requestOverlay) requestOverlay.addEventListener('click', event => { if (event.target === requestOverlay) closeInfoOverlay(requestOverlay); });
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape') {
-      closeInfoOverlay(requestOverlay);
-      closeInfoOverlay(faqOverlay);
-    }
+    if (event.key === 'Escape') closeInfoOverlay(requestOverlay);
   });
   groups.addEventListener('click', event => {
     const button = event.target.closest('[data-request-offer]');
@@ -2279,6 +2271,63 @@
         report('Ссылка выделена. Скопируй её через меню устройства.');
       } finally {
         copyButton.disabled = false;
+      }
+    });
+  }
+})();
+</script>
+
+
+<script>
+/* FAQ/support controls must work even if the offers API or offer markup is unavailable. */
+(function () {
+  const faqOverlay = document.getElementById('faq-overlay');
+  const faqButton = document.getElementById('start-faq-button');
+  const closeButton = document.getElementById('faq-close');
+  const supportLink = document.getElementById('faq-support-link');
+
+  function closeFaq() {
+    if (faqOverlay) faqOverlay.hidden = true;
+  }
+
+  if (faqButton && faqOverlay) {
+    faqButton.addEventListener('click', function () {
+      faqOverlay.hidden = false;
+    });
+  }
+  if (closeButton) closeButton.addEventListener('click', closeFaq);
+  if (faqOverlay) {
+    faqOverlay.addEventListener('click', function (event) {
+      if (event.target === faqOverlay) closeFaq();
+    });
+  }
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') closeFaq();
+  });
+
+  if (supportLink) {
+    supportLink.addEventListener('click', async function (event) {
+      const url = supportLink.href;
+      if (!url || url === window.location.href || url.endsWith('#')) {
+        event.preventDefault();
+        const fallback = document.getElementById('faq-support-fallback');
+        if (fallback) {
+          fallback.hidden = false;
+          fallback.textContent = 'Контакт поддержки не настроен. Напиши разработчику через VK.';
+        }
+        return;
+      }
+      event.preventDefault();
+      try {
+        if (window.vkBridge && typeof window.vkBridge.send === 'function') {
+          await window.vkBridge.send('VKWebAppOpenURL', { url });
+        } else {
+          const opened = window.open(url, '_blank', 'noopener,noreferrer');
+          if (!opened) window.location.href = url;
+        }
+      } catch (error) {
+        console.warn('[Roadnote support] Could not open VK support link:', error);
+        window.location.href = url;
       }
     });
   }
