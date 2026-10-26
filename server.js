@@ -27,12 +27,17 @@ function makeLiveToken(userId) {
   return token;
 }
 function getLiveEntitlement(userId) {
+  ensureDailyScan(userId);
   const row = getUserEntitlements.get(String(userId));
+  const subscriptionActive = Boolean(row?.subscription_until && Date.parse(row.subscription_until) > Date.now());
+  const unlimited = Number(row?.unlimited || 0) === 1;
+  const paidBalance = row && row.scan_balance !== null ? Number(row.scan_balance) : 0;
+  const dailyAvailable = row?.daily_scan_date === moscowDayKey() && Number(row?.daily_scan_available || 0) === 1;
   return {
-    scanBalance: row && row.scan_balance !== null ? Number(row.scan_balance) : null,
+    scanBalance: paidBalance > 0 ? paidBalance : dailyAvailable ? 1 : 0,
     subscriptionUntil: row?.subscription_until || null,
-    subscriptionActive: Boolean(row?.subscription_until && Date.parse(row.subscription_until) > Date.now()),
-    unlimited: Number(row?.unlimited || 0) === 1
+    subscriptionActive,
+    unlimited
   };
 }
 function sendLiveEntitlement(userId) {
@@ -61,7 +66,10 @@ db.exec(`
     subscription_until TEXT DEFAULT NULL,
     unlimited INTEGER NOT NULL DEFAULT 0,
     last_scan_at TEXT DEFAULT NULL,
-    last_transport_number TEXT DEFAULT NULL
+    last_transport_number TEXT DEFAULT NULL,
+    welcome_bonus_granted INTEGER NOT NULL DEFAULT 0,
+    daily_scan_date TEXT DEFAULT NULL,
+    daily_scan_available INTEGER NOT NULL DEFAULT 0
   );
 `);
 
@@ -84,10 +92,31 @@ if (!userColumns.some(column => column.name === 'last_scan_at')) {
 if (!userColumns.some(column => column.name === 'last_transport_number')) {
   db.exec('ALTER TABLE users ADD COLUMN last_transport_number TEXT DEFAULT NULL');
 }
+if (!userColumns.some(column => column.name === 'welcome_bonus_granted')) {
+  db.exec('ALTER TABLE users ADD COLUMN welcome_bonus_granted INTEGER NOT NULL DEFAULT 0');
+}
+if (!userColumns.some(column => column.name === 'daily_scan_date')) {
+  db.exec('ALTER TABLE users ADD COLUMN daily_scan_date TEXT DEFAULT NULL');
+}
+if (!userColumns.some(column => column.name === 'daily_scan_available')) {
+  db.exec('ALTER TABLE users ADD COLUMN daily_scan_available INTEGER NOT NULL DEFAULT 0');
+}
+
+// Older accounts with an unassigned balance receive the welcome scans once.
+// Accounts that already had an assigned balance are treated as previously onboarded.
+db.prepare(`
+  UPDATE users
+  SET scan_balance = 3, welcome_bonus_granted = 1
+  WHERE welcome_bonus_granted = 0
+    AND scan_balance IS NULL
+    AND COALESCE(unlimited, 0) = 0
+    AND (subscription_until IS NULL OR subscription_until <= ?)
+`).run(new Date().toISOString());
+db.prepare('UPDATE users SET welcome_bonus_granted = 1 WHERE welcome_bonus_granted = 0').run();
 
 const upsertUser = db.prepare(`
-  INSERT INTO users (vk_id, first_name, last_name, photo_url, first_seen, last_seen, visit_count)
-  VALUES (@vk_id, @first_name, @last_name, @photo_url, @now, @now, 1)
+  INSERT INTO users (vk_id, first_name, last_name, photo_url, first_seen, last_seen, visit_count, scan_balance, welcome_bonus_granted)
+  VALUES (@vk_id, @first_name, @last_name, @photo_url, @now, @now, 1, 3, 1)
   ON CONFLICT(vk_id) DO UPDATE SET
     first_name = CASE WHEN excluded.first_name <> '' THEN excluded.first_name ELSE users.first_name END,
     last_name = CASE WHEN excluded.last_name <> '' THEN excluded.last_name ELSE users.last_name END,
@@ -97,24 +126,63 @@ const upsertUser = db.prepare(`
 `);
 const listUsers = db.prepare(`
   SELECT vk_id, first_name, last_name, photo_url, first_seen, last_seen, visit_count,
-         scan_balance, subscription_until, unlimited, last_scan_at, last_transport_number
+         scan_balance, subscription_until, unlimited, last_scan_at, last_transport_number,
+         welcome_bonus_granted, daily_scan_date, daily_scan_available
   FROM users
   ORDER BY last_seen DESC
 `);
 const userCount = db.prepare('SELECT COUNT(*) AS count FROM users');
-const getUserScanBalance = db.prepare('SELECT scan_balance, subscription_until, unlimited FROM users WHERE vk_id = ?');
+const getUserScanBalance = db.prepare('SELECT scan_balance, subscription_until, unlimited, daily_scan_date, daily_scan_available FROM users WHERE vk_id = ?');
 const grantPack = db.prepare('UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + ? WHERE vk_id = ?');
 const setUnlimited = db.prepare('UPDATE users SET unlimited = ?, scan_balance = CASE WHEN ? = 0 THEN COALESCE(scan_balance, 0) ELSE scan_balance END WHERE vk_id = ?');
 const updateSubscription = db.prepare('UPDATE users SET subscription_until = ?, scan_balance = COALESCE(scan_balance, 0) WHERE vk_id = ?');
-const getUserEntitlements = db.prepare('SELECT scan_balance, subscription_until, unlimited FROM users WHERE vk_id = ?');
+const getUserEntitlements = db.prepare('SELECT scan_balance, subscription_until, unlimited, daily_scan_date, daily_scan_available FROM users WHERE vk_id = ?');
 const spendUserScan = db.prepare(
   'UPDATE users SET scan_balance = scan_balance - 1 WHERE vk_id = ? AND scan_balance IS NOT NULL AND scan_balance > 0'
 );
+const spendDailyScan = db.prepare(
+  'UPDATE users SET daily_scan_available = 0 WHERE vk_id = ? AND daily_scan_date = ? AND daily_scan_available = 1 AND COALESCE(scan_balance, 0) <= 0'
+);
 const ensureUserForScan = db.prepare(`
-  INSERT INTO users (vk_id, first_name, last_name, photo_url, first_seen, last_seen, visit_count, scan_balance)
-  VALUES (?, '', '', '', ?, ?, 1, NULL)
+  INSERT INTO users (vk_id, first_name, last_name, photo_url, first_seen, last_seen, visit_count, scan_balance, welcome_bonus_granted)
+  VALUES (?, '', '', '', ?, ?, 1, 3, 1)
   ON CONFLICT(vk_id) DO NOTHING
 `);
+
+function moscowDayKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Moscow',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return values.year + '-' + values.month + '-' + values.day;
+}
+
+const grantDailyScan = db.prepare(`
+  UPDATE users
+  SET daily_scan_date = ?, daily_scan_available = 1
+  WHERE vk_id = ?
+    AND COALESCE(scan_balance, 0) <= 0
+    AND COALESCE(unlimited, 0) = 0
+    AND (subscription_until IS NULL OR subscription_until <= ?)
+    AND (daily_scan_date IS NULL OR daily_scan_date <> ?)
+`);
+
+function ensureDailyScan(userId, now = new Date()) {
+  const dayKey = moscowDayKey(now);
+  const nowIso = now.toISOString();
+  grantDailyScan.run(dayKey, String(userId), nowIso, dayKey);
+  return dayKey;
+}
+
+function getDisplayedScanBalance(row) {
+  if (!row) return 0;
+  const paidBalance = row.scan_balance === null || row.scan_balance === undefined ? 0 : Number(row.scan_balance);
+  if (paidBalance > 0) return paidBalance;
+  return row.daily_scan_date === moscowDayKey() && Number(row.daily_scan_available || 0) === 1 ? 1 : 0;
+}
 
 app.disable('x-powered-by');
 app.use(express.json({ limit: '32kb' }));
@@ -324,19 +392,22 @@ app.post('/api/paytag', async (req, res) => {
 
   const now = new Date().toISOString();
   ensureUserForScan.run(userId, now, now);
+  ensureDailyScan(userId);
   const balanceRow = getUserScanBalance.get(userId);
   const balanceBefore = balanceRow?.scan_balance === null || balanceRow?.scan_balance === undefined
-    ? null
+    ? 0
     : Number(balanceRow.scan_balance);
   const subscriptionActive = Boolean(balanceRow?.subscription_until && Date.parse(balanceRow.subscription_until) > Date.now());
   const hasUnlimited = Number(balanceRow?.unlimited || 0) === 1 || subscriptionActive;
+  const dayKey = moscowDayKey();
+  const dailyAvailable = balanceRow?.daily_scan_date === dayKey && Number(balanceRow?.daily_scan_available || 0) === 1;
 
-  if (!hasUnlimited && balanceBefore !== null && (!Number.isSafeInteger(balanceBefore) || balanceBefore <= 0)) {
+  if (!hasUnlimited && (!Number.isSafeInteger(balanceBefore) || balanceBefore <= 0) && !dailyAvailable) {
     return res.status(402).json({
       ok: false,
       code: 'SCAN_BALANCE_EMPTY',
       scanBalance: 0,
-      error: 'Баланс сканов исчерпан. Пополните баланс, чтобы продолжить.'
+      error: 'Бесплатный скан на сегодня уже использован. Пополните баланс или возвращайтесь завтра.'
     });
   }
 
@@ -355,23 +426,40 @@ app.post('/api/paytag', async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   try {
     const data = await task;
-    let scanBalance = balanceBefore;
-
-    // Active subscriptions and explicit unlimited access do not consume pack scans.
-    // Charge only after valid transport data was fetched.
-    if (!hasUnlimited && balanceBefore !== null) {
-      const spent = spendUserScan.run(userId);
-      if (spent.changes !== 1) {
-        return res.status(402).json({
-          ok: false,
-          code: 'SCAN_BALANCE_EMPTY',
-          scanBalance: 0,
-          error: 'Баланс сканов исчерпан. Пополните баланс, чтобы продолжить.'
-        });
+    // Paid/package scans are consumed first. The daily scan is separate and
+    // only consumed when the paid balance is empty. Charge only after valid data.
+    if (!hasUnlimited) {
+      if (balanceBefore > 0) {
+        const spent = spendUserScan.run(userId);
+        if (spent.changes !== 1) {
+          const latest = getUserScanBalance.get(userId);
+          if (Number(latest?.scan_balance || 0) <= 0) {
+            ensureDailyScan(userId);
+            const refreshed = getUserScanBalance.get(userId);
+            const dailyNowAvailable = refreshed?.daily_scan_date === moscowDayKey() && Number(refreshed?.daily_scan_available || 0) === 1;
+            if (!dailyNowAvailable || spendDailyScan.run(userId, moscowDayKey()).changes !== 1) {
+              return res.status(402).json({ ok: false, code: 'SCAN_BALANCE_EMPTY', scanBalance: 0, error: 'Бесплатный скан на сегодня уже использован. Пополните баланс или возвращайтесь завтра.' });
+            }
+          } else {
+            spendUserScan.run(userId);
+          }
+        }
+      } else {
+        const dailySpent = spendDailyScan.run(userId, dayKey);
+        if (dailySpent.changes !== 1) {
+          const latest = getUserScanBalance.get(userId);
+          if (Number(latest?.scan_balance || 0) > 0) {
+            spendUserScan.run(userId);
+          } else {
+            return res.status(402).json({ ok: false, code: 'SCAN_BALANCE_EMPTY', scanBalance: 0, error: 'Бесплатный скан на сегодня уже использован. Пополните баланс или возвращайтесь завтра.' });
+          }
+        }
       }
-      scanBalance = Number(getUserScanBalance.get(userId).scan_balance);
+      ensureDailyScan(userId);
       sendLiveEntitlement(userId);
     }
+    const currentEntitlement = getUserEntitlements.get(userId);
+    const scanBalance = getDisplayedScanBalance(currentEntitlement);
 
     db.prepare('UPDATE users SET last_scan_at = ?, last_transport_number = ? WHERE vk_id = ?')
       .run(new Date().toISOString(), String(data.vehicleNumber || '').trim() || null, userId);
@@ -407,10 +495,9 @@ app.post('/api/session', (req, res) => {
         now
       });
     }
+    ensureDailyScan(userId);
     const balanceRow = getUserScanBalance.get(userId);
-    const scanBalance = balanceRow && balanceRow.scan_balance !== null
-      ? Number(balanceRow.scan_balance)
-      : null;
+    const scanBalance = getDisplayedScanBalance(balanceRow);
     const subscriptionUntil = balanceRow?.subscription_until || null;
     const subscriptionActive = Boolean(subscriptionUntil && Date.parse(subscriptionUntil) > Date.now());
     const unlimited = Number(balanceRow?.unlimited || 0) === 1;
