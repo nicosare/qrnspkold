@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#f2f3f4">
+<title>Roadnote — Запросы тарифов</title>
+<style>
+:root{color-scheme:light;--bg:#f2f3f4;--card:#fff;--text:#24262b;--muted:#737b87;--line:#e1e6ed;--accent:#2787f5;--soft:#eaf3ff;--green:#18864b;--danger:#b42318;--orange:#9a6700}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit}
+button,a{touch-action:manipulation}
+button{min-height:42px;border:1px solid var(--line);border-radius:11px;padding:9px 12px;background:#fff;color:var(--text);font-weight:750;cursor:pointer}
+button:disabled{opacity:.5;cursor:wait}
+a{color:var(--accent);text-decoration:none}
+main{width:100%;max-width:900px;margin:0 auto;padding:15px 12px 28px}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:13px}
+h1{margin:0;font-size:23px;letter-spacing:-.4px;line-height:1.2}
+.sub{margin-top:5px;color:var(--muted);font-size:13px;line-height:1.45}
+.count{flex:0 0 auto;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#536172;font-size:12px;font-weight:800}
+.nav{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 12px}
+.nav a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:#354150;font-size:13px;font-weight:750}
+.nav a.active{background:#eaf3ff;border-color:#bfdaff;color:#1766bc}
+.panel{padding:12px;border:1px solid var(--line);border-radius:17px;background:#fff}
+.toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center}
+.toolbar input,.toolbar select{width:100%;min-width:0;min-height:42px;padding:9px 11px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--text)}
+.primary{border-color:#2787f5;background:#2787f5;color:#fff}
+.status{padding:30px 12px;text-align:center;color:var(--muted)}
+.status.error{color:var(--danger)}
+.cards{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+.request-card{padding:13px;border:1px solid var(--line);border-radius:15px;background:#fff}
+.request-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.request-title{min-width:0;color:#202d3c;font-size:16px;font-weight:850;line-height:1.3;overflow-wrap:anywhere}
+.request-meta{margin-top:5px;color:#718092;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.pill{display:inline-flex;align-items:center;flex:0 0 auto;padding:5px 8px;border-radius:999px;background:#fff2cc;color:#855b00;font-size:11px;font-weight:850}
+.pill.processed{background:#e2f6e9;color:#176c3e}
+.pill.declined{background:#fde9e7;color:#a5261d}
+.request-description{margin-top:10px;color:#5f6d7d;font-size:13px;line-height:1.5}
+.request-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.request-actions button{flex:1 1 150px}
+.process{border-color:#bce5c9;background:#e9f8ee;color:#176c3e}
+.decline{border-color:#f1c9c5;background:#fff5f4;color:#aa3026}
+.empty{padding:30px 12px;text-align:center;color:var(--muted)}
+.foot{margin-top:14px;color:var(--muted);font-size:12px;line-height:1.5}
+@media(max-width:600px){
+ main{padding-top:12px}.top{align-items:flex-start}.count{padding:6px 8px}
+ h1{font-size:21px}.panel{padding:9px}.toolbar{grid-template-columns:minmax(0,1fr) auto}.toolbar input{grid-column:1/-1}.toolbar select{grid-column:1}.toolbar button{grid-column:2}.request-card{padding:11px}
+}
+</style>
+</head>
+<body>
+<main>
+<header class="top">
+  <div><h1>Запросы тарифов</h1><div class="sub">Запросы не списывают оплату и не начисляют доступ автоматически. Отмечай здесь те, что оформил вручную.</div></div>
+  <div class="count" id="count">Загрузка…</div>
+</header>
+<nav class="nav" aria-label="Разделы админки">
+  <a id="users-link" href="#">Пользователи</a>
+  <a id="offers-link" href="#">Предложения</a>
+  <a class="active" href="#" aria-current="page">Запросы</a>
+</nav>
+<section class="panel">
+  <div class="toolbar">
+    <input id="search" type="search" placeholder="Имя, VK ID или тариф" autocomplete="off" aria-label="Поиск запросов">
+    <select id="filter" aria-label="Фильтр по статусу">
+      <option value="pending">Ожидают оформления</option>
+      <option value="all">Все запросы</option>
+      <option value="processed">Оформленные</option>
+      <option value="declined">Отклонённые</option>
+    </select>
+    <button class="primary" id="refresh" type="button">Обновить</button>
+  </div>
+  <div id="status" class="status" role="status">Проверяем доступ…</div>
+  <div id="cards" class="cards" hidden></div>
+  <div id="empty" class="empty" hidden></div>
+  <div class="foot">Статус «Оформлен» — это только отметка администратора. Изменения баланса и подписки нужно выполнять отдельно в разделе «Пользователи».</div>
+</section>
+</main>
+<script>
+(() => {
+  const query=window.location.search.slice(1);
+  const auth='VK '+btoa(unescape(encodeURIComponent(query))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const usersLink=document.getElementById('users-link');
+  const offersLink=document.getElementById('offers-link');
+  if(usersLink) usersLink.href='/roadnote/admin/users'+window.location.search;
+  if(offersLink) offersLink.href='/roadnote/admin/offers'+window.location.search;
+  const status=document.getElementById('status');
+  const cards=document.getElementById('cards');
+  const empty=document.getElementById('empty');
+  const count=document.getElementById('count');
+  const search=document.getElementById('search');
+  const filter=document.getElementById('filter');
+  let requests=[];
+  const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const date=value=>value?new Date(value).toLocaleString('ru-RU',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+  const money=value=>value===null||value===undefined||value===''?'':Number(value).toLocaleString('ru-RU',{maximumFractionDigits:2})+' ₽';
+  const statusLabel={pending:'Ожидает оформления',processed:'Оформлен вручную',declined:'Отклонён'};
+  function render(){
+    const q=search.value.trim().toLocaleLowerCase('ru');
+    const shown=requests.filter(r=>{
+      const byStatus=filter.value==='all'||r.status===filter.value;
+      const user=[r.first_name,r.last_name,r.vk_id,r.offer_title,r.offer_id].filter(Boolean).join(' ').toLocaleLowerCase('ru');
+      return byStatus&&user.includes(q);
+    });
+    cards.innerHTML=shown.map(r=>{
+      const name=[r.first_name,r.last_name].filter(Boolean).join(' ')||'Пользователь VK';
+      const quantity=Number(r.offer_quantity)||1;
+      const quantityText=quantity+' '+(r.offer_unit_label||'');
+      const type=r.offer_type==='subscription'?'Подписка':'Пакет сканирований';
+      const price=money(r.offer_price);
+      const oldPrice=money(r.offer_old_price);
+      const priceText=price?'Цена: '+price+(oldPrice?' · старая цена '+oldPrice:''):'Цена в карточке не указана';
+      const badgeClass=r.status==='processed'?'processed':r.status==='declined'?'declined':'';
+      const actions=r.status==='pending'
+        ? '<div class="request-actions"><button class="process" type="button" data-action="processed" data-id="'+r.id+'">Отметить оформленным</button><button class="decline" type="button" data-action="declined" data-id="'+r.id+'">Отклонить</button></div>'
+        : '';
+      const profile='https://vk.com/id'+encodeURIComponent(r.vk_id);
+      return '<article class="request-card"><div class="request-top"><div><div class="request-title">'+esc(r.offer_title||type)+'</div><div class="request-meta">'+esc(type)+' · '+esc(quantityText)+'<br>'+esc(name)+' · <a href="'+profile+'" target="_blank" rel="noopener noreferrer">VK ID '+esc(r.vk_id)+'</a><br>Запрошено: '+esc(date(r.requested_at))+'</div></div><span class="pill '+badgeClass+'">'+esc(statusLabel[r.status]||r.status)+'</span></div>'+
+        '<div class="request-description">'+esc(r.offer_description||'Описание не указано')+'<br>'+esc(priceText)+'</div>'+actions+'</article>';
+    }).join('');
+    cards.hidden=shown.length===0;
+    empty.hidden=shown.length!==0;
+    empty.textContent=requests.length?'Запросов с такими условиями не найдено.':'Пока нет запросов на тарифы.';
+    status.hidden=true;
+    count.textContent='Ожидают: '+requests.filter(r=>r.status==='pending').length+' · Всего: '+requests.length;
+  }
+  async function load(){
+    status.hidden=false;status.className='status';status.textContent='Загружаем запросы…';cards.hidden=true;empty.hidden=true;
+    if(!query){status.className='status error';status.textContent='Открой страницу из VK Mini App, чтобы подтвердить права администратора.';return;}
+    try{
+      const response=await fetch('../api/admin/offer-requests',{headers:{Authorization:auth},cache:'no-store'});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'Не удалось загрузить запросы.');
+      requests=data.requests||[];render();
+    }catch(error){status.hidden=false;status.className='status error';status.textContent=error.message;count.textContent='Нет доступа';}
+  }
+  async function updateRequest(button){
+    const id=button.dataset.id;
+    const nextStatus=button.dataset.action;
+    button.disabled=true;
+    try{
+      const response=await fetch('../api/admin/offer-requests/'+encodeURIComponent(id),{
+        method:'PATCH',headers:{Authorization:auth,'Content-Type':'application/json'},
+        body:JSON.stringify({status:nextStatus}),cache:'no-store'
+      });
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'Не удалось изменить статус.');
+      const item=requests.find(r=>String(r.id)===String(id));
+      if(item)item.status=nextStatus;
+      render();
+    }catch(error){button.disabled=false;window.alert(error.message);}
+  }
+  cards.addEventListener('click',event=>{const button=event.target.closest('button[data-action]');if(button)updateRequest(button);});
+  search.addEventListener('input',render);
+  filter.addEventListener('change',render);
+  document.getElementById('refresh').addEventListener('click',load);
+  load();
+})();
+</script>
+</body>
+</html>
