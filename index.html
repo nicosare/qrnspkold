@@ -648,6 +648,26 @@
             .start-offer-duration { font-size: 21px; }
         }
 
+        .start-referral {
+            margin-top: 22px; padding: 16px; border: 1px solid #e1e6ed;
+            border-radius: 18px; background: #fff;
+        }
+        .start-referral-title { font-size: 16px; font-weight: 700; color: #27313d; }
+        .start-referral-description { margin-top: 5px; color: #737d89; font-size: 13px; line-height: 1.4; }
+        .start-referral-link {
+            display: block; width: 100%; margin-top: 12px; padding: 10px 11px;
+            border: 1px solid #e1e6ed; border-radius: 10px; background: #f7f9fb;
+            color: #3a4654; font: inherit; font-size: 12px; overflow: hidden; text-overflow: ellipsis;
+        }
+        .start-referral-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 9px; }
+        .start-referral-button {
+            min-height: 40px; padding: 8px 10px; border: 0; border-radius: 10px;
+            background: #2787f5; color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+        }
+        .start-referral-button-secondary { background: #eef4fc; color: #2875cc; }
+        .start-referral-button:disabled { opacity: .5; cursor: default; }
+        .start-referral-status { margin-top: 7px; color: #687583; font-size: 12px; min-height: 16px; }
+
         .start-actions { display: flex; flex-direction: column; gap: 11px; margin-top: auto; }
         .start-button {
             width: 100%;
@@ -859,6 +879,16 @@
             <div id="scan-status" class="start-status" role="status" aria-live="polite"></div>
         </div>
 
+        <section class="start-referral" aria-labelledby="start-referral-title">
+            <div class="start-referral-title" id="start-referral-title">Пригласи друга</div>
+            <p class="start-referral-description">Поделись Roadnote. Когда друг впервые успешно отсканирует QR-код, тебе начислим 3 скана.</p>
+            <input class="start-referral-link" id="start-referral-link" type="text" readonly aria-label="Твоя реферальная ссылка" value="Загружаем ссылку…">
+            <div class="start-referral-actions">
+                <button class="start-referral-button" id="start-referral-share" type="button" disabled>Поделиться</button>
+                <button class="start-referral-button start-referral-button-secondary" id="start-referral-copy" type="button" disabled>Копировать</button>
+            </div>
+            <div class="start-referral-status" id="start-referral-status" role="status" aria-live="polite"></div>
+        </section>
     </div>
 </section>
 
@@ -879,6 +909,11 @@
     const startOverlayElement = document.getElementById('start-overlay');
     const startScanButton = document.getElementById('start-scan-new');
     const continueCurrentScanButton = document.getElementById('continue-current-scan');
+    const referralLinkInput = document.getElementById('start-referral-link');
+    const referralShareButton = document.getElementById('start-referral-share');
+    const referralCopyButton = document.getElementById('start-referral-copy');
+    const referralStatus = document.getElementById('start-referral-status');
+    let currentReferralLink = '';
     const pageBody = document.body;
 
     let timerInterval = null;
@@ -1579,6 +1614,8 @@
 
         startScanButton.addEventListener('click', scanWithVkBridge);
         continueCurrentScanButton.addEventListener('click', closeStartOverlay);
+        if (referralShareButton) referralShareButton.addEventListener('click', shareReferralLink);
+        if (referralCopyButton) referralCopyButton.addEventListener('click', copyReferralLink);
         refreshScanButton();
 
         // The start overlay is shown on launch. Returning to the ticket puts
@@ -1653,6 +1690,47 @@
     });
   }
 
+  function setReferralLink(link) {
+    currentReferralLink = String(link || '');
+    if (referralLinkInput) referralLinkInput.value = currentReferralLink || 'Не удалось получить ссылку';
+    if (referralShareButton) referralShareButton.disabled = !currentReferralLink;
+    if (referralCopyButton) referralCopyButton.disabled = !currentReferralLink;
+  }
+
+  async function copyReferralLink() {
+    if (!currentReferralLink) return;
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(currentReferralLink);
+      } else {
+        referralLinkInput.focus();
+        referralLinkInput.select();
+        if (!document.execCommand('copy')) throw new Error('copy unavailable');
+      }
+      if (referralStatus) referralStatus.textContent = 'Ссылка скопирована';
+    } catch (_) {
+      if (referralLinkInput) {
+        referralLinkInput.focus();
+        referralLinkInput.select();
+      }
+      if (referralStatus) referralStatus.textContent = 'Выдели ссылку и скопируй её вручную';
+    }
+  }
+
+  async function shareReferralLink() {
+    if (!currentReferralLink) return;
+    try {
+      if (window.vkBridge && typeof window.vkBridge.send === 'function') {
+        await window.vkBridge.send('VKWebAppShare', { link: currentReferralLink });
+        if (referralStatus) referralStatus.textContent = 'Открылось меню отправки ссылки';
+        return;
+      }
+    } catch (error) {
+      console.warn('VK share unavailable:', error);
+    }
+    await copyReferralLink();
+  }
+
   async function registerRoadnoteVisit() {
     if (!window.vkBridge || typeof window.vkBridge.send !== 'function') {
       setScannerStatus('Откройте Roadnote внутри VK Mini App, чтобы проверить баланс сканов.');
@@ -1710,6 +1788,7 @@
       }
 
       const session = await response.json();
+      setReferralLink(session.referralLink);
       scanSessionReady = true;
       updateScanBalance(session.scanBalance, session.subscriptionUntil, session.unlimited, session.subscriptionActive);
 
@@ -1752,6 +1831,7 @@
               });
               if (!refreshResponse.ok) return;
               const current = await refreshResponse.json();
+              setReferralLink(current.referralLink);
               scanSessionReady = true;
               updateScanBalance(current.scanBalance, current.subscriptionUntil, current.unlimited, current.subscriptionActive);
               if (!scanBalanceAssigned) setScannerStatus('');
