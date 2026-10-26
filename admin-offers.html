@@ -462,9 +462,33 @@ input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{out
   document.getElementById('publish').addEventListener('click',publish);
   document.getElementById('reset-draft').addEventListener('click',resetDraft);
   document.getElementById('cards-view').addEventListener('input',event=>{if(event.target.matches('[data-kind]'))fieldChanged(event.target);});
-  document.getElementById('cards-view').addEventListener('change',event=>{if(event.target.matches('[data-kind]'))fieldChanged(event.target);});
+  document.getElementById('cards-view').addEventListener('change',event=>{
+    const target=event.target;
+    if(!target.matches('[data-kind]'))return;
+    const field=target.dataset.field;
+    const card=target.closest('[data-offer-card]');
+    const cardId=card?.dataset.offerCard;
+    fieldChanged(target);
+    if(['type','sectionId','sortOrder','visible'].includes(field)){
+      renderCards();
+      const current=cardId?offersList.querySelector('[data-offer-card="'+cardId+'"]'):null;
+      if(current)current.open=true;
+    }
+  });
   document.getElementById('sections-view').addEventListener('input',event=>{if(event.target.matches('[data-kind]'))fieldChanged(event.target);});
-  document.getElementById('sections-view').addEventListener('change',event=>{if(event.target.matches('[data-kind]'))fieldChanged(event.target);});
+  document.getElementById('sections-view').addEventListener('change',event=>{
+    const target=event.target;
+    if(!target.matches('[data-kind]'))return;
+    const field=target.dataset.field;
+    const card=target.closest('[data-section-card]');
+    const cardId=card?.dataset.sectionCard;
+    fieldChanged(target);
+    if(['sortOrder','visible'].includes(field)){
+      renderSections();
+      const current=cardId?sectionsList.querySelector('[data-section-card="'+cardId+'"]'):null;
+      if(current)current.open=true;
+    }
+  });
   offersList.addEventListener('click',event=>{const button=event.target.closest('[data-action]');if(button&&!button.disabled)handleAction(button);});
   sectionsList.addEventListener('click',event=>{const button=event.target.closest('[data-action]');if(button&&!button.disabled)handleAction(button);});
   window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
