@@ -1314,6 +1314,21 @@ app.post('/api/yoomoney/notification', (req, res) => {
   return res.status(200).send('ok');
 });
 
+app.get('/api/community/avatar', async (_req, res) => {
+  try {
+    const groups = await vkApi('groups.getById', { group_ids: communityId });
+    const avatarUrl = Array.isArray(groups) ? groups[0]?.photo_200 || groups[0]?.photo_100 : '';
+    if (!avatarUrl || !/^https:\/\//i.test(avatarUrl)) {
+      return res.status(502).send('Community avatar unavailable');
+    }
+    res.setHeader('Cache-Control', 'public, max-age=900');
+    return res.redirect(302, avatarUrl);
+  } catch (error) {
+    console.warn('[Roadnote community avatar]', error?.message || error);
+    return res.status(502).send('Community avatar unavailable');
+  }
+});
+
 app.get('/health', (_req, res) => {
   res.json({ ok: true, database: 'connected' });
 });
