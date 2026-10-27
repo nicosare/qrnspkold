@@ -509,8 +509,8 @@ function getTariffState(userId) {
   const id = String(userId);
   const completed = db.prepare("SELECT EXISTS(SELECT 1 FROM tariff_requests WHERE vk_id = ? AND status = 'approved') AS value").get(id);
   const activeRequests = db.prepare(
-    "SELECT id, offer_id, offer_name, offer_kind, quantity, price_rub, status, created_at, updated_at, completed_at, screenshot_attachment " +
-    "FROM tariff_requests WHERE vk_id = ? AND status IN ('awaiting_payment','awaiting_review') ORDER BY CASE status WHEN 'awaiting_payment' THEN 0 ELSE 1 END, id DESC LIMIT 20"
+    "SELECT id, offer_id, offer_name, offer_kind, quantity, price_rub, status, created_at, updated_at, completed_at " +
+    "FROM tariff_requests WHERE vk_id = ? AND status = 'awaiting_payment' ORDER BY id DESC LIMIT 20"
   ).all(id);
   const active = activeRequests.find(request => request.status === 'awaiting_payment') || activeRequests[0] || null;
   const history = db.prepare(
@@ -857,14 +857,14 @@ app.post('/api/tariffs/request', async (req, res) => {
   try {
     const replaceAndCreate = db.transaction(() => {
       replacedRequest = db.prepare(
-        "SELECT id, status, screenshot_attachment, admin_message_id, bot_message_id FROM tariff_requests WHERE vk_id = ? AND status = 'awaiting_payment' ORDER BY id DESC LIMIT 1"
+        "SELECT id, status, admin_message_id, bot_message_id FROM tariff_requests WHERE vk_id = ? AND status = 'awaiting_payment' ORDER BY id DESC LIMIT 1"
       ).get(userId) || null;
 
-      // Only the unpaid request is replaceable; screenshot-submitted requests remain untouched.
+      // Only an unpaid purchase can be replaced.
       if (replacedRequest) {
         const replaced = db.prepare(
           "UPDATE tariff_requests SET status = 'replaced', updated_at = ?, completed_at = ? " +
-          "WHERE id = ? AND vk_id = ? AND status IN ('awaiting_payment','awaiting_review')"
+          "WHERE id = ? AND vk_id = ? AND status = 'awaiting_payment'"
         ).run(nowIso, nowIso, replacedRequest.id, userId);
         if (replaced.changes !== 1) throw new Error('Активная заявка уже изменилась. Обнови страницу и попробуй ещё раз.');
       }
@@ -893,9 +893,7 @@ app.post('/api/tariffs/request', async (req, res) => {
 
   if (replacedRequest?.admin_message_id) await deleteCommunityMessage(replacedRequest.admin_message_id);
   if (replacedRequest?.bot_message_id) await deleteCommunityMessage(replacedRequest.bot_message_id);
-  const notice = replacedRequest
-    ? ''
-    : 'Заявка создана. Открой её в Mini App и прикрепи скриншот оплаты.';
+  const notice = replacedRequest ? '' : 'Покупка создана. Заверши оплату в открывшемся окне ЮMoney.';
   sendLiveTariffState(userId, notice);
   return res.json({ ok: true, requestId, ...getTariffState(userId) });
 });
