@@ -5,6 +5,7 @@
   const modalContent = document.getElementById('tariff-modal-content');
   const modalStatus = document.getElementById('tariff-modal-status');
   const tariffStatus = document.getElementById('start-tariff-status');
+  const tariffNote = document.getElementById('start-offers-note');
   let state = { hasPurchased: false, activeTariffRequests: [], activeTariffRequest: null, tariffRequestHistory: [] };
   let busy = false;
   let activePurchase = null;
@@ -73,6 +74,9 @@
       tariffRequestHistory: next && Array.isArray(next.tariffRequestHistory) ? next.tariffRequestHistory : []
     };
     window.roadnoteHasPurchased = state.hasPurchased;
+    if (tariffNote) tariffNote.textContent = state.hasPurchased
+      ? 'Скидка на первую покупку уже использована. Для следующих покупок действуют обычные цены.'
+      : 'Скидка действует только на первую покупку.';
     updatePrices();
     if (tariffStatus && next && next.notice) {
       tariffStatus.textContent = next.notice;
