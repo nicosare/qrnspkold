@@ -98,15 +98,38 @@
 
     busyOfferId = offerId;
     renderState({ hasPurchased: hasPurchased, activeTariffRequest: activeRequest });
-    setStatus('Запрашиваю разрешение на сообщения от сообщества…', false);
+    setStatus('Проверяю разрешение на сообщения…', false);
     try {
-      const permission = await window.vkBridge.send('VKWebAppAllowMessagesFromGroup', { group_id: communityId });
-      if (permission && permission.result === false) throw new Error('Permission denied');
+      // VK's permission dialog should only be needed once. Check the actual
+      // server-side permission state first, so a previously approved user is
+      // not asked again on every tariff request.
+      let permissionAlreadyGranted = false;
+      try {
+        const checkResponse = await fetch(apiUrl('api/tariffs/permission'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ launchParams: launchParams }),
+          cache: 'no-store',
+          credentials: 'omit'
+        });
+        if (checkResponse.ok) {
+          const checkData = await checkResponse.json().catch(function () { return {}; });
+          permissionAlreadyGranted = checkData.ok === true && checkData.allowed === true;
+        }
+      } catch (checkError) {
+        console.warn('[Roadnote tariff permission check]', checkError);
+      }
+
+      if (!permissionAlreadyGranted) {
+        setStatus('Запрашиваю разрешение на сообщения от сообщества…', false);
+        const permission = await window.vkBridge.send('VKWebAppAllowMessagesFromGroup', { group_id: communityId });
+        if (permission && permission.result === false) throw new Error('Permission denied');
+      }
     } catch (error) {
       console.info('[Roadnote tariff] Community messages permission was not granted:', error);
       busyOfferId = '';
       renderState({ hasPurchased: hasPurchased, activeTariffRequest: activeRequest });
-      setStatus('Чтобы оставить заявку, нужно разрешить сообщения от сообщества Roadnote. Нажми «Оставить заявку» ещё раз и подтверди разрешение.', true);
+      setStatus('VK не подтвердил разрешение на сообщения. Проверь, разрешены ли сообщения от сообщества Roadnote, и попробуй ещё раз.', true);
       return;
     }
 
