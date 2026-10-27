@@ -857,13 +857,6 @@ app.post('/api/tariffs/request', async (req, res) => {
       db.prepare('UPDATE tariff_requests SET payment_label = ? WHERE id = ?').run('roadnote-request-' + requestId, requestId);
     })();
   } catch (error) {
-    if (false && error?.lockedByReview) {
-      return res.status(409).json({
-        error: error.message,
-        lockedByReview: true,
-        ...getTariffState(userId)
-      });
-    }
     console.error('[tariff request create/switch]', error?.message || error);
     return res.status(409).json({ error: 'Не удалось сменить покупку. Обнови страницу и попробуй ещё раз.', ...getTariffState(userId) });
   }
