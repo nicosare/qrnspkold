@@ -126,7 +126,7 @@
             z-index: 1;
         }
 
-        header::after {
+        .wrapper > header::after {
             content: '';
             display: block;
             position: absolute;
@@ -745,6 +745,7 @@
         .info-sheet-header > div { min-width:0; }
         .faq-sheet {
             box-sizing:border-box;
+            background:#c2eeeb;
             display:flex;
             flex-direction:column;
             height:min(88dvh,820px);
@@ -753,8 +754,10 @@
             min-height:0;
         }
         .faq-sheet .info-sheet-header {
+            position:relative;
+            z-index:1;
             flex:0 0 auto;
-            touch-action:none;
+            touch-action:pan-y;
             cursor:grab;
             user-select:none;
             -webkit-user-select:none;
@@ -2117,47 +2120,42 @@
     closeButton.addEventListener('click', handleClose, true);
     closeButton.addEventListener('pointerup', handleClose, true);
   }
-  // A downward gesture on the fixed header closes the drawer; the question
-  // list itself remains a native vertical scroller.
+  // Downward swipe closes from anywhere on the sheet except the scrollable
+  // question list. Inside the list, native vertical scrolling always wins.
   const faqSheet = faqOverlay ? faqOverlay.querySelector('.faq-sheet') : null;
-  const faqHeader = faqOverlay ? faqOverlay.querySelector('.info-sheet-header') : null;
-  if (faqSheet && faqHeader) {
+  if (faqSheet) {
     let startX = 0;
     let startY = 0;
     let trackingSwipe = false;
     let activePointerId = null;
+    let startedInList = false;
 
-    faqHeader.addEventListener('pointerdown', function (event) {
-      if (event.target && event.target.closest && event.target.closest('#faq-close')) return;
+    faqSheet.addEventListener('pointerdown', function (event) {
+      if (event.target && event.target.closest &&
+          event.target.closest('#faq-close, .faq-list, a, button, summary')) return;
       if (event.pointerType === 'mouse' && event.button !== 0) return;
       startX = event.clientX;
       startY = event.clientY;
       activePointerId = event.pointerId;
       trackingSwipe = true;
-      faqSheet.classList.add('faq-swipe-dragging');
-      try { faqHeader.setPointerCapture(event.pointerId); } catch (_) {}
+      startedInList = false;
     });
 
-    faqHeader.addEventListener('pointerup', function (event) {
+    faqSheet.addEventListener('pointerup', function (event) {
       if (!trackingSwipe || event.pointerId !== activePointerId) return;
       const dx = event.clientX - startX;
       const dy = event.clientY - startY;
       trackingSwipe = false;
       activePointerId = null;
-      faqSheet.classList.remove('faq-swipe-dragging');
-      if (dy >= 55 && dy > Math.abs(dx) * 1.15) {
-        closeFaq();
-      }
+      if (dy >= 70 && dy > Math.abs(dx) * 1.2) closeFaq();
     });
 
     const cancelSwipe = function (event) {
       if (event && activePointerId !== null && event.pointerId !== activePointerId) return;
       trackingSwipe = false;
       activePointerId = null;
-      faqSheet.classList.remove('faq-swipe-dragging');
     };
-    faqHeader.addEventListener('pointercancel', cancelSwipe);
-    faqHeader.addEventListener('lostpointercapture', cancelSwipe);
+    faqSheet.addEventListener('pointercancel', cancelSwipe);
   }
 
   if (faqOverlay) {
