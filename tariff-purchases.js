@@ -142,8 +142,14 @@
       tariffStatus.classList.remove('is-error');
     }
     if (modal && !modal.hidden && state.activeTariffRequest && activeModalRequest && Number(activeModalRequest.id) === Number(state.activeTariffRequest.id)) {
-      activeModalRequest = state.activeTariffRequest;
-      renderModal();
+      // Preserve the selected file and its preview during routine state refreshes.
+      // Rebuild the modal only when the request status actually changes.
+      if (activeModalRequest.status !== state.activeTariffRequest.status) {
+        activeModalRequest = state.activeTariffRequest;
+        renderModal();
+      } else {
+        activeModalRequest = state.activeTariffRequest;
+      }
     }
   }
 
