@@ -752,6 +752,8 @@
         .start-referral-button-secondary { background: #eef4fc; color: #2875cc; }
         .start-referral-button:disabled { opacity: .5; cursor: default; }
 
+        .start-scan-actions { margin-bottom: 24px; }
+
         .start-actions { display: flex; flex-direction: column; gap: 11px; margin-top: auto; }
         .start-button {
             width: 100%;
@@ -1034,6 +1036,20 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             <div id="scan-balance-status" class="scan-balance-status" role="status" aria-live="polite">Проверяем баланс…</div>
         </div>
 
+        <div class="start-actions start-scan-actions">
+            <button class="start-button start-button-primary" id="start-scan-new" type="button" disabled>
+                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 8V4a1 1 0 0 1 1-1h4M16 3h4a1 1 0 0 1 1 1v4M21 16v4a1 1 0 0 1-1 1h-4M8 21H4a1 1 0 0 1-1-1v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <rect x="8" y="8" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Сканировать новый QR-код
+            </button>
+            <button class="start-button start-button-secondary" id="continue-current-scan" type="button">
+                Вернуться к текущему скану
+            </button>
+<div id="scan-status" class="start-status" role="status" aria-live="polite"></div>
+        </div>
+
         <section class="start-offers-section" aria-labelledby="start-offers-title">
             <div class="start-offers-section-heading"><div><div class="start-section-kicker">ROADNOTE PLUS</div><h3 id="start-offers-title">Тарифы</h3></div></div>
             <p class="start-offers-lead" id="start-offers-lead">Выбирай удобный формат: отдельные сканирования или безлимит.</p>
@@ -1064,23 +1080,13 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         </section>
 
         <div class="start-actions">
-            <button class="start-button start-button-primary" id="start-scan-new" type="button" disabled>
-                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 8V4a1 1 0 0 1 1-1h4M16 3h4a1 1 0 0 1 1 1v4M21 16v4a1 1 0 0 1-1 1h-4M8 21H4a1 1 0 0 1-1-1v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    <rect x="8" y="8" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="2"/>
-                </svg>
-                Сканировать новый QR-код
-            </button>
-            <button class="start-button start-button-secondary" id="continue-current-scan" type="button">
-                Вернуться к текущему скану
-            </button>
             <button class="start-button start-button-secondary" id="start-faq-button" type="button">
                 Частые вопросы
             </button>
             <button class="start-button start-button-secondary" id="start-admin-users-button" type="button" hidden>
                 Пользователи
             </button>
-            <div id="scan-status" class="start-status" role="status" aria-live="polite"></div>
+
         </div>
 
         <section class="start-referral" aria-labelledby="start-referral-title">
@@ -2347,6 +2353,6 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             </section>
         </div>
 
-<script src="tariff-purchases.js?v=20261027-collapsible-requests-6"></script>
+<script src="tariff-purchases.js?v=20261027-scan-actions-above-tariffs-1"></script>
 </body>
 </html>
