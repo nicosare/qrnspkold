@@ -745,7 +745,7 @@
         .info-sheet-header > div { min-width:0; }
         .faq-sheet {
             box-sizing:border-box;
-            background:#c2eeeb;
+            background:#fff;
             display:flex;
             flex-direction:column;
             height:min(88dvh,820px);
@@ -757,6 +757,7 @@
             position:relative;
             z-index:1;
             flex:0 0 auto;
+            background:linear-gradient(135deg,#f5f9ff 0%,#fff 76%);
             touch-action:pan-y;
             cursor:grab;
             user-select:none;
@@ -2120,48 +2121,39 @@
     closeButton.addEventListener('click', handleClose, true);
     closeButton.addEventListener('pointerup', handleClose, true);
   }
-  // Downward swipe closes from anywhere on the sheet except the scrollable
-  // question list. Inside the list, native vertical scrolling always wins.
+  // Track a deliberate downward swipe across the drawer. Native scrolling
+  // inside the question list is preserved; only a long pull from its top dismisses.
   const faqSheet = faqOverlay ? faqOverlay.querySelector('.faq-sheet') : null;
   if (faqSheet) {
-    let startX = 0;
-    let startY = 0;
-    let trackingSwipe = false;
-    let activePointerId = null;
-    let startedInList = false;
-    let listAtStart = null;
+    let startX = 0, startY = 0, startScrollTop = 0, startInList = false;
+    let trackingTouch = false;
+    faqSheet.addEventListener('touchstart', function (event) {
+      if (!event.touches || event.touches.length !== 1) { trackingTouch = false; return; }
+      const target = event.target;
+      if (target && target.closest && target.closest('#faq-close, button, a')) { trackingTouch = false; return; }
+      const touch = event.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      const list = target && target.closest ? target.closest('.faq-list') : null;
+      startInList = Boolean(list);
+      startScrollTop = list ? list.scrollTop : -1;
+      trackingTouch = true;
+    }, { passive: true });
 
-    faqSheet.addEventListener('pointerdown', function (event) {
-      if (event.target && event.target.closest &&
-          event.target.closest('#faq-close, a, button')) return;
-      if (event.pointerType === 'mouse' && event.button !== 0) return;
-      startX = event.clientX;
-      startY = event.clientY;
-      activePointerId = event.pointerId;
-      trackingSwipe = true;
-      listAtStart = event.target && event.target.closest ? event.target.closest('.faq-list') : null;
-      startedInList = Boolean(listAtStart);
-    });
+    faqSheet.addEventListener('touchend', function (event) {
+      if (!trackingTouch || !event.changedTouches || !event.changedTouches.length) return;
+      const touch = event.changedTouches[0];
+      const dx = touch.clientX - startX;
+      const dy = touch.clientY - startY;
+      trackingTouch = false;
+      // A list gesture is dismissible only when it began at the very top and
+      // is a clear, long pull; normal shorter list scrolls never close the sheet.
+      const threshold = startInList ? 150 : 65;
+      const canClose = !startInList || startScrollTop <= 1;
+      if (canClose && dy >= threshold && dy > Math.abs(dx) * 1.25) closeFaq();
+    }, { passive: true });
 
-    faqSheet.addEventListener('pointerup', function (event) {
-      if (!trackingSwipe || event.pointerId !== activePointerId) return;
-      const dx = event.clientX - startX;
-      const dy = event.clientY - startY;
-      trackingSwipe = false;
-      activePointerId = null;
-      const threshold = startedInList ? 110 : 70;
-      const listCanDismiss = !startedInList || (listAtStart && listAtStart.scrollTop <= 0);
-      if (listCanDismiss && dy >= threshold && dy > Math.abs(dx) * 1.2) closeFaq();
-      startedInList = false;
-      listAtStart = null;
-    });
-
-    const cancelSwipe = function (event) {
-      if (event && activePointerId !== null && event.pointerId !== activePointerId) return;
-      trackingSwipe = false;
-      activePointerId = null;
-    };
-    faqSheet.addEventListener('pointercancel', cancelSwipe);
+    faqSheet.addEventListener('touchcancel', function () { trackingTouch = false; }, { passive: true });
   }
 
   if (faqOverlay) {
