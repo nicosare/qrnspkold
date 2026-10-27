@@ -938,7 +938,7 @@ async function uploadTariffScreenshotToVk(userId, imageBuffer, mimeType) {
   return 'photo' + String(photo.owner_id) + '_' + String(photo.id) + (photo.access_key ? '_' + String(photo.access_key) : '');
 }
 
-app.post('/api/tariffs/request', (req, res) => {
+app.post('/api/tariffs/request', async (req, res) => {
   let userId;
   try {
     ({ userId } = parseLaunchParams(req.body?.launchParams));
@@ -951,35 +951,46 @@ app.post('/api/tariffs/request', (req, res) => {
   const user = db.prepare('SELECT vk_id FROM users WHERE vk_id = ?').get(userId);
   if (!user) return res.status(409).json({ error: 'Сначала дождись загрузки баланса и попробуй снова.' });
 
-  const current = db.prepare(
-    "SELECT id FROM tariff_requests WHERE vk_id = ? AND status IN ('awaiting_payment','awaiting_review') ORDER BY id DESC LIMIT 1"
-  ).get(userId);
-  if (current) {
-    return res.status(409).json({
-      error: 'У тебя уже есть активная заявка. Открой её в блоке «Заявки», чтобы отправить скриншот или отозвать заявку.',
-      ...getTariffState(userId)
-    });
-  }
-
   const stateBefore = getTariffState(userId);
   const discounted = !stateBefore.hasPurchased;
   const priceRub = discounted ? offer.promoPrice : offer.regularPrice;
   const nowIso = new Date().toISOString();
   let requestId;
+  let replacedRequest = null;
   try {
-    const created = db.prepare(
-      "INSERT INTO tariff_requests (vk_id, offer_id, offer_name, offer_kind, quantity, price_rub, regular_price_rub, is_discounted, status, created_at, updated_at) " +
-      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'awaiting_payment', ?, ?)"
-    ).run(
-      userId, offer.id, offer.name, offer.kind, offer.quantity, priceRub, offer.regularPrice,
-      discounted ? 1 : 0, nowIso, nowIso
-    );
-    requestId = Number(created.lastInsertRowid);
+    const replaceAndCreate = db.transaction(() => {
+      replacedRequest = db.prepare(
+        "SELECT id, admin_message_id, bot_message_id FROM tariff_requests WHERE vk_id = ? AND status IN ('awaiting_payment','awaiting_review') ORDER BY id DESC LIMIT 1"
+      ).get(userId) || null;
+
+      if (replacedRequest) {
+        const replaced = db.prepare(
+          "UPDATE tariff_requests SET status = 'replaced', updated_at = ?, completed_at = ? " +
+          "WHERE id = ? AND vk_id = ? AND status IN ('awaiting_payment','awaiting_review')"
+        ).run(nowIso, nowIso, replacedRequest.id, userId);
+        if (replaced.changes !== 1) throw new Error('Активная заявка уже изменилась. Обнови страницу и попробуй ещё раз.');
+      }
+
+      const created = db.prepare(
+        "INSERT INTO tariff_requests (vk_id, offer_id, offer_name, offer_kind, quantity, price_rub, regular_price_rub, is_discounted, status, created_at, updated_at) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'awaiting_payment', ?, ?)"
+      ).run(
+        userId, offer.id, offer.name, offer.kind, offer.quantity, priceRub, offer.regularPrice,
+        discounted ? 1 : 0, nowIso, nowIso
+      );
+      requestId = Number(created.lastInsertRowid);
+    })();
   } catch (error) {
-    console.error('[tariff request create]', error?.message || error);
-    return res.status(409).json({ error: 'Не удалось создать заявку. Обнови страницу и попробуй ещё раз.', ...getTariffState(userId) });
+    console.error('[tariff request create/switch]', error?.message || error);
+    return res.status(409).json({ error: 'Не удалось переключить заявку. Обнови страницу и попробуй ещё раз.', ...getTariffState(userId) });
   }
-  sendLiveTariffState(userId, 'Заявка создана. Открой её в Mini App и прикрепи скриншот оплаты.');
+
+  if (replacedRequest?.admin_message_id) await deleteCommunityMessage(replacedRequest.admin_message_id);
+  if (replacedRequest?.bot_message_id) await deleteCommunityMessage(replacedRequest.bot_message_id);
+  const notice = replacedRequest
+    ? 'Активная заявка заменена на выбранный тариф. Открой новую заявку и прикрепи скриншот оплаты.'
+    : 'Заявка создана. Открой её в Mini App и прикрепи скриншот оплаты.';
+  sendLiveTariffState(userId, notice);
   return res.json({ ok: true, requestId, ...getTariffState(userId) });
 });
 
