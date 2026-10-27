@@ -143,10 +143,32 @@
     if (communityPermissionKnown !== true) {
       setStatus('Запрашиваю разрешение на сообщения от Roadnote…', false);
       try {
-        await window.vkBridge.send('VKWebAppAllowMessagesFromGroup', {
+        const permissionResult = await window.vkBridge.send('VKWebAppAllowMessagesFromGroup', {
           group_id: communityId,
           key: 'roadnote_tariff_' + launchUserId
         });
+        console.info('[Roadnote permission dialog resolved]', JSON.stringify({
+          userId: launchUserId,
+          groupId: communityId,
+          result: permissionResult && permissionResult.result
+        }));
+        if (!permissionResult || permissionResult.result !== true) {
+          throw new Error('VK не подтвердил выдачу разрешения.');
+        }
+
+        // Do not trust the dialog closing alone: ask VK API whether permission
+        // is actually active before attempting to create/send the tariff request.
+        const permissionAllowed = await readCommunityMessagePermission();
+        console.info('[Roadnote permission verified after dialog]', JSON.stringify({
+          userId: launchUserId,
+          groupId: communityId,
+          allowed: permissionAllowed
+        }));
+        if (!permissionAllowed) {
+          rememberCommunityPermission(false);
+          setStatus('VK закрыл окно, но разрешение на сообщения не применилось. Попробуй открыть диалог Roadnote в VK и включить сообщения сообщества, затем вернись сюда.', true);
+          return;
+        }
         rememberCommunityPermission(true);
       } catch (error) {
         // Some VK clients reject the Bridge promise despite closing the consent
