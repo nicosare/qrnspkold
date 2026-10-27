@@ -1564,11 +1564,13 @@ app.post('/api/session', (req, res) => {
     const subscriptionUntil = balanceRow?.subscription_until || null;
     const subscriptionActive = Boolean(subscriptionUntil && Date.parse(subscriptionUntil) > Date.now());
     const unlimited = Number(balanceRow?.unlimited || 0) === 1;
+    const scanCount = Number(db.prepare('SELECT COUNT(*) AS count FROM scan_history WHERE vk_id = ?').get(userId)?.count || 0);
     return res.json({
       ok: true,
       ...getTariffState(userId),
       isAdmin: userId === adminVkId,
       scanBalance,
+      scanCount,
       subscriptionUntil,
       subscriptionActive,
       unlimited,
