@@ -744,230 +744,40 @@ async function answerAdminButton(event, message) {
   }
 }
 
-function decideTariffRequest(requestId, decision) {
-  const now = new Date();
-  const nowIso = now.toISOString();
-  const transaction = db.transaction(() => {
-    const request = db.prepare('SELECT * FROM tariff_requests WHERE id = ?').get(requestId);
-    if (!request || request.status !== 'awaiting_review') return { ok: false, request: request || null };
-
-    const nextStatus = decision === 'approve' ? 'approved' : 'rejected';
-    const marked = db.prepare(
-      "UPDATE tariff_requests SET status = ?, updated_at = ?, completed_at = ? WHERE id = ? AND status = 'awaiting_review'"
-    ).run(nextStatus, nowIso, nowIso, requestId);
-    if (marked.changes !== 1) return { ok: false, request: request };
-
-    let subscriptionUntil = null;
-    if (decision === 'approve') {
-      if (request.offer_kind === 'pack') {
-        const grant = grantPack.run(Number(request.quantity), String(request.vk_id));
-        if (grant.changes !== 1) throw new Error('Не удалось начислить пакет сканов: пользователь не найден.');
-        recordScanCredit.run(
-          String(request.vk_id),
-          nowIso,
-          Number(request.quantity),
-          'purchase',
-          'Покупка тарифа «' + request.offer_name + '», заявка №' + request.id
-        );
-      } else if (request.offer_kind === 'subscription') {
-        const user = getUserEntitlements.get(String(request.vk_id));
-        if (!user) throw new Error('Не удалось подключить подписку: пользователь не найден.');
-        const currentExpiry = user.subscription_until && Date.parse(user.subscription_until) > now.getTime()
-          ? new Date(user.subscription_until)
-          : now;
-        subscriptionUntil = addUtcMonths(currentExpiry, Number(request.quantity)).toISOString();
-        const result = updateSubscription.run(subscriptionUntil, String(request.vk_id));
-        if (result.changes !== 1) throw new Error('Не удалось сохранить срок подписки.');
-      } else {
-        throw new Error('У заявки неизвестный тип тарифа.');
-      }
-    }
-
-    return { ok: true, request: { ...request, status: nextStatus }, subscriptionUntil };
-  });
-  return transaction();
-}
-
 async function handleIncomingCommunityMessage(message) {
   const userId = String(message?.from_id || '');
-  if (!/^\d{1,20}$/.test(userId) || Number(userId) <= 0) return;
-  if (String(message?.peer_id || userId) !== userId) return;
+  if (!adminVkId || userId !== adminVkId || String(message?.peer_id || userId) !== userId) return;
 
-  if (adminVkId && userId === adminVkId) {
-    const text = String(message?.text || '').trim().toLowerCase();
-    const photoAttachment = getIncomingPhotoAttachment(message);
-    const buttonPayload = (() => {
-      try { return JSON.parse(String(message?.payload || '{}')); } catch { return {}; }
-    })();
-    if (text === 'обновить иконку' || buttonPayload.action === 'update_community_avatar') {
-      avatarUploadAwaiting.add(userId);
-      await sendAdminMenu('Пришли следующим сообщением фотографию — она станет аватаром сообщества и иконкой Roadnote в миниаппе.');
-      return;
-    }
-    if (avatarUploadAwaiting.has(userId) && photoAttachment) {
-      try {
-        await setCommunityAvatarFromMessage(message);
-        avatarUploadAwaiting.delete(userId);
-        await sendAdminMenu('Готово! Аватар сообщества обновлён. Иконка на стартовой странице миниаппа будет загружать его автоматически.');
-      } catch (error) {
-        console.error('[Roadnote community avatar update]', error?.message || error);
-        await sendAdminMenu('Не получилось обновить аватар: ' + String(error?.message || 'неизвестная ошибка').slice(0, 250) + '. Попробуй отправить фото ещё раз.');
-      }
-      return;
-    }
-    if (avatarUploadAwaiting.has(userId) && text) {
-      await sendAdminMenu('Жду фотографию. Пришли её сообщением в этот диалог.');
-      return;
-    }
-    if (!photoAttachment && (text === 'меню' || text === 'начать' || text === 'start')) {
-      await sendAdminMenu();
-      return;
-    }
-  }
-
-  const active = db.prepare(
-    "SELECT * FROM tariff_requests WHERE vk_id = ? AND status IN ('awaiting_payment','awaiting_review') ORDER BY id DESC LIMIT 1"
-  ).get(userId);
-  if (!active) return;
-
+  const text = String(message?.text || '').trim().toLowerCase();
   const photoAttachment = getIncomingPhotoAttachment(message);
-  if (active.status === 'awaiting_review') {
-    if (photoAttachment) {
-      try {
-        await sendCommunityMessage(userId, 'Скриншот по этой заявке уже получен. Она ожидает проверки.');
-      } catch (error) {
-        console.warn('[tariff duplicate screenshot reply]', error?.message || error);
-      }
-    }
+  const buttonPayload = (() => {
+    try { return JSON.parse(String(message?.payload || '{}')); } catch { return {}; }
+  })();
+
+  if (text === 'обновить иконку' || buttonPayload.action === 'update_community_avatar') {
+    avatarUploadAwaiting.add(userId);
+    await sendAdminMenu('Пришли следующим сообщением фотографию — она станет аватаром сообщества и иконкой Roadnote в миниаппе.');
     return;
   }
-
-  if (!photoAttachment) {
-    if (String(message?.text || '').trim()) {
-      try {
-        await sendCommunityMessage(userId, 'Чтобы отправить заявку на проверку, пришли скриншот оплаты именно фотографией в этот диалог с Roadnote.');
-      } catch (error) {
-        console.warn('[tariff screenshot reminder]', error?.message || error);
-      }
-    }
-    return;
-  }
-
-  const messageId = String(message?.id || message?.conversation_message_id || '');
-  const nowIso = new Date().toISOString();
-  const moved = db.prepare(
-    "UPDATE tariff_requests SET status = 'awaiting_review', screenshot_attachment = ?, screenshot_message_id = ?, updated_at = ? " +
-    "WHERE id = ? AND status = 'awaiting_payment'"
-  ).run(photoAttachment, messageId, nowIso, Number(active.id));
-  if (moved.changes !== 1) return;
-
-  const user = db.prepare('SELECT first_name, last_name FROM users WHERE vk_id = ?').get(userId);
-  const displayName = [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim() || 'Пользователь VK';
-  const adminText = [
-    'Заявка на тариф №' + active.id,
-    'Пользователь: ' + displayName + ' (VK ID ' + userId + ')',
-    'Профиль: https://vk.com/id' + userId,
-    'Тариф: ' + active.offer_name,
-    'Стоимость: ' + formatRubles(active.price_rub),
-    'Скриншот оплаты приложен. Подтверди начисление или отклони заявку.'
-  ].join('\n');
-
-  let adminMessageId = '';
-  try {
-    const response = await sendCommunityMessage(adminVkId, adminText, {
-      attachment: photoAttachment,
-    });
-    adminMessageId = vkMessageId(response);
-    if (!adminMessageId) throw new Error('VK не вернул ID сообщения с заявкой.');
-  } catch (error) {
-    console.error('[tariff admin notification]', error?.message || error);
-    db.prepare(
-      "UPDATE tariff_requests SET status = 'awaiting_payment', screenshot_attachment = NULL, screenshot_message_id = NULL, updated_at = ? " +
-      "WHERE id = ? AND status = 'awaiting_review' AND screenshot_message_id = ?"
-    ).run(new Date().toISOString(), Number(active.id), messageId);
+  if (avatarUploadAwaiting.has(userId) && photoAttachment) {
     try {
-      await sendCommunityMessage(userId, 'Не удалось передать скриншот администратору. Заявка сохранена — проверь, что сообщения Roadnote разрешены, и отправь скриншот ещё раз.');
-    } catch (replyError) {
-      console.warn('[tariff admin delivery failure reply]', replyError?.message || replyError);
+      await setCommunityAvatarFromMessage(message);
+      avatarUploadAwaiting.delete(userId);
+      await sendAdminMenu('Готово! Аватар сообщества и иконка на стартовой странице миниаппа обновлены.');
+    } catch (error) {
+      console.error('[Roadnote community avatar update]', error?.message || error);
+      await sendAdminMenu('Не получилось обновить аватар: ' + String(error?.message || 'неизвестная ошибка').slice(0, 250) + '. Попробуй отправить фото ещё раз.');
     }
-    sendLiveTariffState(userId);
     return;
   }
-
-  const saved = db.prepare(
-    "UPDATE tariff_requests SET admin_message_id = ?, updated_at = ? WHERE id = ? AND status = 'awaiting_review' AND screenshot_message_id = ?"
-  ).run(adminMessageId, new Date().toISOString(), Number(active.id), messageId);
-  if (saved.changes !== 1) {
-    await deleteCommunityMessage(adminMessageId);
+  if (avatarUploadAwaiting.has(userId) && text) {
+    await sendAdminMenu('Жду фотографию. Пришли её сообщением в этот диалог.');
     return;
   }
-
-  try {
-    await sendCommunityMessage(userId, 'Скриншот получен и передан администратору. Заявка ожидает проверки.');
-  } catch (error) {
-    console.warn('[tariff screenshot confirmation]', error?.message || error);
+  if (!photoAttachment && (text === 'меню' || text === 'начать' || text === 'start')) {
+    await sendAdminMenu();
   }
-  sendLiveTariffState(userId, 'Скриншот получен. Заявка ожидает проверки.');
 }
-
-async function handleAdminMessageEvent(event) {
-  const userId = String(event?.user_id || '');
-  if (!adminVkId || userId !== adminVkId) {
-    await answerAdminButton(event || {}, 'Действие доступно только администратору.');
-    return;
-  }
-  const payload = parseCallbackPayload(event?.payload);
-  const requestId = Number(payload?.request_id);
-  const decision = payload?.action === 'approve_tariff' ? 'approve'
-    : payload?.action === 'reject_tariff' ? 'reject'
-    : '';
-  if (!Number.isSafeInteger(requestId) || requestId < 1 || !decision) {
-    await answerAdminButton(event, 'Не удалось распознать действие.');
-    return;
-  }
-
-  let result;
-  try {
-    result = decideTariffRequest(requestId, decision);
-  } catch (error) {
-    console.error('[tariff decision]', error?.message || error);
-    await answerAdminButton(event, 'Не удалось обработать заявку. Попробуй ещё раз.');
-    return;
-  }
-  if (!result.ok) {
-    await answerAdminButton(event, 'Заявка уже закрыта или заменена. Эти кнопки неактуальны.');
-    return;
-  }
-
-  const request = result.request;
-  await deleteCommunityMessage(request.admin_message_id);
-  await deleteCommunityMessage(request.bot_message_id);
-
-  let notice;
-  if (decision === 'approve') {
-    if (request.offer_kind === 'pack') {
-      notice = 'Тариф «' + request.offer_name + '» подключён. Начислено ' + request.quantity + ' сканов.';
-    } else {
-      const until = result.subscriptionUntil
-        ? new Date(result.subscriptionUntil).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Moscow' })
-        : '';
-      notice = 'Тариф «' + request.offer_name + '» подключён.' + (until ? ' Безлимит действует до ' + until + '.' : '');
-    }
-  } else {
-    notice = 'Заявка на тариф «' + request.offer_name + '» отклонена. Тариф не начислен.';
-  }
-
-  try {
-    await sendCommunityMessage(request.vk_id, notice);
-  } catch (error) {
-    console.error('[tariff decision user notification]', error?.message || error);
-  }
-  // Push both the request status and the updated balance to the open Mini App immediately.
-  sendLiveEntitlement(request.vk_id);
-  sendLiveTariffState(request.vk_id, notice);
-  await answerAdminButton(event, decision === 'approve' ? 'Тариф начислен.' : 'Заявка отклонена.');
-}
-
 
 app.post('/api/tariffs/permission', async (req, res) => {
   let userId;
@@ -1024,28 +834,6 @@ app.post('/api/tariffs/state', (req, res) => {
     return res.status(401).json({ error: 'Открой Roadnote внутри VK и попробуй ещё раз.' });
   }
 });
-
-async function uploadTariffScreenshotToVk(userId, imageBuffer, mimeType) {
-  if (!communityToken) throw new Error('VK_GROUP_TOKEN не настроен на сервере.');
-  const uploadServer = await vkApi('photos.getMessagesUploadServer', { peer_id: String(userId) });
-  if (!uploadServer?.upload_url) throw new Error('VK не вернул адрес загрузки фотографии.');
-  const form = new FormData();
-  const extension = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg';
-  form.append('photo', new Blob([imageBuffer], { type: mimeType }), 'payment.' + extension);
-  const uploadResponse = await fetch(uploadServer.upload_url, { method: 'POST', body: form });
-  const uploadData = await uploadResponse.json().catch(() => null);
-  if (!uploadResponse.ok || !uploadData?.photo || !uploadData?.server || !uploadData?.hash) {
-    throw new Error('VK не принял скриншот оплаты.');
-  }
-  const saved = await vkApi('photos.saveMessagesPhoto', {
-    photo: uploadData.photo,
-    server: uploadData.server,
-    hash: uploadData.hash
-  });
-  const photo = Array.isArray(saved) ? saved[0] : saved;
-  if (!photo?.owner_id || !photo?.id) throw new Error('VK не сохранил скриншот оплаты.');
-  return 'photo' + String(photo.owner_id) + '_' + String(photo.id) + (photo.access_key ? '_' + String(photo.access_key) : '');
-}
 
 app.post('/api/tariffs/request', async (req, res) => {
   let userId;
@@ -1110,124 +898,6 @@ app.post('/api/tariffs/request', async (req, res) => {
     : 'Заявка создана. Открой её в Mini App и прикрепи скриншот оплаты.';
   sendLiveTariffState(userId, notice);
   return res.json({ ok: true, requestId, ...getTariffState(userId) });
-});
-
-app.post('/api/tariffs/cancel', async (req, res) => {
-  let userId;
-  try {
-    ({ userId } = parseLaunchParams(req.body?.launchParams));
-  } catch {
-    return res.status(401).json({ error: 'Не удалось подтвердить аккаунт VK. Перезапусти Mini App.' });
-  }
-  const requestId = Number(req.body?.requestId);
-  if (!Number.isSafeInteger(requestId) || requestId < 1) {
-    return res.status(400).json({ error: 'Не удалось определить заявку.' });
-  }
-  const request = db.prepare(
-    "SELECT admin_message_id, bot_message_id, status, screenshot_attachment FROM tariff_requests WHERE id = ? AND vk_id = ? AND status IN ('awaiting_payment','awaiting_review')"
-  ).get(requestId, userId);
-  if (!request) {
-    return res.status(409).json({ error: 'Эта заявка уже закрыта или заменена.', ...getTariffState(userId) });
-  }
-  if (request.status === 'awaiting_review' || request.screenshot_attachment) {
-    return res.status(409).json({ error: 'Эту заявку нельзя отменить: скриншот оплаты уже отправлен, заявка ожидает проверки.', ...getTariffState(userId) });
-  }
-  const nowIso = new Date().toISOString();
-  const result = db.prepare(
-    "UPDATE tariff_requests SET status = 'replaced', updated_at = ?, completed_at = ? " +
-    "WHERE id = ? AND vk_id = ? AND status = 'awaiting_payment' AND screenshot_attachment IS NULL"
-  ).run(nowIso, nowIso, requestId, userId);
-  if (result.changes !== 1) {
-    return res.status(409).json({ error: 'Эта заявка уже закрыта или заменена.', ...getTariffState(userId) });
-  }
-  if (request.admin_message_id) await deleteCommunityMessage(request.admin_message_id);
-  if (request.bot_message_id) await deleteCommunityMessage(request.bot_message_id);
-  sendLiveTariffState(userId, 'Активная заявка отозвана.');
-  return res.json({ ok: true, ...getTariffState(userId) });
-});
-
-app.post('/api/tariffs/screenshot', async (req, res) => {
-  let userId;
-  try {
-    ({ userId } = parseLaunchParams(req.body?.launchParams));
-  } catch {
-    return res.status(401).json({ error: 'Не удалось подтвердить аккаунт VK. Перезапусти Mini App.' });
-  }
-  const requestId = Number(req.body?.requestId);
-  const mimeType = String(req.body?.mimeType || '');
-  const imageData = String(req.body?.imageData || '');
-  if (!Number.isSafeInteger(requestId) || requestId < 1) {
-    return res.status(400).json({ error: 'Не удалось определить заявку.' });
-  }
-  if (!['image/jpeg','image/png','image/webp'].includes(mimeType)) {
-    return res.status(400).json({ error: 'Прикрепи скриншот в формате JPG, PNG или WebP.' });
-  }
-  const base64 = imageData.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '');
-  if (!base64 || base64.length > 9500000 || !/^[A-Za-z0-9+/]*={0,2}$/.test(base64)) {
-    return res.status(413).json({ error: 'Изображение пустое или слишком большое. Выбери скриншот до 6 МБ.' });
-  }
-  const imageBuffer = Buffer.from(base64, 'base64');
-  if (!imageBuffer.length || imageBuffer.length > 6 * 1024 * 1024) {
-    return res.status(413).json({ error: 'Выбери скриншот размером не больше 6 МБ.' });
-  }
-  const request = db.prepare(
-    "SELECT * FROM tariff_requests WHERE id = ? AND vk_id = ? AND status IN ('awaiting_payment','awaiting_review')"
-  ).get(requestId, userId);
-  if (!request) return res.status(409).json({ error: 'Активная заявка не найдена. Обнови список заявок.' });
-  if (request.status === 'awaiting_review' && request.screenshot_attachment) {
-    return res.status(409).json({ error: 'Скриншот уже отправлен. Заявка ожидает проверки.', ...getTariffState(userId) });
-  }
-  if (!adminVkId) return res.status(503).json({ error: 'На сервере не настроен администратор. Скриншот пока не отправлен.' });
-
-  let attachment;
-  try {
-    attachment = await uploadTariffScreenshotToVk(userId, imageBuffer, mimeType);
-  } catch (error) {
-    console.error('[tariff screenshot upload]', error?.message || error);
-    return res.status(502).json({ error: 'Не удалось загрузить скриншот в VK. Попробуй отправить его ещё раз.' });
-  }
-
-  const nowIso = new Date().toISOString();
-  const updated = db.prepare(
-    "UPDATE tariff_requests SET status = 'awaiting_review', screenshot_attachment = ?, screenshot_message_id = 'miniapp', updated_at = ? " +
-    "WHERE id = ? AND vk_id = ? AND status = 'awaiting_payment'"
-  ).run(attachment, nowIso, requestId, userId);
-  if (updated.changes !== 1) {
-    return res.status(409).json({ error: 'Статус заявки изменился. Обнови блок заявок.', ...getTariffState(userId) });
-  }
-
-  const user = db.prepare('SELECT first_name, last_name FROM users WHERE vk_id = ?').get(userId);
-  const displayName = [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim() || 'Пользователь VK';
-  const adminText = [
-    'Заявка на тариф №' + requestId,
-    'Пользователь: ' + displayName + ' (VK ID ' + userId + ')',
-    'Профиль: https://vk.com/id' + userId,
-    'Тариф: ' + request.offer_name,
-    'Стоимость: ' + formatRubles(request.price_rub),
-    'Скриншот оплаты приложен из Mini App. Подтверди начисление или отклони заявку.'
-  ].join('\n');
-
-  let adminMessageId = '';
-  try {
-    const response = await sendCommunityMessage(adminVkId, adminText, {
-      attachment,
-    });
-    adminMessageId = vkMessageId(response);
-    if (!adminMessageId) throw new Error('VK не вернул ID сообщения с заявкой.');
-  } catch (error) {
-    console.error('[tariff admin notification]', error?.message || error);
-    db.prepare(
-      "UPDATE tariff_requests SET status = 'awaiting_payment', screenshot_attachment = NULL, screenshot_message_id = NULL, updated_at = ? " +
-      "WHERE id = ? AND status = 'awaiting_review'"
-    ).run(new Date().toISOString(), requestId);
-    return res.status(502).json({ error: 'Скриншот загружен, но не удалось передать заявку администратору. Попробуй отправить ещё раз.', ...getTariffState(userId) });
-  }
-
-  db.prepare(
-    "UPDATE tariff_requests SET admin_message_id = ?, updated_at = ? WHERE id = ? AND status = 'awaiting_review'"
-  ).run(adminMessageId, new Date().toISOString(), requestId);
-  sendLiveTariffState(userId, 'Скриншот получен. Заявка ожидает проверки.');
-  return res.json({ ok: true, ...getTariffState(userId) });
 });
 
 app.post('/api/vk/callback', (req, res) => {
