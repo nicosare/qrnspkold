@@ -99,14 +99,12 @@
     busyOfferId = offerId;
     renderState({ hasPurchased: hasPurchased, activeTariffRequest: activeRequest });
     setStatus('Проверяю разрешение на сообщения…', false);
-    // The VK permission-check API can lag behind the native consent dialog,
-    // and some VK clients reject the bridge promise even when the user accepts.
-    // Ask VK to show the consent dialog, but let the actual server-side
-    // messages.send result decide whether a tariff request can be delivered.
-    try {
-      await window.vkBridge.send('VKWebAppAllowMessagesFromGroup', { group_id: communityId });
-    } catch (error) {
-      console.warn('[Roadnote tariff permission dialog result]', error);
+    const permissionGranted = await ensureCommunityMessagePermission();
+    if (!permissionGranted) {
+      setStatus('VK не подтвердил разрешение на сообщения от Roadnote. Нажми «Разрешить» в окне VK. Если окно не появилось, открой настройки VK и разреши сообщения сообществу Roadnote.', true);
+      busyOfferId = '';
+      renderState({ hasPurchased: hasPurchased, activeTariffRequest: activeRequest });
+      return;
     }
 
     setStatus('Отправляю заявку…', false);
@@ -134,38 +132,71 @@
     }
   }
 
-  // On every Mini App launch, check whether Roadnote may message this user.
-  // If VK reports that permission is missing, show the native consent dialog.
+  let permissionFlow = null;
+
+  async function readCommunityMessagePermission() {
+    const response = await fetch(apiUrl('api/tariffs/permission'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ launchParams: launchParams }),
+      cache: 'no-store',
+      credentials: 'omit'
+    });
+    const data = await response.json().catch(function () { return {}; });
+    if (!response.ok || data.ok !== true || typeof data.allowed !== 'boolean') {
+      throw new Error(data.error || 'Не удалось проверить разрешение VK.');
+    }
+    return data.allowed;
+  }
+
+  // Share one permission flow between startup and tariff clicks so two native
+  // VK consent dialogs can never race each other.
+  function ensureCommunityMessagePermission() {
+    if (permissionFlow) return permissionFlow;
+    permissionFlow = (async function () {
+      if (!launchParams || !window.vkBridge || typeof window.vkBridge.send !== 'function') {
+        return false;
+      }
+      try {
+        if (await readCommunityMessagePermission()) return true;
+      } catch (error) {
+        console.warn('[Roadnote permission check]', error);
+        // If the status endpoint is temporarily unavailable, still let VK show
+        // its native consent UI; the real messages.send remains authoritative.
+      }
+
+      try {
+        const result = await window.vkBridge.send('VKWebAppAllowMessagesFromGroup', {
+          group_id: communityId
+        });
+        // VK returns result=true when the user grants permission.
+        if (result && (result.result === true || result.result === 1)) return true;
+      } catch (error) {
+        console.warn('[Roadnote permission dialog result]', error);
+      }
+
+      try {
+        return await readCommunityMessagePermission();
+      } catch (error) {
+        console.warn('[Roadnote permission recheck]', error);
+        return false;
+      }
+    })().finally(function () {
+      permissionFlow = null;
+    });
+    return permissionFlow;
+  }
+
+  // On each Mini App launch, prompt only when the community is not allowed.
   async function checkPermissionOnLaunch() {
     if (!launchParams || !window.vkBridge || typeof window.vkBridge.send !== 'function') return;
     try {
-      const response = await fetch(apiUrl('api/tariffs/permission'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ launchParams: launchParams }),
-        cache: 'no-store',
-        credentials: 'omit'
-      });
-      const data = await response.json().catch(function () { return {}; });
-      if (!response.ok) {
-        console.warn('[Roadnote startup permission check]', data.error || response.status);
-        return;
-      }
-      if (data.ok === true && data.allowed !== true) {
-        try {
-          await window.vkBridge.send('VKWebAppAllowMessagesFromGroup', { group_id: communityId });
-        } catch (error) {
-          // The bridge may reject despite user consent; the tariff flow verifies
-          // actual delivery server-side when the user submits a request.
-          console.warn('[Roadnote startup permission dialog result]', error);
-        }
-      }
+      await ensureCommunityMessagePermission();
     } catch (error) {
       console.warn('[Roadnote startup permission check]', error);
     }
   }
 
-  // Run immediately when this script is loaded for each app opening.
   checkPermissionOnLaunch();
 
   buttons.forEach(function (button) {
