@@ -1655,6 +1655,7 @@ app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
         db.prepare('DELETE FROM tariff_requests WHERE vk_id = ?').run(vkId);
       });
       resetAccount();
+      sendLiveTariffState(vkId);
     } else if (action === 'grant_pack') {
       const amount = Number(req.body?.amount);
       if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100000) {
