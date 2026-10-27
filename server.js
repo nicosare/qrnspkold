@@ -850,6 +850,31 @@ async function handleAdminMessageEvent(event) {
 }
 
 
+app.post('/api/tariffs/permission', async (req, res) => {
+  let userId;
+  try {
+    ({ userId } = parseLaunchParams(req.body?.launchParams));
+  } catch {
+    return res.status(401).json({ error: 'Открой Roadnote внутри VK и попробуй ещё раз.' });
+  }
+  if (!communityToken) {
+    return res.status(503).json({ error: 'Сообщения сообщества не настроены на сервере.' });
+  }
+  try {
+    const result = await vkApi('messages.isMessagesFromGroupAllowed', {
+      group_id: communityId,
+      user_id: userId
+    });
+    const value = typeof result === 'object' && result !== null
+      ? (result.is_allowed ?? result.allowed ?? result.result)
+      : result;
+    return res.json({ ok: true, allowed: Number(value) === 1 || value === true });
+  } catch (error) {
+    console.warn('[tariff permission check]', error?.message || error);
+    return res.status(502).json({ error: 'Не удалось проверить разрешение VK.' });
+  }
+});
+
 app.post('/api/tariffs/state', (req, res) => {
   try {
     const { userId } = parseLaunchParams(req.body?.launchParams);
