@@ -763,8 +763,9 @@
         .start-referral-button-secondary { background: #eef4fc; color: #2875cc; }
         .start-referral-button:disabled { opacity: .5; cursor: default; }
 
-        .start-actions.start-scan-actions { flex-direction: column !important; align-items: stretch; margin-bottom: 0; }
-        .start-actions.start-scan-actions > .start-button { display: block; box-sizing: border-box; width: 100%; min-width: 0; flex: 0 0 auto; }
+        .start-actions.start-scan-actions { flex-direction: row; align-items: stretch; margin-bottom: 0; }
+        .start-actions.start-scan-actions > .start-button { display: flex; box-sizing: border-box; flex: 1 1 0; width: 0; min-width: 0; align-items: center; justify-content: center; }
+        .start-actions.start-scan-actions #start-scan-new svg { display: block; flex: 0 0 21px; width: 21px; height: 21px; }
 
         .start-actions { display: flex; flex-direction: row; gap: 10px; margin-top: 0; padding-bottom: 0; }
         .start-admin-actions { display:flex; width:100%; margin-top:0; padding-bottom:8px; }
