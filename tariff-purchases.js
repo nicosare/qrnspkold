@@ -254,8 +254,20 @@
     let content = '<div class="tariff-modal-card"><div class="tariff-modal-offer">' + esc(offerName) + '</div>' +
       '<div class="tariff-modal-price">' + esc(rubles(request.priceRub)) + '</div>' +
       '<div class="tariff-modal-note"><p>Заявка №' + esc(request.id) + ' создана.</p>' +
-      '<p>Ссылка на оплату появится позже (пока заглушка).</p>' +
-      '<p>После оплаты прикрепи сюда скриншот или фотографию подтверждения. После проверки администратор подключит тариф.</p></div></div>';
+      (awaitingReview
+        ? '<p><strong>Скриншот отправлен. Заявка ожидает проверки.</strong></p>'
+        : '<p class="tariff-payment-warning"><strong>Важно: отправь ровно ' + esc(rubles(request.priceRub)) + ' — сумму, указанную в заявке. Если сумма платежа не совпадёт, заявка будет отклонена.</strong></p>' +
+          '<form class="tariff-payment-button" method="POST" action="https://yoomoney.ru/quickpay/confirm" style="margin:12px auto;max-width:330px;display:grid;gap:10px;">' +
+          '<input type="hidden" name="receiver" value="4100119368734043">' +
+          '<input type="hidden" name="quickpay-form" value="button">' +
+          '<input type="hidden" name="sum" value="' + esc(Number(request.priceRub).toFixed(2)) + '" data-type="number">' +
+          '<input type="hidden" name="label" value="roadnote-request-' + esc(request.id) + '">' +
+          '<div style="font-size:13px;font-weight:600;">Способ оплаты</div>' +
+          '<label style="display:flex;align-items:center;gap:8px;"><input type="radio" name="paymentType" value="AC" checked> Банковской картой</label>' +
+          '<label style="display:flex;align-items:center;gap:8px;"><input type="radio" name="paymentType" value="PC"> Из кошелька ЮMoney</label>' +
+          '<button type="submit" class="tariff-modal-primary">Оплатить ' + esc(rubles(request.priceRub)) + '</button>' +
+          '</form>' +
+          '<p>После оплаты прикрепи скриншот или фотографию подтверждения.</p>') + '</div></div>';
     if (awaitingReview) {
       content += '<div class="tariff-modal-note"><strong>Скриншот получен.</strong> Заявка передана администратору и ожидает проверки.</div>';
     } else {
