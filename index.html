@@ -741,13 +741,23 @@
             .start-balance-card { padding: 17px 19px; }
             .start-offers-card { padding: 15px 17px; margin-bottom: 18px; }
         }
-        .info-overlay { position:fixed; inset:0; z-index:15000; display:grid; place-items:center; padding:18px; background:rgba(13,23,36,.55); backdrop-filter:blur(5px); }
+        .info-overlay { position:fixed; inset:0; z-index:15000; display:grid; place-items:center; padding:18px; background:rgba(13,23,36,.58); backdrop-filter:blur(7px); -webkit-backdrop-filter:blur(7px); }
         .info-overlay[hidden] { display:none !important; }
-        .info-sheet { width:min(100%,640px); max-height:min(88dvh,820px); overflow:auto; overscroll-behavior:contain; padding:22px; border:1px solid #e5ebf2; border-radius:22px; background:#fff; color:#25303d; box-shadow:0 24px 80px #10243c30; }
-        .info-sheet-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:8px; }
-        .info-sheet-title { margin:0; font-size:22px; line-height:1.2; font-weight:850; letter-spacing:-.3px; }
-        .info-sheet-subtitle { margin:7px 0 17px; color:#778392; font-size:13px; line-height:1.5; }
-        .info-sheet-close { flex:0 0 auto; width:38px; min-height:38px; padding:0; border:1px solid #e5eaf0; border-radius:12px; background:#f7f9fc; color:#596778; font:inherit; font-size:23px; line-height:1; cursor:pointer; }
+        .info-sheet { width:min(100%,640px); max-height:min(88dvh,820px); overflow:auto; overscroll-behavior:contain; padding:22px; border:1px solid #e5ebf2; border-radius:24px; background:#fff; color:#25303d; box-shadow:0 28px 90px #10243c38; }
+        .info-sheet-header { display:flex; align-items:center; justify-content:space-between; gap:18px; margin:-22px -22px 18px; padding:22px; border-bottom:1px solid #edf1f6; border-radius:24px 24px 0 0; background:linear-gradient(135deg,#f5f9ff 0%,#fff 76%); }
+        .info-sheet-header > div { min-width:0; }
+        .info-sheet-title { margin:0; font-size:24px; line-height:1.15; font-weight:850; letter-spacing:-.65px; color:#1f2d40; }
+        .info-sheet-subtitle { max-width:440px; margin:8px 0 0; color:#778392; font-size:13px; line-height:1.5; }
+        .info-sheet-close { position:relative; z-index:2; display:grid; place-items:center; flex:0 0 42px; width:42px; height:42px; min-height:42px; padding:0 0 3px; border:1px solid #dfe8f4; border-radius:50%; background:#fff; color:#53647a; font-family:Arial,sans-serif; font-size:27px; font-weight:400; line-height:1; cursor:pointer; pointer-events:auto; touch-action:manipulation; box-shadow:0 3px 10px #193b6010; transition:background .15s ease,color .15s ease,transform .15s ease; }
+        .info-sheet-close:hover { background:#eaf3ff; color:#176fd0; }
+        .info-sheet-close:active { transform:scale(.94); }
+        @media (max-width:480px) {
+            .info-overlay { padding:10px; }
+            .info-sheet { width:100%; max-height:90dvh; padding:17px; border-radius:20px; }
+            .info-sheet-header { gap:12px; margin:-17px -17px 15px; padding:19px 17px 17px; border-radius:20px 20px 0 0; }
+            .info-sheet-title { font-size:22px; }
+            .info-sheet-close { flex-basis:38px; width:38px; height:38px; min-height:38px; }
+        }
         .faq-kicker { display:block; margin-bottom:7px; color:#2787f5; font-size:10px; font-weight:850; letter-spacing:1.5px; }
         .faq-list { display:flex; flex-direction:column; gap:8px; }
         .faq-list details { overflow:hidden; padding:0; border:1px solid #e5eaf0; border-radius:15px; background:#fbfcfe; transition:border-color .18s ease, background .18s ease; }
@@ -840,7 +850,7 @@
 </div>
 
 <section class="info-overlay" id="faq-overlay" role="dialog" aria-modal="true" aria-labelledby="faq-title" hidden>
-    <div class="info-sheet">
+    <div class="info-sheet faq-sheet">
         <header class="info-sheet-header">
             <div>
                 <span class="faq-kicker">ROADNOTE · СПРАВКА</span>
@@ -2067,11 +2077,25 @@
       faqOverlay.hidden = false;
     });
   }
-  if (closeButton) closeButton.addEventListener('click', closeFaq);
+  if (closeButton) {
+    const handleClose = function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeFaq();
+    };
+    closeButton.addEventListener('click', handleClose, true);
+    closeButton.addEventListener('pointerup', handleClose, true);
+  }
   if (faqOverlay) {
     faqOverlay.addEventListener('click', function (event) {
+      const closeTarget = event.target && event.target.closest ? event.target.closest('#faq-close') : null;
+      if (closeTarget) {
+        event.preventDefault();
+        closeFaq();
+        return;
+      }
       if (event.target === faqOverlay) closeFaq();
-    });
+    }, true);
   }
   document.addEventListener('keydown', function (event) {
     if (event.key === 'Escape') closeFaq();
