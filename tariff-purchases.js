@@ -134,6 +134,40 @@
     }
   }
 
+  // On every Mini App launch, check whether Roadnote may message this user.
+  // If VK reports that permission is missing, show the native consent dialog.
+  async function checkPermissionOnLaunch() {
+    if (!launchParams || !window.vkBridge || typeof window.vkBridge.send !== 'function') return;
+    try {
+      const response = await fetch(apiUrl('api/tariffs/permission'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ launchParams: launchParams }),
+        cache: 'no-store',
+        credentials: 'omit'
+      });
+      const data = await response.json().catch(function () { return {}; });
+      if (!response.ok) {
+        console.warn('[Roadnote startup permission check]', data.error || response.status);
+        return;
+      }
+      if (data.ok === true && data.allowed !== true) {
+        try {
+          await window.vkBridge.send('VKWebAppAllowMessagesFromGroup', { group_id: communityId });
+        } catch (error) {
+          // The bridge may reject despite user consent; the tariff flow verifies
+          // actual delivery server-side when the user submits a request.
+          console.warn('[Roadnote startup permission dialog result]', error);
+        }
+      }
+    } catch (error) {
+      console.warn('[Roadnote startup permission check]', error);
+    }
+  }
+
+  // Run immediately when this script is loaded for each app opening.
+  checkPermissionOnLaunch();
+
   buttons.forEach(function (button) {
     button.addEventListener('click', function (event) {
       event.preventDefault();
