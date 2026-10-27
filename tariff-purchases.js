@@ -295,7 +295,14 @@
     } catch (error) {
       if (error.data && error.data.activeTariffRequest) {
         renderState(error.data);
-        openModal(error.data.activeTariffRequest);
+        if (error.data.lockedByReview) {
+          if (tariffStatus) {
+            tariffStatus.textContent = error.message;
+            tariffStatus.classList.add('is-error');
+          }
+        } else {
+          openModal(error.data.activeTariffRequest);
+        }
       } else if (tariffStatus) {
         tariffStatus.textContent = error.message;
         tariffStatus.classList.add('is-error');
