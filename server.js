@@ -1606,7 +1606,7 @@ app.get('/api/admin/users', requireAdmin, (_req, res) => {
     unlimited: Number(user.unlimited || 0) === 1,
     subscriptionActive: Boolean(user.subscription_until && Date.parse(user.subscription_until) > now)
   }));
-  res.json({ users, total: userCount.get().count });
+  res.json({ users, total: userCount.get().count, adminUserId: req.vkUserId });
 });
 
 app.get('/api/admin/users/:vkId/scans', requireAdmin, (req, res) => {
@@ -1643,7 +1643,19 @@ app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
   const action = req.body?.action;
   const now = new Date();
   try {
-    if (action === 'grant_pack') {
+    if (action === 'reset_account') {
+      if (vkId !== req.vkUserId) {
+        return res.status(403).json({ error: 'Можно обнулить только собственный аккаунт администратора.' });
+      }
+      const resetAccount = db.transaction(() => {
+        db.prepare(
+          'UPDATE users SET scan_balance = 0, subscription_until = NULL, unlimited = 0, welcome_bonus_granted = 1 WHERE vk_id = ?'
+        ).run(vkId);
+        db.prepare("DELETE FROM scan_credit_history WHERE vk_id = ? AND source = 'purchase'").run(vkId);
+        db.prepare('DELETE FROM tariff_requests WHERE vk_id = ?').run(vkId);
+      });
+      resetAccount();
+    } else if (action === 'grant_pack') {
       const amount = Number(req.body?.amount);
       if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100000) {
         return res.status(400).json({ error: 'Укажите количество сканов от 1 до 100000.' });
