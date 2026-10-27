@@ -858,6 +858,8 @@ async function handleAdminMessageEvent(event) {
   } catch (error) {
     console.error('[tariff decision user notification]', error?.message || error);
   }
+  // Push both the request status and the updated balance to the open Mini App immediately.
+  sendLiveEntitlement(request.vk_id);
   sendLiveTariffState(request.vk_id, notice);
   await answerAdminButton(event, decision === 'approve' ? 'Тариф начислен.' : 'Заявка отклонена.');
 }
