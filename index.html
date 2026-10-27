@@ -750,7 +750,8 @@
             border: 1px solid #e1e6ed; border-radius: 10px; background: #f7f9fb;
             color: #3a4654; font: inherit; font-size: 12px; overflow: hidden; text-overflow: ellipsis;
         }
-        .start-referral-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 9px; }
+        .start-referral-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 9px; }
+        .start-referral-actions .start-referral-button { min-width: 0; padding-left: 5px; padding-right: 5px; }
         .start-referral-button {
             min-height: 40px; padding: 8px 10px; border: 0; border-radius: 10px;
             background: #2787f5; color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
@@ -1059,13 +1060,13 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         <section class="start-referral" aria-labelledby="start-referral-title">
             <div class="start-referral-title" id="start-referral-title">Пригласи друга</div>
             <p class="start-referral-description">Поделись Roadnote. Когда друг впервые успешно отсканирует QR-код, тебе начислим 3 скана.</p>
-            <button class="start-referral-qr-toggle" id="start-referral-qr-toggle" type="button" aria-expanded="false" disabled>Показать QR-код ссылки</button>
-            <div class="start-referral-qr" id="start-referral-qr" aria-label="QR-код реферальной ссылки" hidden></div>
             <input class="start-referral-link" id="start-referral-link" type="text" readonly aria-label="Твоя реферальная ссылка" value="Загружаем ссылку…">
             <div class="start-referral-actions">
+                <button class="start-referral-button start-referral-button-secondary" id="start-referral-qr-toggle" type="button" aria-expanded="false" disabled>QR-код</button>
                 <button class="start-referral-button" id="start-referral-share" type="button" disabled>Поделиться</button>
                 <button class="start-referral-button start-referral-button-secondary" id="start-referral-copy" type="button" disabled>Копировать</button>
             </div>
+            <div class="start-referral-qr" id="start-referral-qr" aria-label="QR-код реферальной ссылки" hidden></div>
             <p id="start-referral-status" class="start-tariff-status" role="status" aria-live="polite"></p>
         </section>
 
@@ -2399,6 +2400,6 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             </section>
         </div>
 
-<script src="tariff-purchases.js?v=20261027-referral-qr-toggle-1"></script>
+<script src="tariff-purchases.js?v=20261027-referral-actions-row-1"></script>
 </body>
 </html>
