@@ -99,61 +99,14 @@
     busyOfferId = offerId;
     renderState({ hasPurchased: hasPurchased, activeTariffRequest: activeRequest });
     setStatus('Проверяю разрешение на сообщения…', false);
-    async function checkCommunityPermission() {
-      const response = await fetch(apiUrl('api/tariffs/permission'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ launchParams: launchParams }),
-        cache: 'no-store',
-        credentials: 'omit'
-      });
-      const data = await response.json().catch(function () { return {}; });
-      if (!response.ok) throw new Error(data.error || 'Не удалось проверить разрешение VK.');
-      return data.ok === true && data.allowed === true;
-    }
-
+    // The VK permission-check API can lag behind the native consent dialog,
+    // and some VK clients reject the bridge promise even when the user accepts.
+    // Ask VK to show the consent dialog, but let the actual server-side
+    // messages.send result decide whether a tariff request can be delivered.
     try {
-      let permissionAlreadyGranted = false;
-      try {
-        permissionAlreadyGranted = await checkCommunityPermission();
-      } catch (checkError) {
-        console.warn('[Roadnote tariff permission pre-check]', checkError);
-      }
-
-      if (!permissionAlreadyGranted) {
-        setStatus('Запрашиваю разрешение на сообщения от сообщества…', false);
-        let bridgeError = null;
-        try {
-          await window.vkBridge.send('VKWebAppAllowMessagesFromGroup', { group_id: communityId });
-        } catch (error) {
-          // Some VK clients reject the bridge promise even after the user
-          // accepts the native dialog. Verify the actual permission with VK API
-          // before deciding whether the request should be stopped.
-          bridgeError = error;
-          console.warn('[Roadnote tariff permission dialog result]', error);
-        }
-
-        let permissionGranted = false;
-        try {
-          permissionGranted = await checkCommunityPermission();
-        } catch (checkError) {
-          console.warn('[Roadnote tariff permission post-check]', checkError);
-        }
-
-        if (!permissionGranted) {
-          throw new Error(
-            bridgeError
-              ? 'VK закрыл окно, но сервер пока не видит разрешение. Проверь, что разрешаешь сообщения именно от сообщества Roadnote (ID ' + communityId + '), затем закрой и заново открой Mini App.'
-              : 'VK не подтвердил разрешение на сообщения. Проверь разрешение для сообщества Roadnote и попробуй ещё раз.'
-          );
-        }
-      }
+      await window.vkBridge.send('VKWebAppAllowMessagesFromGroup', { group_id: communityId });
     } catch (error) {
-      console.info('[Roadnote tariff] Community messages permission was not confirmed:', error);
-      busyOfferId = '';
-      renderState({ hasPurchased: hasPurchased, activeTariffRequest: activeRequest });
-      setStatus(error && error.message ? error.message : 'Не удалось проверить разрешение на сообщения.', true);
-      return;
+      console.warn('[Roadnote tariff permission dialog result]', error);
     }
 
     setStatus('Отправляю заявку…', false);
