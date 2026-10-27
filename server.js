@@ -1022,7 +1022,7 @@ app.post('/api/tariffs/request', async (req, res) => {
   if (replacedRequest?.admin_message_id) await deleteCommunityMessage(replacedRequest.admin_message_id);
   if (replacedRequest?.bot_message_id) await deleteCommunityMessage(replacedRequest.bot_message_id);
   const notice = replacedRequest
-    ? 'Неоплаченная заявка заменена на выбранный тариф. Заявки со скриншотом остаются на проверке.'
+    ? ''
     : 'Заявка создана. Открой её в Mini App и прикрепи скриншот оплаты.';
   sendLiveTariffState(userId, notice);
   return res.json({ ok: true, requestId, ...getTariffState(userId) });
