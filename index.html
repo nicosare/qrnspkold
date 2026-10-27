@@ -412,6 +412,8 @@
             width: 100%;
             max-width: 460px;
             min-height: 100%;
+            box-sizing: border-box;
+            padding-bottom: 18px;
             display: flex;
             flex-direction: column;
             gap: 11px;
@@ -750,7 +752,9 @@
             border: 1px solid #e1e6ed; border-radius: 10px; background: #f7f9fb;
             color: #3a4654; font: inherit; font-size: 12px; overflow: hidden; text-overflow: ellipsis;
         }
-        .start-referral-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 9px; }
+        .start-referral-actions { display: grid; grid-template-columns: 42px 1fr 1fr; gap: 8px; margin-top: 9px; }
+        .start-referral-qr-icon { display:grid; place-items:center; width:42px; min-width:42px; height:40px; padding:0; }
+        .start-referral-qr-icon svg { display:block; }
         .start-referral-actions .start-referral-button { min-width: 0; padding-left: 5px; padding-right: 5px; }
         .start-referral-button {
             min-height: 40px; padding: 8px 10px; border: 0; border-radius: 10px;
@@ -761,7 +765,7 @@
 
         .start-scan-actions { margin-bottom: 0; }
 
-        .start-actions { display: flex; flex-direction: column; gap: 11px; margin-top: 0; }
+        .start-actions { display: flex; flex-direction: row; gap: 10px; margin-top: 0; padding-bottom: 8px; }\n        .start-actions > .start-button { flex:1 1 0; width:0; min-width:0; font-size:14px; padding-left:8px; padding-right:8px; }
         .start-button {
             width: 100%;
             min-height: 54px;
@@ -1057,18 +1061,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
 <div id="scan-status" class="start-status" role="status" aria-live="polite"></div>
         </div>
 
-        <section class="start-referral" aria-labelledby="start-referral-title">
-            <div class="start-referral-title" id="start-referral-title">Пригласи друга</div>
-            <p class="start-referral-description">Поделись Roadnote. Когда друг впервые успешно отсканирует QR-код, тебе начислим 3 скана.</p>
-            <input class="start-referral-link" id="start-referral-link" type="text" readonly aria-label="Твоя реферальная ссылка" value="Загружаем ссылку…">
-            <div class="start-referral-actions">
-                <button class="start-referral-button start-referral-button-secondary" id="start-referral-qr-toggle" type="button" aria-expanded="false" disabled>QR-код</button>
-                <button class="start-referral-button" id="start-referral-share" type="button" disabled>Поделиться</button>
-                <button class="start-referral-button start-referral-button-secondary" id="start-referral-copy" type="button" disabled>Копировать</button>
-            </div>
-            <div class="start-referral-qr" id="start-referral-qr" aria-label="QR-код реферальной ссылки" hidden></div>
-            <p id="start-referral-status" class="start-tariff-status" role="status" aria-live="polite"></p>
-        </section>
+
 
         <section class="start-offers-section" aria-labelledby="start-offers-title">
             <div class="start-offers-section-heading"><div><div class="start-section-kicker">ROADNOTE PLUS</div><h3 id="start-offers-title">Тарифы</h3></div></div>
@@ -1088,6 +1081,19 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             <p class="start-offers-note">После первой подтверждённой покупки скидка пропадёт на всех тарифах.</p><p id="start-tariff-status" class="start-tariff-status" role="status" aria-live="polite"></p>
         </section>
 
+        <section class="start-referral" aria-labelledby="start-referral-title">
+            <div class="start-referral-title" id="start-referral-title">Пригласи друга</div>
+            <p class="start-referral-description">Поделись Roadnote. Когда друг впервые успешно отсканирует QR-код, тебе начислим 3 скана.</p>
+            <input class="start-referral-link" id="start-referral-link" type="text" readonly aria-label="Твоя реферальная ссылка" value="Загружаем ссылку…">
+            <div class="start-referral-actions">
+                <button class="start-referral-button start-referral-button-secondary start-referral-qr-icon" id="start-referral-qr-toggle" type="button" aria-label="Показать QR-код ссылки" title="QR-код" aria-expanded="false" disabled><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v2M17 20h4M20 18v3"/></svg></button>
+                <button class="start-referral-button" id="start-referral-share" type="button" disabled>Поделиться</button>
+                <button class="start-referral-button start-referral-button-secondary" id="start-referral-copy" type="button" disabled>Копировать</button>
+            </div>
+            <div class="start-referral-qr" id="start-referral-qr" aria-label="QR-код реферальной ссылки" hidden></div>
+            <p id="start-referral-status" class="start-tariff-status" role="status" aria-live="polite"></p>
+        </section>
+
         <section class="start-applications-section is-collapsed" aria-labelledby="start-applications-title">
             <div class="start-offers-section-heading">
                 <div><div class="start-section-kicker">МОИ ПОКУПКИ</div><h3 id="start-applications-title">Заявки</h3></div>
@@ -1103,6 +1109,9 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             <button class="start-button start-button-secondary" id="start-faq-button" type="button">
                 Частые вопросы
             </button>
+            <a class="start-button start-button-secondary" id="start-support-button" href="https://vk.me/club242494208" target="_blank" rel="noopener noreferrer">
+                Поддержка
+            </a>
             <button class="start-button start-button-secondary" id="start-admin-users-button" type="button" hidden>
                 Пользователи
             </button>
@@ -2400,6 +2409,6 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             </section>
         </div>
 
-<script src="tariff-purchases.js?v=20261027-request-yoomoney-form-1"></script>
+<script src="tariff-purchases.js?v=20261027-payment-privacy-qr-support-1"></script>
 </body>
 </html>
