@@ -55,6 +55,21 @@
             padding: 0;
         }
 
+/* Mini App: disable browser selection and the default blue tap flash. */
+        html, body, body * {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        /* Keep fields editable and allow selecting/copying entered values. */
+        input, textarea, select, [contenteditable="true"] {
+            -webkit-user-select: text;
+            user-select: text;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         html, body {
             height: auto;
             min-height: 100%;
