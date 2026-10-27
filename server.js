@@ -527,7 +527,6 @@ function getTariffState(userId) {
     status: request.status,
     createdAt: request.created_at,
     completedAt: request.completed_at || null,
-    hasScreenshot: Boolean(request.screenshot_attachment),
     paymentLabel: request.payment_label || ('roadnote-request-' + request.id)
   });
   return {
@@ -582,17 +581,6 @@ async function vkApi(method, parameters) {
   } finally {
     clearTimeout(timer);
   }
-}
-
-function vkMessageId(response) {
-  if (Number.isSafeInteger(response) && response > 0) return String(response);
-  if (Array.isArray(response) && response.length) {
-    const first = response[0];
-    if (Number.isSafeInteger(first)) return String(first);
-    if (first && first.message_id) return String(first.message_id);
-  }
-  if (response && response.message_id) return String(response.message_id);
-  return '';
 }
 
 async function sendCommunityMessage(peerId, message, options = {}) {
@@ -663,7 +651,9 @@ async function setCommunityAvatarFromMessage(message) {
     imageResponse = await fetch(sourceUrl, { signal: controller.signal, redirect: 'follow' });
     if (!imageResponse.ok) throw new Error('Не удалось скачать фотографию из VK (HTTP ' + imageResponse.status + ').');
     const contentType = (imageResponse.headers.get('content-type') || '').split(';')[0].toLowerCase();
-    if (!contentType.startsWith('image/')) throw new Error('Вложение не распознано как изображение.');
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(contentType)) {
+      throw new Error('Пришли фотографию в формате JPG, PNG или WebP.');
+    }
     const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
     if (!imageBuffer.length || imageBuffer.length > 15 * 1024 * 1024) throw new Error('Размер изображения пустой или превышает 15 МБ.');
 
@@ -728,19 +718,6 @@ function parseCallbackPayload(payload) {
     return parsed && typeof parsed === 'object' ? parsed : null;
   } catch {
     return null;
-  }
-}
-
-async function answerAdminButton(event, message) {
-  try {
-    await vkApi('messages.sendMessageEventAnswer', {
-      event_id: String(event.event_id || ''),
-      user_id: String(event.user_id || ''),
-      peer_id: String(event.peer_id || event.user_id || ''),
-      event_data: JSON.stringify({ type: 'show_snackbar', text: String(message).slice(0, 200) })
-    });
-  } catch (error) {
-    console.warn('[tariff button answer]', error?.message || error);
   }
 }
 
@@ -866,7 +843,7 @@ app.post('/api/tariffs/request', async (req, res) => {
           "UPDATE tariff_requests SET status = 'replaced', updated_at = ?, completed_at = ? " +
           "WHERE id = ? AND vk_id = ? AND status = 'awaiting_payment'"
         ).run(nowIso, nowIso, replacedRequest.id, userId);
-        if (replaced.changes !== 1) throw new Error('Активная заявка уже изменилась. Обнови страницу и попробуй ещё раз.');
+        if (replaced.changes !== 1) throw new Error('Активная покупка уже изменилась. Обнови страницу и попробуй ещё раз.');
       }
 
       const created = db.prepare(
@@ -880,7 +857,7 @@ app.post('/api/tariffs/request', async (req, res) => {
       db.prepare('UPDATE tariff_requests SET payment_label = ? WHERE id = ?').run('roadnote-request-' + requestId, requestId);
     })();
   } catch (error) {
-    if (error?.lockedByReview) {
+    if (false && error?.lockedByReview) {
       return res.status(409).json({
         error: error.message,
         lockedByReview: true,
@@ -888,7 +865,7 @@ app.post('/api/tariffs/request', async (req, res) => {
       });
     }
     console.error('[tariff request create/switch]', error?.message || error);
-    return res.status(409).json({ error: 'Не удалось переключить заявку. Обнови страницу и попробуй ещё раз.', ...getTariffState(userId) });
+    return res.status(409).json({ error: 'Не удалось сменить покупку. Обнови страницу и попробуй ещё раз.', ...getTariffState(userId) });
   }
 
   if (replacedRequest?.admin_message_id) await deleteCommunityMessage(replacedRequest.admin_message_id);
