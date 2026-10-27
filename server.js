@@ -141,7 +141,8 @@ db.exec(
   "screenshot_message_id TEXT DEFAULT NULL" +
   "); " +
   "CREATE INDEX IF NOT EXISTS idx_tariff_requests_user_time ON tariff_requests(vk_id, created_at DESC); " +
-  "CREATE UNIQUE INDEX IF NOT EXISTS idx_tariff_requests_one_active_per_user ON tariff_requests(vk_id) WHERE status IN ('awaiting_payment','awaiting_review');"
+  "DROP INDEX IF EXISTS idx_tariff_requests_one_active_per_user; " +
+  "CREATE UNIQUE INDEX IF NOT EXISTS idx_tariff_requests_one_unpaid_per_user ON tariff_requests(vk_id) WHERE status = 'awaiting_payment';
 );
 
 // Existing databases predate per-user scan balances. NULL means the balance
@@ -487,10 +488,11 @@ function formatRubles(value) {
 function getTariffState(userId) {
   const id = String(userId);
   const completed = db.prepare("SELECT EXISTS(SELECT 1 FROM tariff_requests WHERE vk_id = ? AND status = 'approved') AS value").get(id);
-  const active = db.prepare(
-    "SELECT id, offer_id, offer_name, offer_kind, quantity, price_rub, status, created_at, updated_at, screenshot_attachment " +
-    "FROM tariff_requests WHERE vk_id = ? AND status IN ('awaiting_payment','awaiting_review') ORDER BY id DESC LIMIT 1"
-  ).get(id);
+  const activeRequests = db.prepare(
+    "SELECT id, offer_id, offer_name, offer_kind, quantity, price_rub, status, created_at, updated_at, completed_at, screenshot_attachment " +
+    "FROM tariff_requests WHERE vk_id = ? AND status IN ('awaiting_payment','awaiting_review') ORDER BY CASE status WHEN 'awaiting_payment' THEN 0 ELSE 1 END, id DESC LIMIT 20"
+  ).all(id);
+  const active = activeRequests.find(request => request.status === 'awaiting_payment') || activeRequests[0] || null;
   const history = db.prepare(
     "SELECT id, offer_id, offer_name, offer_kind, quantity, price_rub, status, created_at, completed_at " +
     "FROM tariff_requests WHERE vk_id = ? AND status IN ('approved','rejected') ORDER BY COALESCE(completed_at, updated_at) DESC, id DESC LIMIT 20"
@@ -510,6 +512,7 @@ function getTariffState(userId) {
   return {
     hasPurchased: Number(completed?.value || 0) === 1,
     activeTariffRequest: active ? mapRequest(active) : null,
+    activeTariffRequests: activeRequests.map(mapRequest),
     tariffRequestHistory: history.map(mapRequest)
   };
 }
@@ -960,13 +963,10 @@ app.post('/api/tariffs/request', async (req, res) => {
   try {
     const replaceAndCreate = db.transaction(() => {
       replacedRequest = db.prepare(
-        "SELECT id, status, screenshot_attachment, admin_message_id, bot_message_id FROM tariff_requests WHERE vk_id = ? AND status IN ('awaiting_payment','awaiting_review') ORDER BY id DESC LIMIT 1"
+        "SELECT id, status, screenshot_attachment, admin_message_id, bot_message_id FROM tariff_requests WHERE vk_id = ? AND status = 'awaiting_payment' ORDER BY id DESC LIMIT 1"
       ).get(userId) || null;
 
-      if (replacedRequest && (replacedRequest.status === 'awaiting_review' || replacedRequest.screenshot_attachment)) {
-        throw Object.assign(new Error('Скриншот уже отправлен. Заявка ожидает проверки — её нельзя заменить другим тарифом.'), { lockedByReview: true });
-      }
-
+      // Only the unpaid request is replaceable; screenshot-submitted requests remain untouched.
       if (replacedRequest) {
         const replaced = db.prepare(
           "UPDATE tariff_requests SET status = 'replaced', updated_at = ?, completed_at = ? " +
@@ -999,7 +999,7 @@ app.post('/api/tariffs/request', async (req, res) => {
   if (replacedRequest?.admin_message_id) await deleteCommunityMessage(replacedRequest.admin_message_id);
   if (replacedRequest?.bot_message_id) await deleteCommunityMessage(replacedRequest.bot_message_id);
   const notice = replacedRequest
-    ? 'Активная заявка заменена на выбранный тариф. Открой новую заявку и прикрепи скриншот оплаты.'
+    ? 'Неоплаченная заявка заменена на выбранный тариф. Заявки со скриншотом остаются на проверке.'
     : 'Заявка создана. Открой её в Mini App и прикрепи скриншот оплаты.';
   sendLiveTariffState(userId, notice);
   return res.json({ ok: true, requestId, ...getTariffState(userId) });
@@ -1017,15 +1017,18 @@ app.post('/api/tariffs/cancel', async (req, res) => {
     return res.status(400).json({ error: 'Не удалось определить заявку.' });
   }
   const request = db.prepare(
-    "SELECT admin_message_id, bot_message_id FROM tariff_requests WHERE id = ? AND vk_id = ? AND status IN ('awaiting_payment','awaiting_review')"
+    "SELECT admin_message_id, bot_message_id, status, screenshot_attachment FROM tariff_requests WHERE id = ? AND vk_id = ? AND status IN ('awaiting_payment','awaiting_review')"
   ).get(requestId, userId);
   if (!request) {
     return res.status(409).json({ error: 'Эта заявка уже закрыта или заменена.', ...getTariffState(userId) });
   }
+  if (request.status === 'awaiting_review' || request.screenshot_attachment) {
+    return res.status(409).json({ error: 'Эту заявку нельзя отменить: скриншот оплаты уже отправлен, заявка ожидает проверки.', ...getTariffState(userId) });
+  }
   const nowIso = new Date().toISOString();
   const result = db.prepare(
     "UPDATE tariff_requests SET status = 'replaced', updated_at = ?, completed_at = ? " +
-    "WHERE id = ? AND vk_id = ? AND status IN ('awaiting_payment','awaiting_review')"
+    "WHERE id = ? AND vk_id = ? AND status = 'awaiting_payment' AND screenshot_attachment IS NULL"
   ).run(nowIso, nowIso, requestId, userId);
   if (result.changes !== 1) {
     return res.status(409).json({ error: 'Эта заявка уже закрыта или заменена.', ...getTariffState(userId) });
