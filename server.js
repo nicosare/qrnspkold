@@ -12,6 +12,7 @@ const port = Number(process.env.PORT || 3000);
 const appId = String(process.env.VK_APP_ID || '54843054');
 const appSecret = process.env.VK_APP_SECRET || '';
 const adminVkId = String(process.env.ADMIN_VK_ID || '');
+const yoomoneyNotificationSecret = String(process.env.YOOMONEY_NOTIFICATION_SECRET || '');
 
 const communityId = String(process.env.VK_GROUP_ID || '242494208');
 const communityToken = String(process.env.VK_GROUP_TOKEN || '');
@@ -24,6 +25,7 @@ const tariffOffers = Object.freeze({
   scans_9: { id: 'scans_9', name: 'Пакет «Старт» — 9 сканов', kind: 'pack', quantity: 9, regularPrice: 99, promoPrice: 69 },
   scans_29: { id: 'scans_29', name: 'Пакет «Оптимальный» — 29 сканов', kind: 'pack', quantity: 29, regularPrice: 249, promoPrice: 179 },
   scans_49: { id: 'scans_49', name: 'Пакет «Большой запас» — 49 сканов', kind: 'pack', quantity: 49, regularPrice: 369, promoPrice: 279 },
+  scan_test_1: { id: 'scan_test_1', name: 'Тестовый тариф — 1 поездка', kind: 'pack', quantity: 1, regularPrice: 5, promoPrice: 5 },
   subscription_1m: { id: 'subscription_1m', name: 'Безлимит на 1 месяц', kind: 'subscription', quantity: 1, regularPrice: 349, promoPrice: 249 },
   subscription_3m: { id: 'subscription_3m', name: 'Безлимит на 3 месяца', kind: 'subscription', quantity: 3, regularPrice: 799, promoPrice: 599 },
   subscription_6m: { id: 'subscription_6m', name: 'Безлимит на 6 месяцев', kind: 'subscription', quantity: 6, regularPrice: 1299, promoPrice: 949 }
@@ -138,12 +140,29 @@ db.exec(
   "bot_message_id TEXT DEFAULT NULL, " +
   "admin_message_id TEXT DEFAULT NULL, " +
   "screenshot_attachment TEXT DEFAULT NULL, " +
-  "screenshot_message_id TEXT DEFAULT NULL" +
+  "screenshot_message_id TEXT DEFAULT NULL, " +
+  "payment_label TEXT DEFAULT NULL, " +
+  "payment_operation_id TEXT DEFAULT NULL, " +
+  "payment_confirmed_at TEXT DEFAULT NULL" +
   "); " +
   "CREATE INDEX IF NOT EXISTS idx_tariff_requests_user_time ON tariff_requests(vk_id, created_at DESC); " +
   "DROP INDEX IF EXISTS idx_tariff_requests_one_active_per_user; " +
   "CREATE UNIQUE INDEX IF NOT EXISTS idx_tariff_requests_one_unpaid_per_user ON tariff_requests(vk_id) WHERE status = 'awaiting_payment';"
 );
+
+const tariffRequestColumns = db.pragma('table_info(tariff_requests)');
+if (!tariffRequestColumns.some(column => column.name === 'payment_label')) db.exec('ALTER TABLE tariff_requests ADD COLUMN payment_label TEXT DEFAULT NULL');
+if (!tariffRequestColumns.some(column => column.name === 'payment_operation_id')) db.exec('ALTER TABLE tariff_requests ADD COLUMN payment_operation_id TEXT DEFAULT NULL');
+if (!tariffRequestColumns.some(column => column.name === 'payment_confirmed_at')) db.exec('ALTER TABLE tariff_requests ADD COLUMN payment_confirmed_at TEXT DEFAULT NULL');
+db.exec(`
+  CREATE TABLE IF NOT EXISTS yoomoney_operations (
+    operation_id TEXT PRIMARY KEY, request_id INTEGER DEFAULT NULL, label TEXT NOT NULL DEFAULT '',
+    amount_rub REAL DEFAULT NULL, currency TEXT NOT NULL DEFAULT '', notification_type TEXT NOT NULL DEFAULT '',
+    sender TEXT NOT NULL DEFAULT '', state TEXT NOT NULL CHECK(state IN ('credited','needs_review')),
+    payload_json TEXT NOT NULL, received_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_yoomoney_operations_request ON yoomoney_operations(request_id, received_at DESC);
+`);
 
 // Existing databases predate per-user scan balances. NULL means the balance
 // has not been assigned yet; once configured, zero blocks scanning and each
@@ -297,6 +316,7 @@ function getDisplayedScanBalance(row) {
 }
 
 app.disable('x-powered-by');
+app.use(express.urlencoded({ extended: false, limit: '32kb' }));
 app.use(express.json({ limit: '12mb' }));
 
 function parseLaunchParams(raw) {
@@ -507,7 +527,8 @@ function getTariffState(userId) {
     status: request.status,
     createdAt: request.created_at,
     completedAt: request.completed_at || null,
-    hasScreenshot: Boolean(request.screenshot_attachment)
+    hasScreenshot: Boolean(request.screenshot_attachment),
+    paymentLabel: request.payment_label || ('roadnote-request-' + request.id)
   });
   return {
     hasPurchased: Number(completed?.value || 0) === 1,
@@ -985,6 +1006,7 @@ app.post('/api/tariffs/request', async (req, res) => {
         discounted ? 1 : 0, nowIso, nowIso
       );
       requestId = Number(created.lastInsertRowid);
+      db.prepare('UPDATE tariff_requests SET payment_label = ? WHERE id = ?').run('roadnote-request-' + requestId, requestId);
     })();
   } catch (error) {
     if (error?.lockedByReview) {
@@ -1170,6 +1192,97 @@ app.post('/api/vk/callback', (req, res) => {
     Promise.resolve().then(() => handleAdminMessageEvent(callbackEvent))
       .catch(error => console.error('[VK message_event tariff handler]', error?.message || error));
   }
+});
+
+
+app.post('/api/yoomoney/notification', (req, res) => {
+  if (!yoomoneyNotificationSecret) {
+    console.error('[YooMoney notification] YOOMONEY_NOTIFICATION_SECRET is not configured');
+    return res.status(503).send('not configured');
+  }
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+  const receivedSign = String(body.sign || '');
+  if (!receivedSign || !/^[a-f0-9]{64}$/i.test(receivedSign)) return res.status(400).send('invalid signature');
+  const rfc3986 = value => encodeURIComponent(String(value == null ? '' : value)).replace(/[!'()*]/g, char => '%' + char.charCodeAt(0).toString(16).toUpperCase());
+  const canonical = Object.keys(body).filter(key => key !== 'sign').sort()
+    .map(key => rfc3986(key) + '=' + rfc3986(body[key])).join('&');
+  const expectedSign = crypto.createHmac('sha256', yoomoneyNotificationSecret).update(canonical, 'utf8').digest('hex');
+  const receivedBytes = Buffer.from(receivedSign.toLowerCase(), 'hex');
+  const expectedBytes = Buffer.from(expectedSign, 'hex');
+  if (receivedBytes.length !== expectedBytes.length || !crypto.timingSafeEqual(receivedBytes, expectedBytes)) {
+    console.warn('[YooMoney notification] signature mismatch');
+    return res.status(403).send('invalid signature');
+  }
+
+  const operationId = String(body.operation_id || '').trim();
+  const label = String(body.label || '').trim();
+  const amount = Number(body.amount);
+  const currency = String(body.currency || '');
+  const notificationType = String(body.notification_type || '');
+  const sender = String(body.sender || '');
+  const unaccepted = String(body.unaccepted || '').toLowerCase() === 'true';
+  if (!operationId || operationId.length > 128 || !Number.isFinite(amount) || amount <= 0) return res.status(400).send('invalid operation');
+  const labelMatch = /^roadnote-request-(\d+)$/.exec(label);
+  const requestId = labelMatch ? Number(labelMatch[1]) : null;
+  const nowIso = new Date().toISOString();
+  let outcome;
+  try {
+    outcome = db.transaction(() => {
+      const previous = db.prepare('SELECT state FROM yoomoney_operations WHERE operation_id = ?').get(operationId);
+      if (previous) return { duplicate: true, state: previous.state, userId: null };
+      const request = requestId ? db.prepare('SELECT * FROM tariff_requests WHERE id = ?').get(requestId) : null;
+      const exactAmount = request && Math.round(amount * 100) === Number(request.price_rub) * 100;
+      const acceptedType = notificationType === 'p2p-incoming' || notificationType === 'card-incoming';
+      const canCredit = Boolean(request && request.status === 'awaiting_payment' && exactAmount &&
+        currency === '643' && !unaccepted && acceptedType && request.vk_id);
+      const state = canCredit ? 'credited' : 'needs_review';
+      if (canCredit) {
+        const marked = db.prepare(
+          "UPDATE tariff_requests SET status = 'approved', payment_operation_id = ?, payment_confirmed_at = ?, updated_at = ?, completed_at = ? WHERE id = ? AND status = 'awaiting_payment'"
+        ).run(operationId, nowIso, nowIso, nowIso, requestId);
+        if (marked.changes !== 1) throw new Error('Purchase state changed during YooMoney processing');
+        if (request.offer_kind === 'pack') {
+          const grant = grantPack.run(Number(request.quantity), String(request.vk_id));
+          if (grant.changes !== 1) throw new Error('Purchase user not found');
+          recordScanCredit.run(String(request.vk_id), nowIso, Number(request.quantity), 'purchase',
+            'Покупка «' + request.offer_name + '», платёж ЮMoney ' + operationId);
+        } else if (request.offer_kind === 'subscription') {
+          const user = getUserEntitlements.get(String(request.vk_id));
+          if (!user) throw new Error('Subscription user not found');
+          const currentExpiry = user.subscription_until && Date.parse(user.subscription_until) > Date.now()
+            ? new Date(user.subscription_until) : new Date();
+          const until = addUtcMonths(currentExpiry, Number(request.quantity)).toISOString();
+          const updated = updateSubscription.run(until, String(request.vk_id));
+          if (updated.changes !== 1) throw new Error('Could not extend subscription');
+        } else {
+          throw new Error('Unknown purchase type');
+        }
+      }
+      db.prepare(
+        'INSERT INTO yoomoney_operations (operation_id, request_id, label, amount_rub, currency, notification_type, sender, state, payload_json, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      ).run(operationId, requestId, label, amount, currency, notificationType, sender, state, JSON.stringify(body), nowIso);
+      return { duplicate: false, state, userId: request?.vk_id || null, requestId };
+    })();
+  } catch (error) {
+    console.error('[YooMoney notification processing]', error?.message || error);
+    return res.status(500).send('processing failed');
+  }
+  if (outcome.duplicate) return res.status(200).send('ok');
+  if (outcome.state === 'credited' && outcome.userId) {
+    sendLiveEntitlement(outcome.userId);
+    sendLiveTariffState(outcome.userId, 'Оплата подтверждена. Покупка начислена.');
+    Promise.resolve().then(() => sendCommunityMessage(outcome.userId, 'Оплата подтверждена. Покупка начислена.'))
+      .catch(error => console.warn('[YooMoney user notice]', error?.message || error));
+  } else {
+    console.warn('[YooMoney payment needs review]', JSON.stringify({
+      operationId, requestId, label, amount, currency, notificationType, unaccepted
+    }));
+    if (adminVkId) Promise.resolve().then(() => sendCommunityMessage(adminVkId,
+      'Платёж ЮMoney требует проверки.\nОперация: ' + operationId + '\nМетка: ' + (label || 'не указана') +
+      '\nСумма: ' + amount + ' RUB\nПричина: тариф не найден, сумма/валюта не совпала или платёж не принят.'))
+      .catch(error => console.warn('[YooMoney admin notice]', error?.message || error));
+  }
+  return res.status(200).send('ok');
 });
 
 app.get('/health', (_req, res) => {
