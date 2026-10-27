@@ -118,24 +118,6 @@
     return data.allowed;
   }
 
-  async function waitForCommunityMessagePermission(timeoutMs) {
-    var deadline = Date.now() + timeoutMs;
-    var lastAllowed = false;
-    var lastError = null;
-    while (Date.now() < deadline) {
-      try {
-        lastAllowed = await readCommunityMessagePermission();
-        lastError = null;
-        if (lastAllowed) return true;
-      } catch (error) {
-        lastError = error;
-      }
-      await new Promise(function (resolve) { window.setTimeout(resolve, 600); });
-    }
-    if (lastError && !lastAllowed) throw lastError;
-    return false;
-  }
-
   async function requestTariff(card) {
     if (!card || busyOfferId) return;
     const offerId = card.dataset.offerId;
@@ -188,9 +170,9 @@
       let permissionAllowed = false;
       let permissionCheckError = null;
       try {
-        // VK's permission status can lag or return a false negative after consent.
-        // This is a best-effort check, not a hard gate on message delivery.
-        permissionAllowed = await waitForCommunityMessagePermission(2500);
+        // This check is diagnostic only: VK may not immediately expose consent
+        // through its API. Actual messages.send below is the authoritative test.
+        permissionAllowed = await readCommunityMessagePermission();
       } catch (error) {
         permissionCheckError = error;
         console.warn('[Roadnote permission verification failed]', error);
@@ -203,24 +185,17 @@
         checkError: permissionCheckError ? String(permissionCheckError.message || permissionCheckError) : null
       }));
 
-      if (!permissionAllowed && !permissionDialogResolved) {
-        rememberCommunityPermission(false);
-        setStatus(permissionCheckError
-          ? 'Не удалось проверить разрешение VK. Заявка не отправлена. Нажми ещё раз.'
-          : 'VK не подтвердил разрешение на сообщения от Roadnote. Если раньше нажимал отказ, включи сообщения в диалоге сообщества Roadnote и попробуй ещё раз.', true);
-        return;
-      }
-
       if (permissionAllowed) {
         rememberCommunityPermission(true);
       } else {
-        // Do not block on a stale status response after VK completed the native
-        // permission request. The server will verify it by sending the message;
-        // VK error 901 is handled explicitly and leaves the request retryable.
-        console.warn('[Roadnote permission status lagging; attempting actual delivery]', JSON.stringify({
+        // Never block an explicitly requested message on a possibly stale
+        // permission-status API. VK itself will enforce consent in messages.send;
+        // error 901 is surfaced below if this account still lacks permission.
+        console.warn('[Roadnote permission status not confirmed; trying actual delivery]', JSON.stringify({
           userId: launchUserId,
           groupId: communityId,
-          dialogResolved: permissionDialogResolved
+          dialogResolved: permissionDialogResolved,
+          checkError: permissionCheckError ? String(permissionCheckError.message || permissionCheckError) : null
         }));
       }
     }
