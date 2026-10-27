@@ -112,35 +112,7 @@
             right: 0;
         }
 
-        header::before {
-            content: '';
-            display: block;
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 300px;
-            height: 60px;
-            background-image: url('media/header-top-part.svg');
-            background-position: right top;
-            background-repeat: no-repeat;
-            z-index: 1;
-        }
-
-        header::after {
-    content: '';
-    display: block;
-    position: absolute;
-    inset: 0; /* растягивает элемент на всю площадь хэдера */
-    top: auto; /* отменяет привязку к верху, оставляя только снизу */
-    height: auto;
-    aspect-ratio: 32/4;
-    /* Слева направо накладываем SVG-волну, а под неё — градиент, который делит фон на прозрачный и серый */
-    background: url('media/header-bottom-part.svg') no-repeat bottom/100% auto,
-                linear-gradient(to bottom, transparent 50%, #f2f3f4 50%);
-    z-index: 1;
-}
- z-index: 1;
-        }
+        /* Декоративные SVG убраны: шапка остаётся чистой и без графических волн. */
 
         /* MAIN CONTENT */
         .content {
@@ -746,6 +718,9 @@
         .info-sheet { width:min(100%,640px); max-height:min(88dvh,820px); overflow:auto; overscroll-behavior:contain; padding:22px; border:1px solid #e5ebf2; border-radius:24px; background:#fff; color:#25303d; box-shadow:0 28px 90px #10243c38; }
         .info-sheet-header { display:flex; align-items:center; justify-content:space-between; gap:18px; margin:-22px -22px 18px; padding:22px; border-bottom:1px solid #edf1f6; border-radius:24px 24px 0 0; background:linear-gradient(135deg,#f5f9ff 0%,#fff 76%); }
         .info-sheet-header > div { min-width:0; }
+        .faq-sheet .info-sheet-header { touch-action: pan-y; cursor: grab; }
+        .faq-sheet.faq-swipe-active { transition: transform .18s ease; }
+        .faq-sheet.faq-swipe-dragging { transition: none; }
         .info-sheet-title { margin:0; font-size:24px; line-height:1.15; font-weight:850; letter-spacing:-.65px; color:#1f2d40; }
         .info-sheet-subtitle { max-width:440px; margin:8px 0 0; color:#778392; font-size:13px; line-height:1.5; }
         .info-sheet-close { position:relative; z-index:2; display:grid; place-items:center; flex:0 0 42px; width:42px; height:42px; min-height:42px; padding:0 0 3px; border:1px solid #dfe8f4; border-radius:50%; background:#fff; color:#53647a; font-family:Arial,sans-serif; font-size:27px; font-weight:400; line-height:1; cursor:pointer; pointer-events:auto; touch-action:manipulation; box-shadow:0 3px 10px #193b6010; transition:background .15s ease,color .15s ease,transform .15s ease; }
@@ -927,10 +902,6 @@
 
         <div class="start-actions">
             <button class="start-button start-button-primary" id="start-scan-new" type="button" disabled>
-                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 8V4a1 1 0 0 1 1-1h4M16 3h4a1 1 0 0 1 1 1v4M21 16v4a1 1 0 0 1-1 1h-4M8 21H4a1 1 0 0 1-1-1v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    <rect x="8" y="8" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="2"/>
-                </svg>
                 Сканировать новый QR-код
             </button>
             <button class="start-button start-button-secondary" id="continue-current-scan" type="button">
@@ -2086,6 +2057,39 @@
     closeButton.addEventListener('click', handleClose, true);
     closeButton.addEventListener('pointerup', handleClose, true);
   }
+  // Close the FAQ drawer by swiping down from its header.
+  const faqSheet = faqOverlay ? faqOverlay.querySelector('.faq-sheet') : null;
+  const faqHeader = faqOverlay ? faqOverlay.querySelector('.info-sheet-header') : null;
+  if (faqSheet && faqHeader) {
+    let startX = 0;
+    let startY = 0;
+    let trackingSwipe = false;
+    faqHeader.addEventListener('pointerdown', function (event) {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      startX = event.clientX;
+      startY = event.clientY;
+      trackingSwipe = true;
+      faqSheet.classList.add('faq-swipe-dragging');
+      try { faqHeader.setPointerCapture(event.pointerId); } catch (_) {}
+    });
+    faqHeader.addEventListener('pointerup', function (event) {
+      if (!trackingSwipe) return;
+      trackingSwipe = false;
+      const dx = event.clientX - startX;
+      const dy = event.clientY - startY;
+      faqSheet.classList.remove('faq-swipe-dragging');
+      if (dy > 75 && dy > Math.abs(dx) * 1.2) {
+        closeFaq();
+      }
+    });
+    const cancelSwipe = function () {
+      trackingSwipe = false;
+      faqSheet.classList.remove('faq-swipe-dragging');
+    };
+    faqHeader.addEventListener('pointercancel', cancelSwipe);
+    faqHeader.addEventListener('lostpointercapture', cancelSwipe);
+  }
+
   if (faqOverlay) {
     faqOverlay.addEventListener('click', function (event) {
       const closeTarget = event.target && event.target.closest ? event.target.closest('#faq-close') : null;
