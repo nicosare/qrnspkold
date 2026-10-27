@@ -94,7 +94,8 @@
       }
       const button = card.querySelector('.start-offer-details');
       if (button) {
-        const isActiveOffer = Boolean(state.activeTariffRequest && state.activeTariffRequest.offerId === card.dataset.offerId);
+        const matchingRequests = (state.activeTariffRequests || []).filter(function (item) { return item.offerId === card.dataset.offerId; });
+        const isActiveOffer = matchingRequests.length > 0;
         button.textContent = isActiveOffer ? 'Открыть заявку' : 'Оставить заявку';
         button.classList.toggle('is-requested', isActiveOffer);
         button.setAttribute('aria-label', isActiveOffer ? 'Открыть активную заявку: ' + (state.activeTariffRequest.name || '') : 'Оставить заявку на ' + (card.querySelector('.start-offer-name')?.textContent || card.dataset.offerId));
@@ -105,12 +106,14 @@
   function renderRequestRow(request, status) {
     const label = status === 'active' ? statusLabel(request) : status === 'approved' ? 'Одобрена' : 'Отклонена';
     const pillClass = status === 'approved' ? 'approved' : status === 'rejected' ? 'rejected' : request.status === 'awaiting_review' ? 'review' : '';
-    const meta = [request.kind === 'pack' ? request.quantity + ' сканов' : request.quantity + ' мес. безлимита', dateLabel(request.createdAt)].filter(Boolean).join(' · ');
-    return '<button class="tariff-application-row" type="button" data-open-tariff-request="' + esc(request.id) + '">' +
+    const meta = 'Заявка №' + request.id + ' · ' + dateLabel(request.createdAt);
+    const rowTag = status === 'active' ? 'button' : 'div';
+    const rowAttrs = status === 'active' ? ' type="button" data-open-tariff-request="' + esc(request.id) + '"' : '';
+    return '<' + rowTag + ' class="tariff-application-row"' + rowAttrs + '>' +
       '<span class="tariff-application-main"><span class="tariff-application-name">' + esc(request.name) + '</span>' +
       '<span class="tariff-application-meta">' + esc(meta) + '</span>' +
       '<span class="tariff-status-pill ' + pillClass + '">' + esc(label) + '</span></span>' +
-      '<span class="tariff-application-price">' + esc(rubles(request.priceRub)) + '</span></button>';
+      '<span class="tariff-application-price">' + esc(rubles(request.priceRub)) + '</span></' + rowTag + '>';
   }
 
   function renderListGroup(node, label, requests, status) {
@@ -122,22 +125,22 @@
       return;
     }
     node.innerHTML = heading + requests.map(function (request) {
-      if (status !== 'active') {
-        const row = renderRequestRow(request, status);
-        return row.replace('<button class="tariff-application-row"', '<div class="tariff-application-row"').replace('data-open-tariff-request="' + esc(request.id) + '"', '').replace('</button>', '</div>');
-      }
       return renderRequestRow(request, status);
     }).join('');
   }
 
   function renderState(next) {
+    const activeRequests = next && Array.isArray(next.activeTariffRequests)
+      ? next.activeTariffRequests
+      : (next && next.activeTariffRequest ? [next.activeTariffRequest] : []);
     state = {
       hasPurchased: Boolean(next && next.hasPurchased),
-      activeTariffRequest: next && next.activeTariffRequest ? next.activeTariffRequest : null,
+      activeTariffRequests: activeRequests,
+      activeTariffRequest: activeRequests.find(function (item) { return item.status === 'awaiting_payment'; }) || activeRequests[0] || null,
       tariffRequestHistory: next && Array.isArray(next.tariffRequestHistory) ? next.tariffRequestHistory : []
     };
     updatePrices();
-    renderListGroup(activeNode, 'Активная заявка', state.activeTariffRequest ? [state.activeTariffRequest] : [], 'active');
+    renderListGroup(activeNode, 'Активные заявки', state.activeTariffRequests, 'active');
     renderListGroup(approvedNode, 'Одобренные', state.tariffRequestHistory.filter(function (item) { return item.status === 'approved'; }), 'approved');
     renderListGroup(rejectedNode, 'Отклонённые', state.tariffRequestHistory.filter(function (item) { return item.status === 'rejected'; }), 'rejected');
     if (tariffStatus) {
@@ -232,7 +235,9 @@
         '<img id="tariff-payment-preview" class="tariff-file-preview" alt="Предпросмотр скриншота" hidden>' +
         '<div class="tariff-modal-actions"><button class="tariff-modal-primary" id="tariff-payment-send" type="button" disabled>Отправить скриншот</button></div>';
     }
-    content += '<div class="tariff-modal-actions"><button class="tariff-modal-danger" id="tariff-request-cancel" type="button">Отозвать активную заявку</button></div>';
+    if (!awaitingReview && !request.hasScreenshot) {
+      content += '<div class="tariff-modal-actions"><button class="tariff-modal-danger" id="tariff-request-cancel" type="button">Отозвать неоплаченную заявку</button></div>';
+    }
     modalContent.innerHTML = content;
     const input = document.getElementById('tariff-payment-file');
     const preview = document.getElementById('tariff-payment-preview');
@@ -276,8 +281,10 @@
 
   async function createRequest(card) {
     if (busy) return;
-    if (state.activeTariffRequest && state.activeTariffRequest.offerId === card.dataset.offerId) {
-      openModal(state.activeTariffRequest);
+    const matchingRequest = (state.activeTariffRequests || []).filter(function (item) { return item.offerId === card.dataset.offerId; })
+      .sort(function (a, b) { return (a.status === 'awaiting_payment' ? -1 : 0) - (b.status === 'awaiting_payment' ? -1 : 0); })[0];
+    if (matchingRequest) {
+      openModal(matchingRequest);
       return;
     }
     if (!launchParams) {
@@ -354,7 +361,11 @@
   async function cancelRequest() {
     if (busy || !activeModalRequest) return;
     const requestId = activeModalRequest.id;
-    if (!window.confirm('Отозвать активную заявку? После этого можно будет выбрать другой тариф.')) return;
+    if (activeModalRequest.status !== 'awaiting_payment' || activeModalRequest.hasScreenshot) {
+      setModalStatus('Оплаченную заявку со скриншотом отменить нельзя.', true);
+      return;
+    }
+    if (!window.confirm('Отозвать неоплаченную заявку? После этого можно будет выбрать другой тариф.')) return;
     busy = true;
     const button = document.getElementById('tariff-request-cancel');
     if (button) { button.disabled = true; button.textContent = 'Отзываем…'; }
@@ -366,7 +377,7 @@
     } catch (error) {
       if (error.data) renderState(error.data);
       setModalStatus(error.message, true);
-      if (button) { button.disabled = false; button.textContent = 'Отозвать активную заявку'; }
+      if (button) { button.disabled = false; button.textContent = 'Отозвать неоплаченную заявку'; }
     } finally {
       busy = false;
     }
@@ -383,8 +394,9 @@
 
   document.addEventListener('click', function (event) {
     const row = event.target.closest('[data-open-tariff-request]');
-    if (row && state.activeTariffRequest && Number(row.dataset.openTariffRequest) === Number(state.activeTariffRequest.id)) {
-      openModal(state.activeTariffRequest);
+    if (row) {
+      const request = (state.activeTariffRequests || []).find(function (item) { return Number(item.id) === Number(row.dataset.openTariffRequest); });
+      if (request) openModal(request);
       return;
     }
     if (event.target.closest('[data-tariff-modal-close]')) closeModal();
