@@ -423,6 +423,20 @@
     });
   }
 
+  // Shared SSE stream pushes tariff status changes without requiring a Mini App restart.
+  window.setRoadnoteTariffState = function (next) {
+    if (!next || typeof next !== 'object') return;
+    renderState(next);
+    if (next.notice && tariffStatus) {
+      tariffStatus.textContent = next.notice;
+      tariffStatus.classList.remove('is-error');
+    }
+  };
+
+  window.addEventListener('roadnote:tariff-state', function (event) {
+    window.setRoadnoteTariffState(event.detail);
+  });
+
   document.getElementById('tariff-applications-refresh')?.addEventListener('click', refreshState);
   document.addEventListener('keydown', function (event) {
     if (event.key === 'Escape' && modal && !modal.hidden) closeModal();
