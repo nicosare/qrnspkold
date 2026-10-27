@@ -740,6 +740,15 @@
         }
         .info-overlay { position:fixed; inset:0; z-index:15000; display:grid; place-items:center; padding:18px; background:rgba(13,23,36,.58); backdrop-filter:blur(7px); -webkit-backdrop-filter:blur(7px); }
         .info-overlay[hidden] { display:none !important; }
+        #faq-overlay { opacity:1; transition:opacity .18s ease; }
+        #faq-overlay[hidden] { display:none !important; opacity:0; }
+        #faq-overlay.faq-overlay-closing { opacity:0; pointer-events:none; }
+        #faq-overlay .faq-sheet { transform:translateY(0); opacity:1; transition:transform .22s cubic-bezier(.2,.75,.25,1), opacity .18s ease; will-change:transform,opacity; }
+        #faq-overlay.faq-overlay-opening .faq-sheet { transform:translateY(18px); opacity:0; }
+        #faq-overlay.faq-overlay-closing .faq-sheet { transform:translateY(24px); opacity:0; }
+        @media (prefers-reduced-motion:reduce) {
+            #faq-overlay, #faq-overlay .faq-sheet { transition:none !important; }
+        }
         .info-sheet { width:min(100%,640px); max-height:min(88dvh,820px); overflow:auto; overscroll-behavior:contain; padding:22px; border:1px solid #e5ebf2; border-radius:24px; background:#fff; color:#25303d; box-shadow:0 28px 90px #10243c38; }
         .info-sheet-header { display:flex; align-items:center; justify-content:space-between; gap:18px; margin:-22px -22px 18px; padding:22px; border-bottom:1px solid #edf1f6; border-radius:24px 24px 0 0; background:linear-gradient(135deg,#f5f9ff 0%,#fff 76%); }
         .info-sheet-header > div { min-width:0; }
@@ -2103,13 +2112,36 @@
   const closeButton = document.getElementById('faq-close');
   const supportLink = document.getElementById('faq-support-link');
 
+  let faqCloseTimer = null;
   function closeFaq() {
-    if (faqOverlay) faqOverlay.hidden = true;
+    if (!faqOverlay || faqOverlay.hidden || faqOverlay.classList.contains('faq-overlay-closing')) return;
+    if (faqCloseTimer) clearTimeout(faqCloseTimer);
+    faqOverlay.classList.remove('faq-overlay-opening');
+    faqOverlay.classList.add('faq-overlay-closing');
+    faqCloseTimer = setTimeout(function () {
+      faqOverlay.hidden = true;
+      faqOverlay.classList.remove('faq-overlay-closing', 'faq-overlay-opening');
+      faqCloseTimer = null;
+    }, 190);
+  }
+
+  function openFaq() {
+    if (!faqOverlay) return;
+    if (faqCloseTimer) clearTimeout(faqCloseTimer);
+    faqCloseTimer = null;
+    faqOverlay.classList.remove('faq-overlay-closing', 'faq-overlay-opening');
+    faqOverlay.hidden = false;
+    // Force the initial frame so the entrance transition also runs on mobile WebViews.
+    void faqOverlay.offsetWidth;
+    faqOverlay.classList.add('faq-overlay-opening');
+    requestAnimationFrame(function () {
+      faqOverlay.classList.remove('faq-overlay-opening');
+    });
   }
 
   if (faqButton && faqOverlay) {
     faqButton.addEventListener('click', function () {
-      faqOverlay.hidden = false;
+      openFaq();
     });
   }
   if (closeButton) {
