@@ -883,7 +883,7 @@
 .start-applications-section.is-collapsed .tariff-applications-group.has-latest-request{display:block}
 .start-applications-section.is-collapsed .tariff-applications-group.has-latest-request .tariff-applications-label,.start-applications-section.is-collapsed .tariff-applications-group.has-latest-request .tariff-applications-empty{display:none}
 .start-applications-section.is-collapsed .tariff-application-row:not(.is-latest){display:none}
-.tariff-applications-toggle{width:36px;height:36px;border:1px solid #e2e8f0;border-radius:12px;background:#f6f9fc;color:#64748b;font-size:22px;line-height:1;cursor:pointer}
+.tariff-applications-toggle{display:grid;place-items:center;width:44px;min-width:44px;height:44px;min-height:44px;margin:0;padding:0;border:1px solid #e5e9ef;border-radius:14px;background:#f5f7fa;color:#24262b;font:inherit;font-size:27px;line-height:1;cursor:pointer;-webkit-tap-highlight-color:transparent}.tariff-applications-toggle:active{background:#eaf1fa;transform:scale(.97)}.tariff-applications-toggle-arrow{display:block;transform:rotate(-90deg);transition:transform .18s ease}.start-applications-section:not(.is-collapsed) .tariff-applications-toggle-arrow{transform:rotate(90deg)}
 .tariff-applications-heading-actions{display:flex;align-items:center;gap:8px}
 .tariff-refresh{width:36px;height:36px;border:1px solid #e2e8f0;border-radius:12px;background:#f6f9fc;color:#2787f5;font-size:23px;line-height:1;cursor:pointer}
 .tariff-applications-group{margin-top:15px}.tariff-applications-label{margin-bottom:8px;color:#687586;font-size:12px;font-weight:800}
@@ -1055,7 +1055,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         <section class="start-applications-section is-collapsed" aria-labelledby="start-applications-title">
             <div class="start-offers-section-heading">
                 <div><div class="start-section-kicker">МОИ ПОКУПКИ</div><h3 id="start-applications-title">Заявки</h3></div>
-                <div class="tariff-applications-heading-actions"><button id="tariff-applications-toggle" class="tariff-applications-toggle" type="button" aria-label="Развернуть заявки" aria-expanded="false">⌄</button><button id="tariff-applications-refresh" class="tariff-refresh" type="button" aria-label="Обновить заявки">↻</button></div>
+                <div class="tariff-applications-heading-actions"><button id="tariff-applications-toggle" class="tariff-applications-toggle" type="button" aria-label="Развернуть заявки" aria-expanded="false"><span class="tariff-applications-toggle-arrow" aria-hidden="true">‹</span></button><button id="tariff-applications-refresh" class="tariff-refresh" type="button" aria-label="Обновить заявки">↻</button></div>
             </div>
             <div id="tariff-applications-active" class="tariff-applications-group"><div class="tariff-applications-label">Активная заявка</div><div class="tariff-applications-empty">Активных заявок пока нет.</div></div>
             <div id="tariff-applications-approved" class="tariff-applications-group"><div class="tariff-applications-label">Одобренные</div><div class="tariff-applications-empty">Пока нет одобренных заявок.</div></div>
@@ -2347,6 +2347,6 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             </section>
         </div>
 
-<script src="tariff-purchases.js?v=20261027-collapsible-requests-4"></script>
+<script src="tariff-purchases.js?v=20261027-collapsible-requests-5"></script>
 </body>
 </html>
