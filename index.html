@@ -4,6 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Roadnote — Транспортные данные</title>
+    <script>
+    (function () {
+        var params = new URLSearchParams(window.location.search);
+        var isRoadnoteVkLaunch =
+            params.get('vk_app_id') === '54843054' &&
+            params.has('vk_platform') &&
+            (params.has('sign') || params.has('vk_user_id'));
+
+        if (!isRoadnoteVkLaunch) {
+            // Stop parsing this document before any external scripts or app assets load.
+            document.open();
+            document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body></body></html>');
+            document.close();
+        }
+    })();
+    </script>
     <!-- Load dependencies normally; application startup must not wait for VKWebAppInit. -->
     <script src="https://cdn.jsdelivr.net/npm/easyqrcodejs@4.5.0/dist/easy.qrcode.min.js"></script>
     <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
