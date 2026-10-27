@@ -971,7 +971,93 @@
             .info-sheet-title { font-size:20px; }
         }
 
-    </style>
+    
+        /* Polished, lightweight motion for the Roadnote start screen. */
+        @keyframes roadnoteStartReveal {
+            from { opacity: 0; transform: translate3d(0, 16px, 0) scale(.985); filter: blur(3px); }
+            to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+        }
+        @keyframes roadnoteBrandReveal {
+            from { opacity: 0; transform: translate3d(0, -8px, 0); }
+            to { opacity: 1; transform: translate3d(0, 0, 0); }
+        }
+        @keyframes roadnoteBalanceGlow {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        .start-overlay:not([hidden]) .start-brand {
+            animation: roadnoteBrandReveal .55s cubic-bezier(.2,.75,.25,1) both;
+        }
+        .start-overlay:not([hidden]) .start-screen > * {
+            animation: roadnoteStartReveal .62s cubic-bezier(.2,.75,.25,1) both;
+        }
+        .start-overlay:not([hidden]) .start-screen > *:nth-child(1) { animation-delay: .02s; }
+        .start-overlay:not([hidden]) .start-screen > *:nth-child(2) { animation-delay: .07s; }
+        .start-overlay:not([hidden]) .start-screen > *:nth-child(3) { animation-delay: .13s; }
+        .start-overlay:not([hidden]) .start-screen > *:nth-child(4) { animation-delay: .19s; }
+        .start-overlay:not([hidden]) .start-screen > *:nth-child(5) { animation-delay: .24s; }
+        .start-overlay:not([hidden]) .start-screen > *:nth-child(6) { animation-delay: .29s; }
+        .start-overlay:not([hidden]) .start-screen > *:nth-child(7) { animation-delay: .34s; }
+        .start-overlay:not([hidden]) .start-screen > *:nth-child(8) { animation-delay: .39s; }
+        .start-balance-card {
+            background-size: 180% 180%;
+            animation: roadnoteBalanceGlow 12s ease-in-out infinite;
+            transition: box-shadow .28s ease, transform .28s cubic-bezier(.2,.75,.25,1);
+        }
+        .start-balance-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 36px #176dcc35;
+        }
+        .start-offers-section, .start-referral {
+            transition: transform .28s cubic-bezier(.2,.75,.25,1), box-shadow .28s ease, border-color .28s ease;
+        }
+        .start-offers-section:hover, .start-referral:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 13px 30px rgba(31, 65, 105, .075);
+            border-color: #d5e4f6;
+        }
+        .start-offer {
+            transition: transform .24s cubic-bezier(.2,.75,.25,1), box-shadow .24s ease, border-color .24s ease;
+        }
+        .start-offer:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(31, 65, 105, .10);
+            border-color: #b8d6fb;
+        }
+        .start-button, .start-referral-button, .start-referral-qr-toggle, .start-offer-details {
+            transition: transform .22s cubic-bezier(.2,.75,.25,1), box-shadow .22s ease, background-color .22s ease, opacity .22s ease;
+        }
+        .start-button:hover:not(:disabled), .start-referral-button:hover:not(:disabled), .start-referral-qr-toggle:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+        .start-button-primary:hover:not(:disabled), .start-referral-button:hover:not(:disabled) {
+            box-shadow: 0 10px 22px #2787f535;
+        }
+        .start-button:active:not(:disabled), .start-referral-button:active:not(:disabled),
+        .start-referral-qr-toggle:active:not(:disabled), .start-offer-details:active:not(:disabled) {
+            transform: scale(.975);
+        }
+        .start-brand-icon {
+            transition: transform .35s cubic-bezier(.2,.75,.25,1), box-shadow .35s ease;
+        }
+        .start-brand-icon:hover {
+            transform: rotate(-4deg) scale(1.04);
+            box-shadow: 0 11px 24px #2787f540;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .start-overlay:not([hidden]) .start-screen > *,
+            .start-overlay:not([hidden]) .start-brand,
+            .start-balance-card {
+                animation: none !important;
+            }
+            .start-balance-card, .start-offers-section, .start-referral, .start-offer,
+            .start-button, .start-referral-button, .start-referral-qr-toggle,
+            .start-offer-details, .start-brand-icon {
+                transition: none !important;
+            }
+        }
+
+        </style>
 <style>
 .start-applications-section{width:100%;margin:0;padding:19px 16px 16px;border:1px solid #e3e8ef;border-radius:22px;background:#fff;box-shadow:0 8px 24px rgba(31,65,105,.045);text-align:left}
 .start-applications-section.is-collapsed .tariff-applications-group{display:none}
