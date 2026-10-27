@@ -1226,7 +1226,8 @@ app.post('/api/yoomoney/notification', (req, res) => {
 
   const operationId = String(body.operation_id || '').trim();
   const label = String(body.label || '').trim();
-  const amount = Number(body.amount);
+  const amount = Number(body.amount); // Amount credited to the wallet after YooMoney's fee.
+  const withdrawAmount = Number(body.withdraw_amount); // Amount actually charged to the buyer.
   const currency = String(body.currency || '');
   const notificationType = String(body.notification_type || '');
   const sender = String(body.sender || '');
@@ -1239,9 +1240,13 @@ app.post('/api/yoomoney/notification', (req, res) => {
   try {
     outcome = db.transaction(() => {
       const previous = db.prepare('SELECT state FROM yoomoney_operations WHERE operation_id = ?').get(operationId);
-      if (previous) return { duplicate: true, state: previous.state, userId: null };
+      // Already credited operations are idempotent. A prior needs_review operation
+      // must be re-evaluated when YooMoney retries its notification after a fix.
+      if (previous?.state === 'credited') return { duplicate: true, state: previous.state, userId: null };
       const request = requestId ? db.prepare('SELECT * FROM tariff_requests WHERE id = ?').get(requestId) : null;
-      const exactAmount = request && Math.round(amount * 100) === Number(request.price_rub) * 100;
+      // Compare the buyer's charged amount, not the net amount received after YooMoney's fee.
+      const exactAmount = request && Number.isFinite(withdrawAmount) &&
+        Math.round(withdrawAmount * 100) === Number(request.price_rub) * 100;
       const acceptedType = notificationType === 'p2p-incoming' || notificationType === 'card-incoming';
       const canCredit = Boolean(request && request.status === 'awaiting_payment' && exactAmount &&
         currency === '643' && !unaccepted && acceptedType && request.vk_id);
@@ -1269,7 +1274,8 @@ app.post('/api/yoomoney/notification', (req, res) => {
         }
       }
       db.prepare(
-        'INSERT INTO yoomoney_operations (operation_id, request_id, label, amount_rub, currency, notification_type, sender, state, payload_json, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO yoomoney_operations (operation_id, request_id, label, amount_rub, currency, notification_type, sender, state, payload_json, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
+        'ON CONFLICT(operation_id) DO UPDATE SET request_id = excluded.request_id, label = excluded.label, amount_rub = excluded.amount_rub, currency = excluded.currency, notification_type = excluded.notification_type, sender = excluded.sender, state = excluded.state, payload_json = excluded.payload_json, received_at = excluded.received_at'
       ).run(operationId, requestId, label, amount, currency, notificationType, sender, state, JSON.stringify(body), nowIso);
       return { duplicate: false, state, userId: request?.vk_id || null, requestId };
     })();
