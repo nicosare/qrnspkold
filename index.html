@@ -763,9 +763,12 @@
         .start-referral-button-secondary { background: #eef4fc; color: #2875cc; }
         .start-referral-button:disabled { opacity: .5; cursor: default; }
 
-        .start-scan-actions { margin-bottom: 0; }
+        .start-scan-actions { flex-direction: column; margin-bottom: 0; }
+        .start-scan-actions > .start-button { width:100%; flex:0 0 auto; }
 
-        .start-actions { display: flex; flex-direction: row; gap: 10px; margin-top: 0; padding-bottom: 8px; }\n        .start-actions > .start-button { flex:1 1 0; width:0; min-width:0; font-size:14px; padding-left:8px; padding-right:8px; }
+        .start-actions { display: flex; flex-direction: row; gap: 10px; margin-top: 0; padding-bottom: 0; }
+        .start-admin-actions { display:flex; width:100%; margin-top:0; padding-bottom:8px; }
+        .start-admin-actions > .start-button { width:100%; }\n        .start-actions > .start-button { flex:1 1 0; width:0; min-width:0; font-size:14px; padding-left:8px; padding-right:8px; }
         .start-button {
             width: 100%;
             min-height: 54px;
@@ -1112,10 +1115,11 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             <a class="start-button start-button-secondary" id="start-support-button" href="https://vk.me/club242494208" target="_blank" rel="noopener noreferrer">
                 Поддержка
             </a>
+        </div>
+        <div class="start-admin-actions">
             <button class="start-button start-button-secondary" id="start-admin-users-button" type="button" hidden>
                 Пользователи
             </button>
-
         </div>
 
 
@@ -1726,9 +1730,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     async function handleScannedText(decodedText) {
         const scannedUrl = String(decodedText || '').trim();
         if (!isValidNspkQrUrl(scannedUrl)) {
-            const message = 'QR-код не подходит. Нужна ссылка с домена qr.bilet.nspk.ru и параметром paytagid.';
-            setScannerStatus(message);
-            alert(message);
+            setScannerStatus('');
             return false;
         }
 
@@ -1749,11 +1751,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             setScannerStatus('Данные загружены. Основная страница обновлена.');
             return true;
         } catch (error) {
-            console.error('Не удалось загрузить данные QR:', error);
-            const details = String(error?.message || error || 'Неизвестная ошибка');
-            const message = `Не удалось загрузить данные QR с сервера Roadnote. ${details}`;
-            setScannerStatus(message);
-            alert(message);
+            console.warn('QR не удалось обработать; продолжаем сканирование:', error);
+            setScannerStatus('');
             return false;
         }
     }
@@ -1800,21 +1799,30 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         if (scanProcessing) return;
         scanProcessing = true;
         refreshScanButton();
-        setScannerStatus('Открываем сканер в приложении VK…');
         try {
             if (typeof window.roadnoteScanQr !== 'function') {
-                throw new Error('VK QR-сканер не загрузился. Проверьте интернет и перезапустите Mini App.');
+                console.warn('VK QR scanner is unavailable.');
+                return;
             }
-            const code = await window.roadnoteScanQr();
-            const success = await handleScannedText(code);
-            if (success) {
-                closeStartOverlay();
-                setScannerStatus('');
+            while (!startOverlayElement.hidden) {
+                let code;
+                try {
+                    code = await window.roadnoteScanQr();
+                } catch (error) {
+                    // Closing/cancelling the native scanner is not an error to show in the UI.
+                    console.info('VK QR scanning ended:', error);
+                    break;
+                }
+                const success = await handleScannedText(code);
+                if (success) {
+                    closeStartOverlay();
+                    setScannerStatus('');
+                    break;
+                }
+                // Invalid QR or a failed lookup: reopen the native reader silently.
             }
-        } catch (error) {
-            console.warn('VK Bridge QR scanner failed:', error);
-            setScannerStatus(error.message || 'Не удалось открыть сканер VK. Проверьте, что приложение запущено внутри VK на телефоне.');
         } finally {
+            setScannerStatus('');
             scanProcessing = false;
             refreshScanButton();
         }
