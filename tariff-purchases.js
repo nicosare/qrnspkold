@@ -14,6 +14,9 @@
   let activeModalRequest = null;
   let selectedFile = null;
   let previewUrl = '';
+  let lockedScrollY = 0;
+  let touchStartY = 0;
+  let touchStartX = 0;
 
   function apiUrl(path) {
     const pathname = window.location.pathname;
@@ -170,10 +173,30 @@
     previewUrl = '';
   }
 
+  function lockBackgroundScroll() {
+    lockedScrollY = window.scrollY || window.pageYOffset || 0;
+    document.body.classList.add('start-overlay-open');
+    document.body.style.position = 'fixed';
+    document.body.style.top = '-' + lockedScrollY + 'px';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+  }
+
+  function unlockBackgroundScroll() {
+    document.body.classList.remove('start-overlay-open');
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    window.scrollTo(0, lockedScrollY);
+  }
+
   function closeModal() {
     if (!modal) return;
     modal.hidden = true;
-    document.body.classList.remove('start-overlay-open');
+    unlockBackgroundScroll();
     clearSelectedFile();
     setModalStatus('', false);
   }
@@ -192,8 +215,9 @@
       content += '<div class="tariff-modal-note"><strong>Скриншот получен.</strong> Заявка передана администратору и ожидает проверки.</div>';
     } else {
       content += '<div class="tariff-upload-title">Скриншот оплаты</div>' +
-        '<input class="tariff-file-input" id="tariff-payment-file" type="file" accept="image/jpeg,image/png,image/webp">' +
-        '<label class="tariff-file-label" for="tariff-payment-file">＋ Выбрать скриншот</label>' +
+        '<label class="tariff-file-label">＋ Выбрать скриншот' +
+        '<input class="tariff-file-input" id="tariff-payment-file" type="file" accept="image/*">' +
+        '</label>' +
         '<img id="tariff-payment-preview" class="tariff-file-preview" alt="Предпросмотр скриншота" hidden>' +
         '<div class="tariff-modal-actions"><button class="tariff-modal-primary" id="tariff-payment-send" type="button" disabled>Отправить скриншот</button></div>';
     }
@@ -236,7 +260,7 @@
     setModalStatus('', false);
     renderModal();
     modal.hidden = false;
-    document.body.classList.add('start-overlay-open');
+    lockBackgroundScroll();
   }
 
   async function createRequest(card) {
@@ -344,6 +368,26 @@
     }
     if (event.target.closest('[data-tariff-modal-close]')) closeModal();
   });
+
+  if (modal) {
+    const sheet = modal.querySelector('.tariff-modal-sheet');
+    if (sheet) {
+      sheet.addEventListener('touchstart', function (event) {
+        if (!event.touches || event.touches.length !== 1) return;
+        touchStartY = event.touches[0].clientY;
+        touchStartX = event.touches[0].clientX;
+      }, { passive: true });
+      sheet.addEventListener('touchend', function (event) {
+        if (!event.changedTouches || event.changedTouches.length !== 1 || modal.hidden) return;
+        const deltaY = event.changedTouches[0].clientY - touchStartY;
+        const deltaX = event.changedTouches[0].clientX - touchStartX;
+        if (deltaY > 95 && Math.abs(deltaX) < 75 && sheet.scrollTop <= 0) closeModal();
+      }, { passive: true });
+    }
+    modal.addEventListener('click', function (event) {
+      if (event.target === modal) closeModal();
+    });
+  }
 
   document.getElementById('tariff-applications-refresh')?.addEventListener('click', refreshState);
   document.addEventListener('keydown', function (event) {
