@@ -2129,16 +2129,18 @@
     let trackingSwipe = false;
     let activePointerId = null;
     let startedInList = false;
+    let listAtStart = null;
 
     faqSheet.addEventListener('pointerdown', function (event) {
       if (event.target && event.target.closest &&
-          event.target.closest('#faq-close, .faq-list, a, button, summary')) return;
+          event.target.closest('#faq-close, a, button')) return;
       if (event.pointerType === 'mouse' && event.button !== 0) return;
       startX = event.clientX;
       startY = event.clientY;
       activePointerId = event.pointerId;
       trackingSwipe = true;
-      startedInList = false;
+      listAtStart = event.target && event.target.closest ? event.target.closest('.faq-list') : null;
+      startedInList = Boolean(listAtStart);
     });
 
     faqSheet.addEventListener('pointerup', function (event) {
@@ -2147,7 +2149,11 @@
       const dy = event.clientY - startY;
       trackingSwipe = false;
       activePointerId = null;
-      if (dy >= 70 && dy > Math.abs(dx) * 1.2) closeFaq();
+      const threshold = startedInList ? 110 : 70;
+      const listCanDismiss = !startedInList || (listAtStart && listAtStart.scrollTop <= 0);
+      if (listCanDismiss && dy >= threshold && dy > Math.abs(dx) * 1.2) closeFaq();
+      startedInList = false;
+      listAtStart = null;
     });
 
     const cancelSwipe = function (event) {
