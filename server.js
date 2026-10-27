@@ -142,7 +142,7 @@ db.exec(
   "); " +
   "CREATE INDEX IF NOT EXISTS idx_tariff_requests_user_time ON tariff_requests(vk_id, created_at DESC); " +
   "DROP INDEX IF EXISTS idx_tariff_requests_one_active_per_user; " +
-  "CREATE UNIQUE INDEX IF NOT EXISTS idx_tariff_requests_one_unpaid_per_user ON tariff_requests(vk_id) WHERE status = 'awaiting_payment';
+  "CREATE UNIQUE INDEX IF NOT EXISTS idx_tariff_requests_one_unpaid_per_user ON tariff_requests(vk_id) WHERE status = 'awaiting_payment';"
 );
 
 // Existing databases predate per-user scan balances. NULL means the balance
