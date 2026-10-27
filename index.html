@@ -763,8 +763,8 @@
         .start-referral-button-secondary { background: #eef4fc; color: #2875cc; }
         .start-referral-button:disabled { opacity: .5; cursor: default; }
 
-        .start-scan-actions { flex-direction: column; margin-bottom: 0; }
-        .start-scan-actions > .start-button { width:100%; flex:0 0 auto; }
+        .start-actions.start-scan-actions { flex-direction: column !important; align-items: stretch; margin-bottom: 0; }
+        .start-actions.start-scan-actions > .start-button { display: block; box-sizing: border-box; width: 100%; min-width: 0; flex: 0 0 auto; }
 
         .start-actions { display: flex; flex-direction: row; gap: 10px; margin-top: 0; padding-bottom: 0; }
         .start-admin-actions { display:flex; width:100%; margin-top:0; padding-bottom:8px; }
@@ -1060,7 +1060,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                 Сканировать новый QR-код
             </button>
             <button class="start-button start-button-secondary" id="continue-current-scan" type="button">
-                Вернуться к текущему скану
+                К текущему билету
             </button>
 <div id="scan-status" class="start-status" role="status" aria-live="polite"></div>
         </div>
