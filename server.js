@@ -1318,11 +1318,30 @@ app.get('/api/community/avatar', async (_req, res) => {
   try {
     const groups = await vkApi('groups.getById', { group_ids: communityId });
     const avatarUrl = Array.isArray(groups) ? groups[0]?.photo_200 || groups[0]?.photo_100 : '';
-    if (!avatarUrl || !/^https:\/\//i.test(avatarUrl)) {
+    if (!avatarUrl || !/^https?:\/\//i.test(avatarUrl)) {
       return res.status(502).send('Community avatar unavailable');
     }
-    res.setHeader('Cache-Control', 'public, max-age=900');
-    return res.redirect(302, avatarUrl);
+
+    const imageController = new AbortController();
+    const imageTimer = setTimeout(() => imageController.abort(), 10000);
+    try {
+      const imageResponse = await fetch(avatarUrl.replace(/^http:\/\//i, 'https://'), {
+        signal: imageController.signal,
+        redirect: 'follow'
+      });
+      const contentType = imageResponse.headers.get('content-type') || '';
+      if (!imageResponse.ok || !contentType.toLowerCase().startsWith('image/')) {
+        return res.status(502).send('Community avatar image unavailable');
+      }
+      const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+      if (!imageBuffer.length) return res.status(502).send('Community avatar image unavailable');
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=900');
+      res.setHeader('Content-Length', String(imageBuffer.length));
+      return res.status(200).send(imageBuffer);
+    } finally {
+      clearTimeout(imageTimer);
+    }
   } catch (error) {
     console.warn('[Roadnote community avatar]', error?.message || error);
     return res.status(502).send('Community avatar unavailable');
