@@ -960,8 +960,12 @@ app.post('/api/tariffs/request', async (req, res) => {
   try {
     const replaceAndCreate = db.transaction(() => {
       replacedRequest = db.prepare(
-        "SELECT id, admin_message_id, bot_message_id FROM tariff_requests WHERE vk_id = ? AND status IN ('awaiting_payment','awaiting_review') ORDER BY id DESC LIMIT 1"
+        "SELECT id, status, screenshot_attachment, admin_message_id, bot_message_id FROM tariff_requests WHERE vk_id = ? AND status IN ('awaiting_payment','awaiting_review') ORDER BY id DESC LIMIT 1"
       ).get(userId) || null;
+
+      if (replacedRequest && (replacedRequest.status === 'awaiting_review' || replacedRequest.screenshot_attachment)) {
+        throw Object.assign(new Error('Скриншот уже отправлен. Заявка ожидает проверки — её нельзя заменить другим тарифом.'), { lockedByReview: true });
+      }
 
       if (replacedRequest) {
         const replaced = db.prepare(
@@ -981,6 +985,13 @@ app.post('/api/tariffs/request', async (req, res) => {
       requestId = Number(created.lastInsertRowid);
     })();
   } catch (error) {
+    if (error?.lockedByReview) {
+      return res.status(409).json({
+        error: error.message,
+        lockedByReview: true,
+        ...getTariffState(userId)
+      });
+    }
     console.error('[tariff request create/switch]', error?.message || error);
     return res.status(409).json({ error: 'Не удалось переключить заявку. Обнови страницу и попробуй ещё раз.', ...getTariffState(userId) });
   }
