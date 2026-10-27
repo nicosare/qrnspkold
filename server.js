@@ -1239,11 +1239,16 @@ app.post('/api/vk/callback', (req, res) => {
   res.status(200).type('text/plain').send('ok');
   if (event.type === 'message_allow') {
     const permissionEvent = event.object || {};
+    const allowedUserId = String(permissionEvent.user_id || '');
     console.info('[VK community message permission granted]', JSON.stringify({
       user_id: permissionEvent.user_id || null,
       group_id: event.group_id || null,
       key: permissionEvent.key || null
     }));
+    if (adminVkId && allowedUserId === adminVkId) {
+      Promise.resolve().then(() => sendAdminMenu('Меню администратора Roadnote готово.'))
+        .catch(error => console.error('[Roadnote admin menu]', error?.message || error));
+    }
   } else if (event.type === 'message_deny') {
     const permissionEvent = event.object || {};
     console.warn('[VK community message permission denied]', JSON.stringify({
@@ -1399,7 +1404,7 @@ app.get('/api/community/avatar', async (_req, res) => {
       const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
       if (!imageBuffer.length) return res.status(502).send('Community avatar image unavailable');
       res.setHeader('Content-Type', contentType);
-      res.setHeader('Cache-Control', 'public, max-age=900');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
       res.setHeader('Content-Length', String(imageBuffer.length));
       return res.status(200).send(imageBuffer);
     } finally {
