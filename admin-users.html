@@ -250,7 +250,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
        details.dataset.loaded='1';
        if(!data.credits.length){list.innerHTML='<div class="scan-history-empty">Начислений пока нет.</div>';return;}
        list.innerHTML=data.credits.map(item=>{
-         const source=item.source==='welcome'?'Приветственный бонус':item.source==='admin'?'Ручное начисление':'Начисление';
+         const source=item.source==='welcome'?'Приветственный бонус':item.source==='purchase'?'Покупка тарифа':item.source==='admin'?'Ручное начисление':'Начисление';
          const note=item.note?' · '+item.note:'';
          const amount=Number(item.amount);
          const plural=amount===1?'скан':amount>=2&&amount<=4?'скана':'сканов';

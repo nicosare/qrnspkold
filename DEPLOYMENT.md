@@ -31,3 +31,27 @@ curl -I https://tintink.ru/roadnote/
 ```
 
 Open `https://tintink.ru/roadnote/admin/users` from inside the VK Mini App so VK launch parameters are present. A normal browser visit is not authenticated.
+
+
+## Tariff applications and community bot
+
+Tariff requests are stored in the existing SQLite database at \`data/roadnote.sqlite\`; do not delete the \`data\` directory. The app fixes the price on each request. The promotional price is available until the first request that you approve; after an approved purchase, the UI shows ordinary prices for all offers. Rejected or replaced requests do not consume the first-purchase discount.
+
+Add these values to the existing server \`.env\` (do not commit or share the real token):
+
+- \`VK_GROUP_ID=242494208\`
+- \`VK_GROUP_TOKEN\` — a community access token with permission to use messages.
+- \`VK_CALLBACK_SECRET\` — a random secret that exactly matches the secret key configured for the Callback API server.
+- \`VK_CALLBACK_CONFIRMATION\` — the confirmation code shown by VK for that Callback API server.
+
+Then in the VK community settings, open **Management → API → Callback API**, create a server with URL \`https://tintink.ru/roadnote/api/vk/callback\`, enter the same secret key, save the confirmation code in \`.env\`, and enable the **incoming messages** and **message event** event types. Confirm the server in VK. Make sure the administrator account can receive messages from the Roadnote community as well.
+
+Rebuild only the Roadnote app after editing \`.env\`:
+
+\`\`\`bash
+cd /home/roadnote-deploy/roadnote-source
+docker compose up -d --build roadnote-app
+curl -fsS --max-time 10 http://127.0.0.1:3003/health
+\`\`\`
+
+A customer must allow messages from the community when pressing **Оставить заявку**. The community sends the tariff details and the current price, then waits for a photo screenshot. The administrator receives the screenshot with **Начислить** and **Отменить** callback buttons. Decisions are idempotent: a closed or replaced request cannot be credited again. The payment link is intentionally a placeholder until the real URL is supplied.

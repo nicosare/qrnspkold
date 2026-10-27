@@ -12,16 +12,9 @@
     (function () {
         try {
             if (window.vkBridge && typeof window.vkBridge.send === "function") {
-                Promise.resolve(window.vkBridge.send("VKWebAppInit"))
-                    .then(function () {
-                        return window.vkBridge.send("VKWebAppAllowMessagesFromGroup", { group_id: 242494208 });
-                    })
-                    .then(function () {
-                        console.info("Roadnote community messages permission granted or already enabled.");
-                    })
-                    .catch(function (error) {
-                        console.info("Roadnote community messages permission was not granted or is unavailable:", error);
-                    });
+                Promise.resolve(window.vkBridge.send("VKWebAppInit")).catch(function (error) {
+                    console.warn("VK Mini App initialization failed:", error);
+                });
             }
         } catch (error) {
             console.warn("VK Mini App initialization failed:", error);
@@ -684,6 +677,38 @@
             .start-offer { padding-bottom:32px; }
             .start-offer-details { left:7px; bottom:7px; min-height:20px; padding:3px 7px; font-size:9px; }
         }
+        .start-offer-details {
+            width: calc(100% - 18px);
+            max-width: none;
+            background: #2787f5;
+            border-color: #2787f5;
+            color: #fff;
+            cursor: pointer;
+            pointer-events: auto;
+            white-space: nowrap;
+            font-size: 8px;
+            padding-inline: 3px;
+        }
+        .start-offer-details:active:not(:disabled) { background: #176dcc; }
+        .start-offer-details:disabled { opacity: .72; cursor: wait; }
+        .start-offer-details.is-requested {
+            background: #15945d;
+            border-color: #15945d;
+            color: #fff;
+            cursor: default;
+        }
+        .start-tariff-status {
+            margin: 9px 0 0;
+            color: #647080;
+            font-size: 11px;
+            line-height: 1.4;
+            text-align: center;
+        }
+        .start-tariff-status:empty { display: none; }
+        .start-tariff-status.is-error { color: #c43b43; }
+        @media(max-width:540px) {
+            .start-offer-details { width: calc(100% - 14px); font-size: 7.6px; }
+        }
 
         .start-offer-ribbon { position:absolute; top:0; right:0; padding:5px 9px 6px 11px; border-radius:0 14px 0 10px; background:#edf3fa; color:#53667b; font-size:9px; line-height:1.1; font-weight:850; letter-spacing:.15px; }
         .start-offer-ribbon-value { background:#e8f7ee; color:#187747; }
@@ -982,17 +1007,17 @@
             <p class="start-offers-lead" id="start-offers-lead">Выбирай удобный формат: отдельные сканирования или безлимит.</p>
             <div id="start-offers-groups">
                 <div class="start-offer-group"><div class="start-offer-group-title"><span class="start-offer-group-icon">↗</span><span>Пакеты сканирований</span></div><div class="start-offer-grid">
-                    <article class="start-offer"><div class="start-offer-ribbon" aria-label="Для знакомства">Старт</div><div class="start-offer-top"><span class="start-offer-count">9</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-pricing"><span class="start-offer-old-price">99 ₽</span><span class="start-offer-current-price">69 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−30%</span><span class="start-offer-unit-price">7,67 ₽ / скан</span></div><button class="start-offer-details" type="button" disabled aria-disabled="true">Скоро</button></article>
-                    <article class="start-offer"><div class="start-offer-ribbon start-offer-ribbon-value">Выгодно</div><div class="start-offer-top"><span class="start-offer-count">29</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-pricing"><span class="start-offer-old-price">249 ₽</span><span class="start-offer-current-price">179 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−28%</span><span class="start-offer-unit-price">6,17 ₽ / скан</span></div><button class="start-offer-details" type="button" disabled aria-disabled="true">Скоро</button></article>
-                    <article class="start-offer"><div class="start-offer-ribbon start-offer-ribbon-value">Лучшая цена</div><div class="start-offer-top"><span class="start-offer-count">49</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-pricing"><span class="start-offer-old-price">369 ₽</span><span class="start-offer-current-price">279 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−24%</span><span class="start-offer-unit-price">5,69 ₽ / скан</span></div><button class="start-offer-details" type="button" disabled aria-disabled="true">Скоро</button></article>
+                    <article class="start-offer" data-offer-id="scans_9" data-offer-kind="pack" data-quantity="9" data-regular-price="99" data-promo-price="69"><div class="start-offer-ribbon" aria-label="Для знакомства">Старт</div><div class="start-offer-top"><span class="start-offer-count">9</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-pricing"><span class="start-offer-old-price">99 ₽</span><span class="start-offer-current-price">69 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−30%</span><span class="start-offer-unit-price">7,67 ₽ / скан</span></div><button class="start-offer-details" type="button" data-offer-id="scans_9">Оставить заявку</button></article>
+                    <article class="start-offer" data-offer-id="scans_29" data-offer-kind="pack" data-quantity="29" data-regular-price="249" data-promo-price="179"><div class="start-offer-ribbon start-offer-ribbon-value">Выгодно</div><div class="start-offer-top"><span class="start-offer-count">29</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-pricing"><span class="start-offer-old-price">249 ₽</span><span class="start-offer-current-price">179 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−28%</span><span class="start-offer-unit-price">6,17 ₽ / скан</span></div><button class="start-offer-details" type="button" data-offer-id="scans_29">Оставить заявку</button></article>
+                    <article class="start-offer" data-offer-id="scans_49" data-offer-kind="pack" data-quantity="49" data-regular-price="369" data-promo-price="279"><div class="start-offer-ribbon start-offer-ribbon-value">Лучшая цена</div><div class="start-offer-top"><span class="start-offer-count">49</span><span class="start-offer-unit">сканов</span></div><div class="start-offer-pricing"><span class="start-offer-old-price">369 ₽</span><span class="start-offer-current-price">279 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−24%</span><span class="start-offer-unit-price">5,69 ₽ / скан</span></div><button class="start-offer-details" type="button" data-offer-id="scans_49">Оставить заявку</button></article>
                 </div></div>
                 <div class="start-offer-group start-subscription-group"><div class="start-offer-group-title"><span class="start-offer-group-icon">✦</span><span>Безлимитные подписки</span></div><div class="start-offer-grid start-subscription-grid">
-                    <article class="start-offer start-offer-subscription start-offer-monthly"><div class="start-offer-ribbon start-offer-ribbon-hit">Хит</div><div class="start-offer-duration">1 <span>месяц</span></div><div class="start-offer-description">Безлимит</div><div class="start-offer-pricing"><span class="start-offer-old-price">349 ₽</span><span class="start-offer-current-price">249 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−29%</span></div><button class="start-offer-details" type="button" disabled aria-disabled="true">Скоро</button></article>
-                    <article class="start-offer start-offer-subscription"><div class="start-offer-duration">3 <span>месяца</span></div><div class="start-offer-description">Безлимит</div><div class="start-offer-pricing"><span class="start-offer-old-price">799 ₽</span><span class="start-offer-current-price">599 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−25%</span><span class="start-offer-unit-price">≈ 200 ₽ / мес.</span></div><button class="start-offer-details" type="button" disabled aria-disabled="true">Скоро</button></article>
-                    <article class="start-offer start-offer-subscription"><div class="start-offer-duration">6 <span>месяцев</span></div><div class="start-offer-description">Безлимит</div><div class="start-offer-pricing"><span class="start-offer-old-price">1 299 ₽</span><span class="start-offer-current-price">949 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−27%</span><span class="start-offer-unit-price">≈ 158 ₽ / мес.</span></div><button class="start-offer-details" type="button" disabled aria-disabled="true">Скоро</button></article>
+                    <article class="start-offer start-offer-subscription start-offer-monthly" data-offer-id="subscription_1m" data-offer-kind="subscription" data-quantity="1" data-regular-price="349" data-promo-price="249"><div class="start-offer-ribbon start-offer-ribbon-hit">Хит</div><div class="start-offer-duration">1 <span>месяц</span></div><div class="start-offer-description">Безлимит</div><div class="start-offer-pricing"><span class="start-offer-old-price">349 ₽</span><span class="start-offer-current-price">249 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−29%</span></div><button class="start-offer-details" type="button" data-offer-id="subscription_1m">Оставить заявку</button></article>
+                    <article class="start-offer start-offer-subscription" data-offer-id="subscription_3m" data-offer-kind="subscription" data-quantity="3" data-regular-price="799" data-promo-price="599"><div class="start-offer-duration">3 <span>месяца</span></div><div class="start-offer-description">Безлимит</div><div class="start-offer-pricing"><span class="start-offer-old-price">799 ₽</span><span class="start-offer-current-price">599 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−25%</span><span class="start-offer-unit-price">≈ 200 ₽ / мес.</span></div><button class="start-offer-details" type="button" data-offer-id="subscription_3m">Оставить заявку</button></article>
+                    <article class="start-offer start-offer-subscription" data-offer-id="subscription_6m" data-offer-kind="subscription" data-quantity="6" data-regular-price="1299" data-promo-price="949"><div class="start-offer-duration">6 <span>месяцев</span></div><div class="start-offer-description">Безлимит</div><div class="start-offer-pricing"><span class="start-offer-old-price">1 299 ₽</span><span class="start-offer-current-price">949 ₽</span></div><div class="start-offer-meta"><span class="start-offer-discount">−27%</span><span class="start-offer-unit-price">≈ 158 ₽ / мес.</span></div><button class="start-offer-details" type="button" data-offer-id="subscription_6m">Оставить заявку</button></article>
                 </div></div>
             </div>
-            <p class="start-offers-note">Цена со скидкой действует только при первой покупке. При последующих покупках — обычная цена.</p>
+            <p class="start-offers-note">После первой подтверждённой покупки скидка пропадёт на всех тарифах.</p><p id="start-tariff-status" class="start-tariff-status" role="status" aria-live="polite"></p>
         </section>
 
         <div class="start-actions">
@@ -1781,6 +1806,7 @@
     })();
 </script>
 
+<script src="tariff-purchases.js"></script>
 <script>
 (function () {
   function showAdminTools() {
@@ -1969,6 +1995,7 @@
       }
 
       const session = await response.json();
+      if (typeof window.setRoadnoteTariffState === 'function') window.setRoadnoteTariffState(session);
       if (typeof window.setRoadnoteReferralLink === 'function') {
         window.setRoadnoteReferralLink(session.referralLink);
       } else {
@@ -1990,6 +2017,14 @@
         const source = new EventSource(eventsUrl.toString());
         entitlementEventSource = source;
         source.addEventListener('entitlement', (event) => {
+          source.addEventListener('tariff', (event) => {
+            try {
+              const current = JSON.parse(event.data);
+              if (typeof window.setRoadnoteTariffState === 'function') window.setRoadnoteTariffState(current);
+            } catch (eventError) {
+              console.warn('Roadnote tariff event was invalid:', eventError);
+            }
+          });
           try {
             const current = JSON.parse(event.data);
             scanSessionReady = true;
@@ -2016,6 +2051,7 @@
               });
               if (!refreshResponse.ok) return;
               const current = await refreshResponse.json();
+              if (typeof window.setRoadnoteTariffState === 'function') window.setRoadnoteTariffState(current);
               setReferralLink(current.referralLink);
               scanSessionReady = true;
               updateScanBalance(current.scanBalance, current.subscriptionUntil, current.unlimited, current.subscriptionActive);

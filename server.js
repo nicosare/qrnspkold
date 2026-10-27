@@ -12,6 +12,21 @@ const port = Number(process.env.PORT || 3000);
 const appId = String(process.env.VK_APP_ID || '54843054');
 const appSecret = process.env.VK_APP_SECRET || '';
 const adminVkId = String(process.env.ADMIN_VK_ID || '');
+
+const communityId = String(process.env.VK_GROUP_ID || '242494208');
+const communityToken = String(process.env.VK_GROUP_TOKEN || '');
+const callbackSecret = String(process.env.VK_CALLBACK_SECRET || '');
+const callbackConfirmation = String(process.env.VK_CALLBACK_CONFIRMATION || '');
+const vkApiVersion = '5.199';
+
+const tariffOffers = Object.freeze({
+  scans_9: { id: 'scans_9', name: 'Пакет «Старт» — 9 сканов', kind: 'pack', quantity: 9, regularPrice: 99, promoPrice: 69 },
+  scans_29: { id: 'scans_29', name: 'Пакет «Оптимальный» — 29 сканов', kind: 'pack', quantity: 29, regularPrice: 249, promoPrice: 179 },
+  scans_49: { id: 'scans_49', name: 'Пакет «Большой запас» — 49 сканов', kind: 'pack', quantity: 49, regularPrice: 369, promoPrice: 279 },
+  subscription_1m: { id: 'subscription_1m', name: 'Безлимит на 1 месяц', kind: 'subscription', quantity: 1, regularPrice: 349, promoPrice: 249 },
+  subscription_3m: { id: 'subscription_3m', name: 'Безлимит на 3 месяца', kind: 'subscription', quantity: 3, regularPrice: 799, promoPrice: 599 },
+  subscription_6m: { id: 'subscription_6m', name: 'Безлимит на 6 месяцев', kind: 'subscription', quantity: 6, regularPrice: 1299, promoPrice: 949 }
+});
 const databasePath = process.env.DATABASE_PATH || '/data/roadnote.sqlite';
 const paytagDirectTimeoutMs = Math.max(3000, Number(process.env.PAYTAG_DIRECT_TIMEOUT_MS || 12000));
 const paytagFetchesInFlight = new Map();
@@ -103,8 +118,30 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_referrals_inviter
     ON referrals(inviter_vk_id, created_at DESC);
 `);
-// Remove legacy tables belonging to the retired tariff constructor and request workflow.
-db.exec('DROP TABLE IF EXISTS offer_requests; DROP TABLE IF EXISTS offer_config;');
+// Keep legacy data untouched and persist tariff requests independently of app restarts.
+db.exec(
+  "CREATE TABLE IF NOT EXISTS tariff_requests (" +
+  "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+  "vk_id TEXT NOT NULL, " +
+  "offer_id TEXT NOT NULL, " +
+  "offer_name TEXT NOT NULL, " +
+  "offer_kind TEXT NOT NULL CHECK(offer_kind IN ('pack','subscription')), " +
+  "quantity INTEGER NOT NULL, " +
+  "price_rub INTEGER NOT NULL, " +
+  "regular_price_rub INTEGER NOT NULL, " +
+  "is_discounted INTEGER NOT NULL DEFAULT 0, " +
+  "status TEXT NOT NULL CHECK(status IN ('awaiting_payment','awaiting_review','approved','rejected','replaced','delivery_failed')), " +
+  "created_at TEXT NOT NULL, " +
+  "updated_at TEXT NOT NULL, " +
+  "completed_at TEXT DEFAULT NULL, " +
+  "bot_message_id TEXT DEFAULT NULL, " +
+  "admin_message_id TEXT DEFAULT NULL, " +
+  "screenshot_attachment TEXT DEFAULT NULL, " +
+  "screenshot_message_id TEXT DEFAULT NULL" +
+  "); " +
+  "CREATE INDEX IF NOT EXISTS idx_tariff_requests_user_time ON tariff_requests(vk_id, created_at DESC); " +
+  "CREATE UNIQUE INDEX IF NOT EXISTS idx_tariff_requests_one_active_per_user ON tariff_requests(vk_id) WHERE status IN ('awaiting_payment','awaiting_review');"
+);
 
 // Existing databases predate per-user scan balances. NULL means the balance
 // has not been assigned yet; once configured, zero blocks scanning and each
@@ -441,6 +478,506 @@ async function fetchPaytagViaDirectApi(paytagid) {
 }
 
 
+
+function formatRubles(value) {
+  return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(Number(value) || 0) + ' ₽';
+}
+
+function getTariffState(userId) {
+  const id = String(userId);
+  const completed = db.prepare("SELECT EXISTS(SELECT 1 FROM tariff_requests WHERE vk_id = ? AND status = 'approved') AS value").get(id);
+  const active = db.prepare(
+    "SELECT id, offer_id, offer_name, offer_kind, quantity, price_rub, status FROM tariff_requests " +
+    "WHERE vk_id = ? AND status IN ('awaiting_payment','awaiting_review') ORDER BY id DESC LIMIT 1"
+  ).get(id);
+  return {
+    hasPurchased: Number(completed?.value || 0) === 1,
+    activeTariffRequest: active ? {
+      id: Number(active.id),
+      offerId: active.offer_id,
+      name: active.offer_name,
+      kind: active.offer_kind,
+      quantity: Number(active.quantity),
+      priceRub: Number(active.price_rub),
+      status: active.status
+    } : null
+  };
+}
+
+function sendLiveTariffState(userId, notice = '') {
+  const stream = liveStreams.get(String(userId));
+  if (!stream) return;
+  try {
+    const state = getTariffState(userId);
+    stream.write('event: tariff\ndata: ' + JSON.stringify({ ...state, notice: cleanText(notice, 400) }) + '\n\n');
+  } catch (error) {
+    console.warn('[tariff state event]', error?.message || error);
+  }
+}
+
+async function vkApi(method, parameters) {
+  if (!communityToken) throw new Error('VK_GROUP_TOKEN не настроен на сервере.');
+  const body = new URLSearchParams();
+  body.set('access_token', communityToken);
+  body.set('v', vkApiVersion);
+  for (const [key, value] of Object.entries(parameters || {})) {
+    if (value === undefined || value === null) continue;
+    body.set(key, typeof value === 'string' ? value : String(value));
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const response = await fetch('https://api.vk.com/method/' + method, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+      signal: controller.signal
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload || payload.error) {
+      const vkError = payload?.error;
+      const message = vkError?.error_msg || ('VK API HTTP ' + response.status);
+      const error = new Error(message);
+      error.vkCode = vkError?.error_code;
+      throw error;
+    }
+    return payload.response;
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('VK API не ответил за 10 секунд.');
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function vkMessageId(response) {
+  if (Number.isSafeInteger(response) && response > 0) return String(response);
+  if (Array.isArray(response) && response.length) {
+    const first = response[0];
+    if (Number.isSafeInteger(first)) return String(first);
+    if (first && first.message_id) return String(first.message_id);
+  }
+  if (response && response.message_id) return String(response.message_id);
+  return '';
+}
+
+async function sendCommunityMessage(peerId, message, options = {}) {
+  const parameters = {
+    peer_id: String(peerId),
+    random_id: String(crypto.randomInt(1, 2147483647)),
+    message: String(message)
+  };
+  if (options.attachment) parameters.attachment = options.attachment;
+  if (options.keyboard) parameters.keyboard = options.keyboard;
+  return vkApi('messages.send', parameters);
+}
+
+async function deleteCommunityMessage(messageId) {
+  if (!messageId || !communityToken) return;
+  try {
+    await vkApi('messages.delete', { message_ids: String(messageId), delete_for_all: 1 });
+  } catch (error) {
+    console.warn('[tariff message delete]', String(messageId), error?.message || error);
+  }
+}
+
+function addUtcMonths(baseDate, months) {
+  const expiry = new Date(baseDate);
+  const originalDay = expiry.getUTCDate();
+  expiry.setUTCDate(1);
+  expiry.setUTCMonth(expiry.getUTCMonth() + months);
+  const lastDayOfMonth = new Date(Date.UTC(expiry.getUTCFullYear(), expiry.getUTCMonth() + 1, 0)).getUTCDate();
+  expiry.setUTCDate(Math.min(originalDay, lastDayOfMonth));
+  return expiry;
+}
+
+function buildTariffReviewKeyboard(requestId) {
+  return JSON.stringify({
+    inline: true,
+    one_time: false,
+    buttons: [[
+      {
+        action: {
+          type: 'callback',
+          label: 'Начислить',
+          payload: JSON.stringify({ action: 'approve_tariff', request_id: String(requestId) })
+        },
+        color: 'positive'
+      },
+      {
+        action: {
+          type: 'callback',
+          label: 'Отменить',
+          payload: JSON.stringify({ action: 'reject_tariff', request_id: String(requestId) })
+        },
+        color: 'negative'
+      }
+    ]]
+  });
+}
+
+function getIncomingPhotoAttachment(message) {
+  const attachments = Array.isArray(message?.attachments) ? message.attachments : [];
+  for (const item of attachments) {
+    const photo = item?.type === 'photo' ? item.photo : (item?.photo || item?.attachment?.photo);
+    if (!photo || !photo.id || !photo.owner_id) continue;
+    const accessKey = photo.access_key ? '_' + String(photo.access_key) : '';
+    return 'photo' + String(photo.owner_id) + '_' + String(photo.id) + accessKey;
+  }
+  return '';
+}
+
+function callbackSecretMatches(received) {
+  if (!callbackSecret || typeof received !== 'string') return false;
+  const expectedBytes = Buffer.from(callbackSecret);
+  const receivedBytes = Buffer.from(received);
+  return expectedBytes.length === receivedBytes.length && crypto.timingSafeEqual(expectedBytes, receivedBytes);
+}
+
+function parseCallbackPayload(payload) {
+  if (payload && typeof payload === 'object') return payload;
+  if (typeof payload !== 'string' || !payload) return null;
+  try {
+    const parsed = JSON.parse(payload);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+async function answerAdminButton(event, message) {
+  try {
+    await vkApi('messages.sendMessageEventAnswer', {
+      event_id: String(event.event_id || ''),
+      user_id: String(event.user_id || ''),
+      peer_id: String(event.peer_id || event.user_id || ''),
+      event_data: JSON.stringify({ type: 'show_snackbar', text: String(message).slice(0, 200) })
+    });
+  } catch (error) {
+    console.warn('[tariff button answer]', error?.message || error);
+  }
+}
+
+function decideTariffRequest(requestId, decision) {
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const transaction = db.transaction(() => {
+    const request = db.prepare('SELECT * FROM tariff_requests WHERE id = ?').get(requestId);
+    if (!request || request.status !== 'awaiting_review') return { ok: false, request: request || null };
+
+    const nextStatus = decision === 'approve' ? 'approved' : 'rejected';
+    const marked = db.prepare(
+      "UPDATE tariff_requests SET status = ?, updated_at = ?, completed_at = ? WHERE id = ? AND status = 'awaiting_review'"
+    ).run(nextStatus, nowIso, nowIso, requestId);
+    if (marked.changes !== 1) return { ok: false, request: request };
+
+    let subscriptionUntil = null;
+    if (decision === 'approve') {
+      if (request.offer_kind === 'pack') {
+        const grant = grantPack.run(Number(request.quantity), String(request.vk_id));
+        if (grant.changes !== 1) throw new Error('Не удалось начислить пакет сканов: пользователь не найден.');
+        recordScanCredit.run(
+          String(request.vk_id),
+          nowIso,
+          Number(request.quantity),
+          'purchase',
+          'Покупка тарифа «' + request.offer_name + '», заявка №' + request.id
+        );
+      } else if (request.offer_kind === 'subscription') {
+        const user = getUserEntitlements.get(String(request.vk_id));
+        if (!user) throw new Error('Не удалось подключить подписку: пользователь не найден.');
+        const currentExpiry = user.subscription_until && Date.parse(user.subscription_until) > now.getTime()
+          ? new Date(user.subscription_until)
+          : now;
+        subscriptionUntil = addUtcMonths(currentExpiry, Number(request.quantity)).toISOString();
+        const result = updateSubscription.run(subscriptionUntil, String(request.vk_id));
+        if (result.changes !== 1) throw new Error('Не удалось сохранить срок подписки.');
+      } else {
+        throw new Error('У заявки неизвестный тип тарифа.');
+      }
+    }
+
+    return { ok: true, request: { ...request, status: nextStatus }, subscriptionUntil };
+  });
+  return transaction();
+}
+
+async function handleIncomingCommunityMessage(message) {
+  const userId = String(message?.from_id || '');
+  if (!/^\d{1,20}$/.test(userId) || Number(userId) <= 0) return;
+  if (String(message?.peer_id || userId) !== userId) return;
+
+  const active = db.prepare(
+    "SELECT * FROM tariff_requests WHERE vk_id = ? AND status IN ('awaiting_payment','awaiting_review') ORDER BY id DESC LIMIT 1"
+  ).get(userId);
+  if (!active) return;
+
+  const photoAttachment = getIncomingPhotoAttachment(message);
+  if (active.status === 'awaiting_review') {
+    if (photoAttachment) {
+      try {
+        await sendCommunityMessage(userId, 'Скриншот по этой заявке уже получен. Она ожидает проверки.');
+      } catch (error) {
+        console.warn('[tariff duplicate screenshot reply]', error?.message || error);
+      }
+    }
+    return;
+  }
+
+  if (!photoAttachment) {
+    if (String(message?.text || '').trim()) {
+      try {
+        await sendCommunityMessage(userId, 'Чтобы отправить заявку на проверку, пришли скриншот оплаты именно фотографией в этот диалог с Roadnote.');
+      } catch (error) {
+        console.warn('[tariff screenshot reminder]', error?.message || error);
+      }
+    }
+    return;
+  }
+
+  const messageId = String(message?.id || message?.conversation_message_id || '');
+  const nowIso = new Date().toISOString();
+  const moved = db.prepare(
+    "UPDATE tariff_requests SET status = 'awaiting_review', screenshot_attachment = ?, screenshot_message_id = ?, updated_at = ? " +
+    "WHERE id = ? AND status = 'awaiting_payment'"
+  ).run(photoAttachment, messageId, nowIso, Number(active.id));
+  if (moved.changes !== 1) return;
+
+  const user = db.prepare('SELECT first_name, last_name FROM users WHERE vk_id = ?').get(userId);
+  const displayName = [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim() || 'Пользователь VK';
+  const adminText = [
+    'Заявка на тариф №' + active.id,
+    'Пользователь: ' + displayName + ' (VK ID ' + userId + ')',
+    'Профиль: https://vk.com/id' + userId,
+    'Тариф: ' + active.offer_name,
+    'Стоимость: ' + formatRubles(active.price_rub),
+    'Скриншот оплаты приложен. Подтверди начисление или отклони заявку.'
+  ].join('\n');
+
+  let adminMessageId = '';
+  try {
+    const response = await sendCommunityMessage(adminVkId, adminText, {
+      attachment: photoAttachment,
+      keyboard: buildTariffReviewKeyboard(active.id)
+    });
+    adminMessageId = vkMessageId(response);
+    if (!adminMessageId) throw new Error('VK не вернул ID сообщения с заявкой.');
+  } catch (error) {
+    console.error('[tariff admin notification]', error?.message || error);
+    db.prepare(
+      "UPDATE tariff_requests SET status = 'awaiting_payment', screenshot_attachment = NULL, screenshot_message_id = NULL, updated_at = ? " +
+      "WHERE id = ? AND status = 'awaiting_review' AND screenshot_message_id = ?"
+    ).run(new Date().toISOString(), Number(active.id), messageId);
+    try {
+      await sendCommunityMessage(userId, 'Не удалось передать скриншот администратору. Заявка сохранена — проверь, что сообщения Roadnote разрешены, и отправь скриншот ещё раз.');
+    } catch (replyError) {
+      console.warn('[tariff admin delivery failure reply]', replyError?.message || replyError);
+    }
+    sendLiveTariffState(userId);
+    return;
+  }
+
+  const saved = db.prepare(
+    "UPDATE tariff_requests SET admin_message_id = ?, updated_at = ? WHERE id = ? AND status = 'awaiting_review' AND screenshot_message_id = ?"
+  ).run(adminMessageId, new Date().toISOString(), Number(active.id), messageId);
+  if (saved.changes !== 1) {
+    await deleteCommunityMessage(adminMessageId);
+    return;
+  }
+
+  try {
+    await sendCommunityMessage(userId, 'Скриншот получен и передан администратору. Заявка ожидает проверки.');
+  } catch (error) {
+    console.warn('[tariff screenshot confirmation]', error?.message || error);
+  }
+  sendLiveTariffState(userId, 'Скриншот получен. Заявка ожидает проверки.');
+}
+
+async function handleAdminMessageEvent(event) {
+  const userId = String(event?.user_id || '');
+  if (!adminVkId || userId !== adminVkId) {
+    await answerAdminButton(event || {}, 'Действие доступно только администратору.');
+    return;
+  }
+  const payload = parseCallbackPayload(event?.payload);
+  const requestId = Number(payload?.request_id);
+  const decision = payload?.action === 'approve_tariff' ? 'approve'
+    : payload?.action === 'reject_tariff' ? 'reject'
+    : '';
+  if (!Number.isSafeInteger(requestId) || requestId < 1 || !decision) {
+    await answerAdminButton(event, 'Не удалось распознать действие.');
+    return;
+  }
+
+  let result;
+  try {
+    result = decideTariffRequest(requestId, decision);
+  } catch (error) {
+    console.error('[tariff decision]', error?.message || error);
+    await answerAdminButton(event, 'Не удалось обработать заявку. Попробуй ещё раз.');
+    return;
+  }
+  if (!result.ok) {
+    await answerAdminButton(event, 'Заявка уже закрыта или заменена. Эти кнопки неактуальны.');
+    return;
+  }
+
+  const request = result.request;
+  await deleteCommunityMessage(request.admin_message_id);
+  await deleteCommunityMessage(request.bot_message_id);
+
+  let notice;
+  if (decision === 'approve') {
+    if (request.offer_kind === 'pack') {
+      notice = 'Тариф «' + request.offer_name + '» подключён. Начислено ' + request.quantity + ' сканов.';
+    } else {
+      const until = result.subscriptionUntil
+        ? new Date(result.subscriptionUntil).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Moscow' })
+        : '';
+      notice = 'Тариф «' + request.offer_name + '» подключён.' + (until ? ' Безлимит действует до ' + until + '.' : '');
+    }
+  } else {
+    notice = 'Заявка на тариф «' + request.offer_name + '» отклонена. Тариф не начислен.';
+  }
+
+  try {
+    await sendCommunityMessage(request.vk_id, notice);
+  } catch (error) {
+    console.error('[tariff decision user notification]', error?.message || error);
+  }
+  sendLiveTariffState(request.vk_id, notice);
+  await answerAdminButton(event, decision === 'approve' ? 'Тариф начислен.' : 'Заявка отклонена.');
+}
+
+
+app.post('/api/tariffs/state', (req, res) => {
+  try {
+    const { userId } = parseLaunchParams(req.body?.launchParams);
+    return res.json({ ok: true, ...getTariffState(userId) });
+  } catch {
+    return res.status(401).json({ error: 'Открой Roadnote внутри VK и попробуй ещё раз.' });
+  }
+});
+
+app.post('/api/tariffs/request', async (req, res) => {
+  let userId;
+  try {
+    ({ userId } = parseLaunchParams(req.body?.launchParams));
+  } catch {
+    return res.status(401).json({ error: 'Не удалось подтвердить аккаунт VK. Перезапусти Mini App.' });
+  }
+  if (!communityToken) {
+    return res.status(503).json({ error: 'Сообщения сообщества пока не настроены на сервере. Заявка не создана.' });
+  }
+  const offerId = String(req.body?.offerId || '');
+  const offer = tariffOffers[offerId];
+  if (!offer) return res.status(400).json({ error: 'Выбран неизвестный тариф.' });
+  const user = db.prepare('SELECT vk_id FROM users WHERE vk_id = ?').get(userId);
+  if (!user) return res.status(409).json({ error: 'Сначала дождись загрузки баланса и попробуй снова.' });
+
+  const stateBefore = getTariffState(userId);
+  const discounted = !stateBefore.hasPurchased;
+  const priceRub = discounted ? offer.promoPrice : offer.regularPrice;
+  const nowIso = new Date().toISOString();
+  let requestId = 0;
+  let previous = null;
+  try {
+    db.transaction(() => {
+      previous = db.prepare(
+        "SELECT * FROM tariff_requests WHERE vk_id = ? AND status IN ('awaiting_payment','awaiting_review') ORDER BY id DESC LIMIT 1"
+      ).get(userId) || null;
+      if (previous) {
+        db.prepare("UPDATE tariff_requests SET status = 'replaced', updated_at = ? WHERE id = ? AND status IN ('awaiting_payment','awaiting_review')")
+          .run(nowIso, Number(previous.id));
+      }
+      const created = db.prepare(
+        "INSERT INTO tariff_requests (vk_id, offer_id, offer_name, offer_kind, quantity, price_rub, regular_price_rub, is_discounted, status, created_at, updated_at) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'awaiting_payment', ?, ?)"
+      ).run(
+        userId, offer.id, offer.name, offer.kind, offer.quantity, priceRub, offer.regularPrice,
+        discounted ? 1 : 0, nowIso, nowIso
+      );
+      requestId = Number(created.lastInsertRowid);
+    })();
+  } catch (error) {
+    console.error('[tariff request create]', error?.message || error);
+    return res.status(409).json({ error: 'Не удалось создать заявку. Обнови страницу и попробуй ещё раз.' });
+  }
+
+  const message = [
+    'Заявка на тариф «' + offer.name + '» создана.',
+    'Стоимость: ' + formatRubles(priceRub) + (discounted ? ' (цена первой покупки со скидкой).' : '.'),
+    'Ссылка на оплату: появится позже (пока заглушка).',
+    'После оплаты пришли скриншот сюда, в сообщения Roadnote. После проверки тариф подключит администратор.'
+  ].join('\n');
+
+  let response;
+  let sentMessageId = '';
+  try {
+    response = await sendCommunityMessage(userId, message);
+    sentMessageId = vkMessageId(response);
+    if (!sentMessageId) throw new Error('VK не вернул ID сообщения с тарифом.');
+  } catch (error) {
+    console.error('[tariff request message]', error?.message || error);
+    db.transaction(() => {
+      db.prepare("UPDATE tariff_requests SET status = 'delivery_failed', updated_at = ? WHERE id = ? AND status IN ('awaiting_payment','awaiting_review')")
+        .run(new Date().toISOString(), requestId);
+      if (previous) {
+        db.prepare(
+          "UPDATE tariff_requests SET status = ?, updated_at = ? WHERE id = ? AND status = 'replaced' " +
+          "AND NOT EXISTS (SELECT 1 FROM tariff_requests WHERE vk_id = ? AND status IN ('awaiting_payment','awaiting_review'))"
+        ).run(previous.status, new Date().toISOString(), Number(previous.id), userId);
+      }
+    })();
+    sendLiveTariffState(userId);
+    return res.status(502).json({
+      error: 'Не удалось написать тебе от сообщества. Проверь разрешение на сообщения и попробуй ещё раз.',
+      ...getTariffState(userId)
+    });
+  }
+
+  const saved = db.prepare(
+    "UPDATE tariff_requests SET bot_message_id = ?, updated_at = ? WHERE id = ? AND status IN ('awaiting_payment','awaiting_review')"
+  ).run(sentMessageId, new Date().toISOString(), requestId);
+  if (saved.changes !== 1) {
+    await deleteCommunityMessage(sentMessageId);
+    sendLiveTariffState(userId);
+    return res.status(409).json({
+      error: 'Заявка была заменена более новым запросом.',
+      ...getTariffState(userId)
+    });
+  }
+
+  if (previous) {
+    await deleteCommunityMessage(previous.bot_message_id);
+    await deleteCommunityMessage(previous.admin_message_id);
+  }
+  sendLiveTariffState(userId, 'Сообщение с тарифом отправлено. Пришли скриншот оплаты в диалог с Roadnote.');
+  return res.json({ ok: true, ...getTariffState(userId) });
+});
+
+app.post('/api/vk/callback', (req, res) => {
+  const event = req.body || {};
+  if (String(event.group_id || '') !== communityId || !callbackSecretMatches(event.secret)) {
+    return res.status(403).send('forbidden');
+  }
+  if (event.type === 'confirmation') {
+    if (!callbackConfirmation) return res.status(503).send('VK_CALLBACK_CONFIRMATION is not configured');
+    return res.type('text/plain').send(callbackConfirmation);
+  }
+
+  res.status(200).type('text/plain').send('ok');
+  if (event.type === 'message_new') {
+    const message = event.object?.message || event.object;
+    Promise.resolve().then(() => handleIncomingCommunityMessage(message))
+      .catch(error => console.error('[VK message_new tariff handler]', error?.message || error));
+  } else if (event.type === 'message_event') {
+    const callbackEvent = event.object || {};
+    Promise.resolve().then(() => handleAdminMessageEvent(callbackEvent))
+      .catch(error => console.error('[VK message_event tariff handler]', error?.message || error));
+  }
+});
+
 app.get('/health', (_req, res) => {
   res.json({ ok: true, database: 'connected' });
 });
@@ -611,6 +1148,7 @@ app.post('/api/session', (req, res) => {
     const unlimited = Number(balanceRow?.unlimited || 0) === 1;
     return res.json({
       ok: true,
+      ...getTariffState(userId),
       isAdmin: userId === adminVkId,
       scanBalance,
       subscriptionUntil,
