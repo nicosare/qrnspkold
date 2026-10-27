@@ -879,6 +879,12 @@
     </style>
 <style>
 .start-applications-section{width:100%;margin:0 0 24px;padding:19px 16px 16px;border:1px solid #e3e8ef;border-radius:22px;background:#fff;box-shadow:0 8px 24px rgba(31,65,105,.045);text-align:left}
+.start-applications-section.is-collapsed .tariff-applications-group{display:none}
+.start-applications-section.is-collapsed .tariff-applications-group.has-latest-request{display:block}
+.start-applications-section.is-collapsed .tariff-applications-group.has-latest-request .tariff-applications-label,.start-applications-section.is-collapsed .tariff-applications-group.has-latest-request .tariff-applications-empty{display:none}
+.start-applications-section.is-collapsed .tariff-application-row:not(.is-latest){display:none}
+.tariff-applications-toggle{width:36px;height:36px;border:1px solid #e2e8f0;border-radius:12px;background:#f6f9fc;color:#64748b;font-size:22px;line-height:1;cursor:pointer}
+.tariff-applications-heading-actions{display:flex;align-items:center;gap:8px}
 .tariff-refresh{width:36px;height:36px;border:1px solid #e2e8f0;border-radius:12px;background:#f6f9fc;color:#2787f5;font-size:23px;line-height:1;cursor:pointer}
 .tariff-applications-group{margin-top:15px}.tariff-applications-label{margin-bottom:8px;color:#687586;font-size:12px;font-weight:800}
 .tariff-applications-empty{padding:12px 13px;border:1px dashed #dce4ed;border-radius:13px;color:#8792a0;font-size:13px;line-height:1.4}
@@ -1046,10 +1052,10 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             <p class="start-offers-note">После первой подтверждённой покупки скидка пропадёт на всех тарифах.</p><p id="start-tariff-status" class="start-tariff-status" role="status" aria-live="polite"></p>
         </section>
 
-        <section class="start-applications-section" aria-labelledby="start-applications-title">
+        <section class="start-applications-section is-collapsed" aria-labelledby="start-applications-title">
             <div class="start-offers-section-heading">
                 <div><div class="start-section-kicker">МОИ ПОКУПКИ</div><h3 id="start-applications-title">Заявки</h3></div>
-                <button id="tariff-applications-refresh" class="tariff-refresh" type="button" aria-label="Обновить заявки">↻</button>
+                <div class="tariff-applications-heading-actions"><button id="tariff-applications-toggle" class="tariff-applications-toggle" type="button" aria-label="Развернуть заявки" aria-expanded="false">⌄</button><button id="tariff-applications-refresh" class="tariff-refresh" type="button" aria-label="Обновить заявки">↻</button></div>
             </div>
             <div id="tariff-applications-active" class="tariff-applications-group"><div class="tariff-applications-label">Активная заявка</div><div class="tariff-applications-empty">Активных заявок пока нет.</div></div>
             <div id="tariff-applications-approved" class="tariff-applications-group"><div class="tariff-applications-label">Одобренные</div><div class="tariff-applications-empty">Пока нет одобренных заявок.</div></div>
