@@ -160,13 +160,15 @@
     // required to contain { result: true }. Never gate delivery on that payload.
     if (communityPermissionKnown !== true) {
       setStatus('Запрашиваю разрешение на сообщения от Roadnote…', false);
+      let permissionDialogResolved = false;
       try {
-        // VK Bridge versions may resolve this method with no payload. A missing
-        // {result:true} is not proof of denial; verify the permission via VK API.
+        // VK Bridge clients do not all return the same payload. A resolved
+        // request is a useful consent signal even when the result object is absent.
         const bridgeResult = await window.vkBridge.send('VKWebAppAllowMessagesFromGroup', {
           group_id: communityId,
           key: 'roadnote_tariff_' + launchUserId
         });
+        permissionDialogResolved = !(bridgeResult && bridgeResult.result === false);
         console.info('[Roadnote permission dialog resolved]', JSON.stringify({
           userId: launchUserId,
           groupId: communityId,
@@ -174,8 +176,8 @@
           result: bridgeResult && bridgeResult.result
         }));
       } catch (error) {
-        // Some VK clients reject the Bridge promise after the native dialog closes.
-        // Still check the actual permission state below before sending anything.
+        // Some clients reject after the native dialog closes. Verify the saved
+        // permission below, but keep the actual messages.send result authoritative.
         console.warn('[Roadnote permission dialog rejected]', JSON.stringify({
           userId: launchUserId,
           groupId: communityId,
@@ -183,29 +185,44 @@
         }));
       }
 
-      let permissionAllowed;
+      let permissionAllowed = false;
+      let permissionCheckError = null;
       try {
-        // VK can close the native dialog before its permission state becomes
-        // visible to messages.isMessagesFromGroupAllowed. Poll briefly instead
-        // of treating the first immediate "is_allowed: 0" as final denial.
-        permissionAllowed = await waitForCommunityMessagePermission(8000);
+        // VK's permission status can lag or return a false negative after consent.
+        // This is a best-effort check, not a hard gate on message delivery.
+        permissionAllowed = await waitForCommunityMessagePermission(2500);
       } catch (error) {
-        console.error('[Roadnote permission verification failed]', error);
-        rememberCommunityPermission(false);
-        setStatus('Не удалось проверить разрешение VK. Заявка не отправлена. Нажми ещё раз.', true);
-        return;
+        permissionCheckError = error;
+        console.warn('[Roadnote permission verification failed]', error);
       }
       console.info('[Roadnote permission verified after dialog]', JSON.stringify({
         userId: launchUserId,
         groupId: communityId,
-        allowed: permissionAllowed
+        allowed: permissionAllowed,
+        dialogResolved: permissionDialogResolved,
+        checkError: permissionCheckError ? String(permissionCheckError.message || permissionCheckError) : null
       }));
-      if (!permissionAllowed) {
+
+      if (!permissionAllowed && !permissionDialogResolved) {
         rememberCommunityPermission(false);
-        setStatus('VK не подтвердил разрешение на сообщения от Roadnote. Заявка не отправлена.', true);
+        setStatus(permissionCheckError
+          ? 'Не удалось проверить разрешение VK. Заявка не отправлена. Нажми ещё раз.'
+          : 'VK не подтвердил разрешение на сообщения от Roadnote. Если раньше нажимал отказ, включи сообщения в диалоге сообщества Roadnote и попробуй ещё раз.', true);
         return;
       }
-      rememberCommunityPermission(true);
+
+      if (permissionAllowed) {
+        rememberCommunityPermission(true);
+      } else {
+        // Do not block on a stale status response after VK completed the native
+        // permission request. The server will verify it by sending the message;
+        // VK error 901 is handled explicitly and leaves the request retryable.
+        console.warn('[Roadnote permission status lagging; attempting actual delivery]', JSON.stringify({
+          userId: launchUserId,
+          groupId: communityId,
+          dialogResolved: permissionDialogResolved
+        }));
+      }
     }
 
     setStatus('Отправляю заявку…', false);
