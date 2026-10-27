@@ -995,7 +995,7 @@ app.post('/api/tariffs/cancel', async (req, res) => {
     return res.status(400).json({ error: 'Не удалось определить заявку.' });
   }
   const request = db.prepare(
-    "SELECT admin_message_id FROM tariff_requests WHERE id = ? AND vk_id = ? AND status IN ('awaiting_payment','awaiting_review')"
+    "SELECT admin_message_id, bot_message_id FROM tariff_requests WHERE id = ? AND vk_id = ? AND status IN ('awaiting_payment','awaiting_review')"
   ).get(requestId, userId);
   if (!request) {
     return res.status(409).json({ error: 'Эта заявка уже закрыта или заменена.', ...getTariffState(userId) });
@@ -1009,6 +1009,7 @@ app.post('/api/tariffs/cancel', async (req, res) => {
     return res.status(409).json({ error: 'Эта заявка уже закрыта или заменена.', ...getTariffState(userId) });
   }
   if (request.admin_message_id) await deleteCommunityMessage(request.admin_message_id);
+  if (request.bot_message_id) await deleteCommunityMessage(request.bot_message_id);
   sendLiveTariffState(userId, 'Активная заявка отозвана.');
   return res.json({ ok: true, ...getTariffState(userId) });
 });
