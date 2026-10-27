@@ -155,7 +155,7 @@
       const collapsed = applicationsSection.classList.toggle('is-collapsed');
       applicationsToggle.setAttribute('aria-expanded', String(!collapsed));
       applicationsToggle.setAttribute('aria-label', collapsed ? 'Развернуть заявки' : 'Свернуть заявки');
-      applicationsToggle.textContent = collapsed ? '⌄' : '⌃';
+      /* Direction is styled from the section's collapsed state. */
     });
   }
 
