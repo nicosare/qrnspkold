@@ -34,6 +34,7 @@ const paytagDirectTimeoutMs = Math.max(3000, Number(process.env.PAYTAG_DIRECT_TI
 const paytagFetchesInFlight = new Map();
 const liveStreams = new Map();
 const liveTokens = new Map();
+const avatarUploadAwaiting = new Set();
 function makeLiveToken(userId) {
   const now = Date.now();
   for (const [token, record] of liveTokens) {
@@ -624,29 +625,65 @@ function addUtcMonths(baseDate, months) {
   return expiry;
 }
 
-function buildTariffReviewKeyboard(requestId) {
+function buildAdminMenuKeyboard() {
   return JSON.stringify({
-    inline: true,
     one_time: false,
-    buttons: [[
-      {
-        action: {
-          type: 'callback',
-          label: 'Начислить',
-          payload: JSON.stringify({ action: 'approve_tariff', request_id: String(requestId) })
-        },
-        color: 'positive'
-      },
-      {
-        action: {
-          type: 'callback',
-          label: 'Отменить',
-          payload: JSON.stringify({ action: 'reject_tariff', request_id: String(requestId) })
-        },
-        color: 'negative'
-      }
-    ]]
+    inline: false,
+    buttons: [[{
+      action: { type: 'text', label: 'Обновить иконку', payload: JSON.stringify({ action: 'update_community_avatar' }) },
+      color: 'primary'
+    }]]
   });
+}
+
+async function sendAdminMenu(message = 'Меню администратора Roadnote.') {
+  if (!adminVkId) return;
+  await sendCommunityMessage(adminVkId, message, { keyboard: buildAdminMenuKeyboard() });
+}
+
+async function getPhotoUrlFromMessage(message) {
+  const messageId = String(message?.id || message?.conversation_message_id || '');
+  if (!messageId) throw new Error('Не удалось определить сообщение с фотографией.');
+  const response = await vkApi('messages.getById', { message_ids: messageId });
+  const item = response?.items?.[0];
+  const attachments = Array.isArray(item?.attachments) ? item.attachments : [];
+  const photoAttachment = attachments.find(item => item?.type === 'photo' && item.photo);
+  const sizes = Array.isArray(photoAttachment?.photo?.sizes) ? photoAttachment.photo.sizes : [];
+  const best = sizes.filter(size => size?.url).sort((a, b) => (Number(b.width) * Number(b.height)) - (Number(a.width) * Number(a.height)))[0];
+  if (!best?.url) throw new Error('VK не вернул ссылку на загруженную фотографию.');
+  return best.url;
+}
+
+async function setCommunityAvatarFromMessage(message) {
+  const sourceUrl = await getPhotoUrlFromMessage(message);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  let imageResponse;
+  try {
+    imageResponse = await fetch(sourceUrl, { signal: controller.signal, redirect: 'follow' });
+    if (!imageResponse.ok) throw new Error('Не удалось скачать фотографию из VK (HTTP ' + imageResponse.status + ').');
+    const contentType = (imageResponse.headers.get('content-type') || '').split(';')[0].toLowerCase();
+    if (!contentType.startsWith('image/')) throw new Error('Вложение не распознано как изображение.');
+    const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+    if (!imageBuffer.length || imageBuffer.length > 15 * 1024 * 1024) throw new Error('Размер изображения пустой или превышает 15 МБ.');
+
+    const uploadInfo = await vkApi('photos.getOwnerPhotoUploadServer', { owner_id: '-' + communityId });
+    if (!uploadInfo?.upload_url) throw new Error('VK не выдал адрес загрузки аватара.');
+    const form = new FormData();
+    form.append('photo', new Blob([imageBuffer], { type: contentType }), 'roadnote-avatar.' + (contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg'));
+    const uploadResponse = await fetch(uploadInfo.upload_url, { method: 'POST', body: form });
+    const uploadResult = await uploadResponse.json().catch(() => null);
+    if (!uploadResponse.ok || !uploadResult?.server || !uploadResult?.hash || !uploadResult?.photo) {
+      throw new Error('VK не принял изображение для аватара сообщества.');
+    }
+    await vkApi('photos.saveOwnerPhoto', {
+      server: uploadResult.server,
+      hash: uploadResult.hash,
+      photo: uploadResult.photo
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function getIncomingPhotoAttachment(message) {
@@ -740,6 +777,38 @@ async function handleIncomingCommunityMessage(message) {
   if (!/^\d{1,20}$/.test(userId) || Number(userId) <= 0) return;
   if (String(message?.peer_id || userId) !== userId) return;
 
+  if (adminVkId && userId === adminVkId) {
+    const text = String(message?.text || '').trim().toLowerCase();
+    const photoAttachment = getIncomingPhotoAttachment(message);
+    const buttonPayload = (() => {
+      try { return JSON.parse(String(message?.payload || '{}')); } catch { return {}; }
+    })();
+    if (text === 'обновить иконку' || buttonPayload.action === 'update_community_avatar') {
+      avatarUploadAwaiting.add(userId);
+      await sendAdminMenu('Пришли следующим сообщением фотографию — она станет аватаром сообщества и иконкой Roadnote в миниаппе.');
+      return;
+    }
+    if (avatarUploadAwaiting.has(userId) && photoAttachment) {
+      try {
+        await setCommunityAvatarFromMessage(message);
+        avatarUploadAwaiting.delete(userId);
+        await sendAdminMenu('Готово! Аватар сообщества обновлён. Иконка на стартовой странице миниаппа будет загружать его автоматически.');
+      } catch (error) {
+        console.error('[Roadnote community avatar update]', error?.message || error);
+        await sendAdminMenu('Не получилось обновить аватар: ' + String(error?.message || 'неизвестная ошибка').slice(0, 250) + '. Попробуй отправить фото ещё раз.');
+      }
+      return;
+    }
+    if (avatarUploadAwaiting.has(userId) && text) {
+      await sendAdminMenu('Жду фотографию. Пришли её сообщением в этот диалог.');
+      return;
+    }
+    if (!photoAttachment && (text === 'меню' || text === 'начать' || text === 'start')) {
+      await sendAdminMenu();
+      return;
+    }
+  }
+
   const active = db.prepare(
     "SELECT * FROM tariff_requests WHERE vk_id = ? AND status IN ('awaiting_payment','awaiting_review') ORDER BY id DESC LIMIT 1"
   ).get(userId);
@@ -791,7 +860,6 @@ async function handleIncomingCommunityMessage(message) {
   try {
     const response = await sendCommunityMessage(adminVkId, adminText, {
       attachment: photoAttachment,
-      keyboard: buildTariffReviewKeyboard(active.id)
     });
     adminMessageId = vkMessageId(response);
     if (!adminMessageId) throw new Error('VK не вернул ID сообщения с заявкой.');
@@ -1127,7 +1195,6 @@ app.post('/api/tariffs/screenshot', async (req, res) => {
   try {
     const response = await sendCommunityMessage(adminVkId, adminText, {
       attachment,
-      keyboard: buildTariffReviewKeyboard(requestId)
     });
     adminMessageId = vkMessageId(response);
     if (!adminMessageId) throw new Error('VK не вернул ID сообщения с заявкой.');
@@ -1186,10 +1253,6 @@ app.post('/api/vk/callback', (req, res) => {
     const message = event.object?.message || event.object;
     Promise.resolve().then(() => handleIncomingCommunityMessage(message))
       .catch(error => console.error('[VK message_new tariff handler]', error?.message || error));
-  } else if (event.type === 'message_event') {
-    const callbackEvent = event.object || {};
-    Promise.resolve().then(() => handleAdminMessageEvent(callbackEvent))
-      .catch(error => console.error('[VK message_event tariff handler]', error?.message || error));
   }
 });
 
