@@ -2076,6 +2076,9 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             return 'evening';
         }
         function isRoadnotePromoAvailable() {
+            // Do not show commercial messages until the authenticated tariff state confirms
+            // that the first purchase has not happened.
+            if (window.roadnoteHasPurchased !== false) return false;
             const offers = Array.from(document.querySelectorAll('.start-offer[data-regular-price][data-promo-price]'));
             if (!offers.length) return false;
             return offers.some(offer => {
@@ -2126,6 +2129,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             moodMessage.innerHTML = '<span class="mood-message-icon" aria-hidden="true" style="color:' + (moodColors[selected.color] || moodColors.blue) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + icon + '</svg></span><span class="mood-message-text"></span>';
             moodMessage.querySelector('.mood-message-text').textContent = selected.text;
         }
+        window.refreshRoadnoteMoodMessage = renderRoadnoteMoodMessage;
         renderRoadnoteMoodMessage();
 
         loadFromLocalStorage();
