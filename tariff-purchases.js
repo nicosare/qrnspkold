@@ -98,7 +98,8 @@
         const isActiveOffer = matchingRequests.length > 0;
         button.textContent = isActiveOffer ? 'Открыть заявку' : 'Оставить заявку';
         button.classList.toggle('is-requested', isActiveOffer);
-        button.setAttribute('aria-label', isActiveOffer ? 'Открыть активную заявку: ' + (state.activeTariffRequest.name || '') : 'Оставить заявку на ' + (card.querySelector('.start-offer-name')?.textContent || card.dataset.offerId));
+        const matchingRequest = matchingRequests.find(function (item) { return item.status === 'awaiting_payment'; }) || matchingRequests[0];
+        button.setAttribute('aria-label', isActiveOffer ? 'Открыть активную заявку: ' + (matchingRequest.name || '') : 'Оставить заявку на ' + (card.querySelector('.start-offer-name')?.textContent || card.dataset.offerId));
       }
     });
   }
