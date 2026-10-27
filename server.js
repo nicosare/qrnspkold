@@ -1654,6 +1654,28 @@ app.use((req, res, next) => {
   next();
 });
 
+// Do not expose the Mini App UI when the URL is opened outside VK.
+function isRoadnoteVkLaunch(req) {
+  const params = req.query || {};
+  return String(params.vk_app_id || '') === String(appId)
+    && Boolean(params.vk_platform)
+    && (Boolean(params.sign) || Boolean(params.vk_user_id));
+}
+
+function serveRoadnoteEntry(req, res) {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  if (!isRoadnoteVkLaunch(req)) {
+    res.status(200).type('html').send('');
+    return;
+  }
+  res.sendFile(path.join(__dirname, 'index.html'));
+}
+
+app.get('/', serveRoadnoteEntry);
+app.get('/index.html', serveRoadnoteEntry);
+
 app.use(express.static(__dirname, { index: 'index.html' }));
 app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
