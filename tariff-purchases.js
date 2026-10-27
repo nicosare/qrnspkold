@@ -8,6 +8,8 @@
   const approvedNode = document.getElementById('tariff-applications-approved');
   const rejectedNode = document.getElementById('tariff-applications-rejected');
   const listStatus = document.getElementById('tariff-applications-status');
+  const applicationsSection = document.querySelector('.start-applications-section');
+  const applicationsToggle = document.getElementById('tariff-applications-toggle');
   const tariffStatus = document.getElementById('start-tariff-status');
   let state = { hasPurchased: false, activeTariffRequest: null, tariffRequestHistory: [] };
   let busy = false;
@@ -110,7 +112,7 @@
     const meta = 'Заявка №' + request.id + ' · ' + dateLabel(request.createdAt);
     const rowTag = status === 'active' ? 'button' : 'div';
     const rowAttrs = status === 'active' ? ' type="button" data-open-tariff-request="' + esc(request.id) + '"' : '';
-    return '<' + rowTag + ' class="tariff-application-row"' + rowAttrs + '>' +
+    return '<' + rowTag + ' class="tariff-application-row" data-request-id="' + esc(request.id) + '"' + rowAttrs + '>' +
       '<span class="tariff-application-main"><span class="tariff-application-name">' + esc(request.name) + '</span>' +
       '<span class="tariff-application-meta">' + esc(meta) + '</span>' +
       '<span class="tariff-status-pill ' + pillClass + '">' + esc(label) + '</span></span>' +
@@ -130,6 +132,33 @@
     }).join('');
   }
 
+  function updateCollapsedApplications() {
+    if (!applicationsSection) return;
+    const rows = Array.from(applicationsSection.querySelectorAll('.tariff-application-row'));
+    rows.forEach(function (row) { row.classList.remove('is-latest'); });
+    applicationsSection.querySelectorAll('.tariff-applications-group').forEach(function (group) {
+      group.classList.remove('has-latest-request');
+    });
+    if (!rows.length) return;
+    const latest = rows.reduce(function (current, row) {
+      return !current || Number(row.dataset.requestId) > Number(current.dataset.requestId) ? row : current;
+    }, null);
+    if (latest) {
+      latest.classList.add('is-latest');
+      const group = latest.closest('.tariff-applications-group');
+      if (group) group.classList.add('has-latest-request');
+    }
+  }
+
+  if (applicationsToggle && applicationsSection) {
+    applicationsToggle.addEventListener('click', function () {
+      const collapsed = applicationsSection.classList.toggle('is-collapsed');
+      applicationsToggle.setAttribute('aria-expanded', String(!collapsed));
+      applicationsToggle.setAttribute('aria-label', collapsed ? 'Развернуть заявки' : 'Свернуть заявки');
+      applicationsToggle.textContent = collapsed ? '⌄' : '⌃';
+    });
+  }
+
   function renderState(next) {
     const activeRequests = next && Array.isArray(next.activeTariffRequests)
       ? next.activeTariffRequests
@@ -144,6 +173,7 @@
     renderListGroup(activeNode, 'Активные заявки', state.activeTariffRequests, 'active');
     renderListGroup(approvedNode, 'Одобренные', state.tariffRequestHistory.filter(function (item) { return item.status === 'approved'; }), 'approved');
     renderListGroup(rejectedNode, 'Отклонённые', state.tariffRequestHistory.filter(function (item) { return item.status === 'rejected'; }), 'rejected');
+    updateCollapsedApplications();
     if (tariffStatus) {
       tariffStatus.textContent = state.activeTariffRequest
         ? (state.activeTariffRequest.status === 'awaiting_review' ? 'Скриншот получен. Заявка ожидает проверки.' : 'Заявка сохранена. Скриншот оплаты можно отправить в блоке «Заявки».')
