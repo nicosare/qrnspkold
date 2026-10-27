@@ -995,7 +995,18 @@ app.post('/api/vk/callback', (req, res) => {
   }
 
   res.status(200).type('text/plain').send('ok');
-  if (event.type === 'message_new') {
+  if (event.type === 'message_allow') {
+    const permissionEvent = event.object || {};
+    console.info('[VK community message permission granted]', JSON.stringify({
+      user_id: permissionEvent.user_id || null,
+      key: permissionEvent.key || null
+    }));
+  } else if (event.type === 'message_deny') {
+    const permissionEvent = event.object || {};
+    console.warn('[VK community message permission denied]', JSON.stringify({
+      user_id: permissionEvent.user_id || null
+    }));
+  } else if (event.type === 'message_new') {
     const message = event.object?.message || event.object;
     Promise.resolve().then(() => handleIncomingCommunityMessage(message))
       .catch(error => console.error('[VK message_new tariff handler]', error?.message || error));
