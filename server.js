@@ -1598,7 +1598,7 @@ app.get('/api/events', (req, res) => {
   });
 });
 
-app.get('/api/admin/users', requireAdmin, (_req, res) => {
+app.get('/api/admin/users', requireAdmin, (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const now = Date.now();
   const users = listUsers.all().map(user => ({
