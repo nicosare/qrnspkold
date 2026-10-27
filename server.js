@@ -852,8 +852,18 @@ async function handleAdminMessageEvent(event) {
 
 app.post('/api/tariffs/permission', async (req, res) => {
   let userId;
+  let launchUserId = '';
   try {
-    ({ userId } = parseLaunchParams(req.body?.launchParams));
+    const parsed = parseLaunchParams(req.body?.launchParams);
+    userId = parsed.userId;
+    launchUserId = parsed.params.get('vk_user_id') || '';
+    console.info('[tariff identity diagnostic]', JSON.stringify({
+      endpoint: 'permission',
+      launchUserId,
+      verifiedUserId: userId,
+      idsMatch: launchUserId === userId,
+      appId: parsed.params.get('vk_app_id') || null
+    }));
   } catch {
     return res.status(401).json({ error: 'Открой Roadnote внутри VK и попробуй ещё раз.' });
   }
@@ -886,8 +896,19 @@ app.post('/api/tariffs/state', (req, res) => {
 
 app.post('/api/tariffs/request', async (req, res) => {
   let userId;
+  let launchUserId = '';
   try {
-    ({ userId } = parseLaunchParams(req.body?.launchParams));
+    const parsed = parseLaunchParams(req.body?.launchParams);
+    userId = parsed.userId;
+    launchUserId = parsed.params.get('vk_user_id') || '';
+    console.info('[tariff identity diagnostic]', JSON.stringify({
+      endpoint: 'request',
+      launchUserId,
+      verifiedUserId: userId,
+      idsMatch: launchUserId === userId,
+      appId: parsed.params.get('vk_app_id') || null,
+      offerId: String(req.body?.offerId || '')
+    }));
   } catch {
     return res.status(401).json({ error: 'Не удалось подтвердить аккаунт VK. Перезапусти Mini App.' });
   }
@@ -986,9 +1007,21 @@ app.post('/api/tariffs/request', async (req, res) => {
 
 app.post('/api/vk/callback', (req, res) => {
   const event = req.body || {};
-  if (String(event.group_id || '') !== communityId || !callbackSecretMatches(event.secret)) {
+  const groupMatches = String(event.group_id || '') === communityId;
+  const secretMatches = callbackSecretMatches(event.secret);
+  if (!groupMatches || !secretMatches) {
+    console.warn('[VK callback rejected]', JSON.stringify({
+      type: event.type || null,
+      groupMatches,
+      secretMatches
+    }));
     return res.status(403).send('forbidden');
   }
+  console.info('[VK callback received]', JSON.stringify({
+    type: event.type || null,
+    groupMatches,
+    secretMatches
+  }));
   if (event.type === 'confirmation') {
     if (!callbackConfirmation) return res.status(503).send('VK_CALLBACK_CONFIRMATION is not configured');
     return res.type('text/plain').send(callbackConfirmation);
