@@ -96,7 +96,9 @@
           : 'Заявка отправлена. Пришли скриншот оплаты в сообщения Roadnote.',
         false
       );
-    } else {
+    } else if (!busyOfferId) {
+      // A focus/visibility refresh must not erase the active permission or
+      // delivery status while a tariff request is in progress.
       setStatus('');
     }
   }
