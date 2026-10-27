@@ -144,7 +144,8 @@
       setStatus('Запрашиваю разрешение на сообщения от Roadnote…', false);
       try {
         await window.vkBridge.send('VKWebAppAllowMessagesFromGroup', {
-          group_id: communityId
+          group_id: communityId,
+          key: 'roadnote_tariff_' + launchUserId
         });
         rememberCommunityPermission(true);
       } catch (error) {
