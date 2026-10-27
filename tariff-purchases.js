@@ -169,6 +169,7 @@
       activeTariffRequest: activeRequests.find(function (item) { return item.status === 'awaiting_payment'; }) || activeRequests[0] || null,
       tariffRequestHistory: next && Array.isArray(next.tariffRequestHistory) ? next.tariffRequestHistory : []
     };
+    window.roadnoteHasPurchased = state.hasPurchased;
     updatePrices();
     renderListGroup(activeNode, 'Активные заявки', state.activeTariffRequests, 'active');
     renderListGroup(approvedNode, 'Одобренные', state.tariffRequestHistory.filter(function (item) { return item.status === 'approved'; }), 'approved');
@@ -189,6 +190,9 @@
       } else {
         activeModalRequest = state.activeTariffRequest;
       }
+    }
+    if (typeof window.refreshRoadnoteMoodMessage === 'function') {
+      window.refreshRoadnoteMoodMessage();
     }
   }
 
