@@ -408,6 +408,19 @@
             overflow: hidden;
         }
 
+        body:not(.app-ready) .wrapper,
+        body:not(.app-ready) .content,
+        body:not(.app-ready) .legal-footer,
+        body:not(.app-ready) .admin-tools {
+            visibility: hidden;
+        }
+
+        #continue-current-scan:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
         .start-overlay {
             position: fixed;
             inset: 0;
@@ -1109,7 +1122,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                 </svg>
                 Сканировать новый QR-код
             </button>
-            <button class="start-button start-button-secondary" id="continue-current-scan" type="button">
+            <button class="start-button start-button-secondary" id="continue-current-scan" type="button" disabled>
                 К текущему билету
             </button>
         </div>
@@ -1354,6 +1367,13 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
 
     let scanProcessing = false;
     let scanSessionReady = false;
+    let currentScanCount = 0;
+
+    function updateContinueTicketButton(scanCount) {
+        const parsedCount = Number(scanCount);
+        currentScanCount = Number.isSafeInteger(parsedCount) && parsedCount > 0 ? parsedCount : 0;
+        continueCurrentScanButton.disabled = currentScanCount === 0;
+    }
     let scanBalanceAssigned = false;
     let currentScanBalance = null;
     let scanAccessUnlimited = false;
@@ -1788,6 +1808,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
 
             updateScanBalance(data.scanBalance, data.subscriptionUntil, data.unlimited, data.subscriptionActive);
             applyTransportData(data);
+            updateContinueTicketButton(Math.max(currentScanCount, 1));
             setScannerStatus('Данные загружены. Основная страница обновлена.');
             return true;
         } catch (error) {
@@ -2148,6 +2169,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         // The start overlay is shown on launch. Returning to the ticket puts
         // a start-state entry in history so the device Back action reopens it.
         pageBody.classList.add('start-overlay-open');
+        pageBody.classList.add('app-ready');
         window.history.replaceState({ roadnoteScreen: 'start' }, '', window.location.href);
 
         // If a legacy handoff URL is received, process it here.
@@ -2405,6 +2427,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       }
       scanSessionReady = true;
       updateScanBalance(session.scanBalance, session.subscriptionUntil, session.unlimited, session.subscriptionActive);
+      updateContinueTicketButton(session.scanCount);
 
       try {
         sessionStorage.setItem('roadnoteAdminForNavigation', session.isAdmin === true ? '1' : '0');
@@ -2457,6 +2480,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
               setReferralLink(current.referralLink);
               scanSessionReady = true;
               updateScanBalance(current.scanBalance, current.subscriptionUntil, current.unlimited, current.subscriptionActive);
+              updateContinueTicketButton(current.scanCount);
               if (!scanBalanceAssigned) setScannerStatus('');
               if (current.eventsToken) connectEntitlementEvents(current.eventsToken);
             } catch (refreshError) {
