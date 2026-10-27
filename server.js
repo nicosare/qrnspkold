@@ -1285,17 +1285,31 @@ app.post('/api/yoomoney/notification', (req, res) => {
   }
   if (outcome.duplicate) return res.status(200).send('ok');
   if (outcome.state === 'credited' && outcome.userId) {
+    // Update the buyer's open Mini App session silently; never send a VK message to the buyer.
     sendLiveEntitlement(outcome.userId);
-    sendLiveTariffState(outcome.userId, 'Оплата подтверждена. Покупка начислена.');
-    Promise.resolve().then(() => sendCommunityMessage(outcome.userId, 'Оплата подтверждена. Покупка начислена.'))
-      .catch(error => console.warn('[YooMoney user notice]', error?.message || error));
+    sendLiveTariffState(outcome.userId);
+    const buyer = db.prepare('SELECT first_name, last_name FROM users WHERE vk_id = ?').get(outcome.userId);
+    const buyerName = [buyer?.first_name, buyer?.last_name].filter(Boolean).join(' ').trim() || 'Пользователь VK';
+    const purchasedOffer = requestId ? db.prepare('SELECT offer_name FROM tariff_requests WHERE id = ?').get(requestId) : null;
+    const adminText = [
+      'Новая покупка Roadnote',
+      'Пользователь: ' + buyerName + ' (VK ID ' + outcome.userId + ')',
+      'Профиль: https://vk.com/id' + outcome.userId,
+      'Тариф: ' + (purchasedOffer?.offer_name || 'неизвестен'),
+      'Стоимость: ' + formatRubles(withdrawAmount),
+      'Получено после комиссии: ' + formatRubles(amount),
+      'Операция ЮMoney: ' + operationId
+    ].join('\n');
+    if (adminVkId) Promise.resolve().then(() => sendCommunityMessage(adminVkId, adminText))
+      .catch(error => console.warn('[YooMoney admin purchase notice]', error?.message || error));
   } else {
     console.warn('[YooMoney payment needs review]', JSON.stringify({
-      operationId, requestId, label, amount, currency, notificationType, unaccepted
+      operationId, requestId, label, amount, withdrawAmount, currency, notificationType, unaccepted
     }));
     if (adminVkId) Promise.resolve().then(() => sendCommunityMessage(adminVkId,
       'Платёж ЮMoney требует проверки.\nОперация: ' + operationId + '\nМетка: ' + (label || 'не указана') +
-      '\nСумма: ' + amount + ' RUB\nПричина: тариф не найден, сумма/валюта не совпала или платёж не принят.'))
+      '\nСписано с покупателя: ' + (Number.isFinite(withdrawAmount) ? withdrawAmount : 'неизвестно') + ' RUB' +
+      '\nЗачислено: ' + amount + ' RUB\nПричина: тариф не найден, сумма/валюта не совпала или платёж не принят.'))
       .catch(error => console.warn('[YooMoney admin notice]', error?.message || error));
   }
   return res.status(200).send('ok');
