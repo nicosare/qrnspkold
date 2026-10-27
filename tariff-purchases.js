@@ -256,7 +256,7 @@
       '<div class="tariff-modal-note"><p>Заявка №' + esc(request.id) + ' создана.</p>' +
       (awaitingReview
         ? '<p><strong>Скриншот отправлен. Заявка ожидает проверки.</strong></p>'
-        : '<p class="tariff-payment-warning"><strong>Важно: отправь ровно ' + esc(rubles(request.priceRub)) + ' — сумму, указанную в заявке. Если сумма платежа не совпадёт, заявка будет отклонена.</strong></p>' +
+        : '<p class="tariff-payment-warning">Мы не храним данные банковских карт. Оплата проходит на стороне ЮMoney — защищённого стороннего платёжного сервиса.</p>' +
           '<form class="tariff-payment-button" method="POST" action="https://yoomoney.ru/quickpay/confirm" style="margin:12px auto;max-width:330px;display:grid;gap:10px;">' +
           '<input type="hidden" name="receiver" value="4100119368734043">' +
           '<input type="hidden" name="quickpay-form" value="button">' +
