@@ -2016,15 +2016,15 @@
         eventsUrl.searchParams.set('token', token);
         const source = new EventSource(eventsUrl.toString());
         entitlementEventSource = source;
+        source.addEventListener('tariff', (event) => {
+          try {
+            const current = JSON.parse(event.data);
+            if (typeof window.setRoadnoteTariffState === 'function') window.setRoadnoteTariffState(current);
+          } catch (eventError) {
+            console.warn('Roadnote tariff event was invalid:', eventError);
+          }
+        });
         source.addEventListener('entitlement', (event) => {
-          source.addEventListener('tariff', (event) => {
-            try {
-              const current = JSON.parse(event.data);
-              if (typeof window.setRoadnoteTariffState === 'function') window.setRoadnoteTariffState(current);
-            } catch (eventError) {
-              console.warn('Roadnote tariff event was invalid:', eventError);
-            }
-          });
           try {
             const current = JSON.parse(event.data);
             scanSessionReady = true;

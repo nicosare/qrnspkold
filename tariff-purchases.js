@@ -127,8 +127,11 @@
       console.error('[Roadnote tariff request]', error);
       setStatus(error && error.message ? error.message : 'Не удалось оставить заявку. Попробуй ещё раз.', true);
     } finally {
+      const lastStatus = statusNode ? statusNode.textContent : '';
+      const wasError = Boolean(statusNode && statusNode.classList.contains('is-error'));
       busyOfferId = '';
       renderState({ hasPurchased: hasPurchased, activeTariffRequest: activeRequest });
+      if (wasError) setStatus(lastStatus, true);
     }
   }
 
