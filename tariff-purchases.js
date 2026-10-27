@@ -93,7 +93,12 @@
           : new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price / quantity) + ' ₽ / скан';
       }
       const button = card.querySelector('.start-offer-details');
-      if (button) button.textContent = state.activeTariffRequest ? 'Открыть заявку' : 'Оставить заявку';
+      if (button) {
+        const isActiveOffer = Boolean(state.activeTariffRequest && state.activeTariffRequest.offerId === card.dataset.offerId);
+        button.textContent = isActiveOffer ? 'Открыть заявку' : 'Оставить заявку';
+        button.classList.toggle('is-requested', isActiveOffer);
+        button.setAttribute('aria-label', isActiveOffer ? 'Открыть активную заявку: ' + (state.activeTariffRequest.name || '') : 'Оставить заявку на ' + (card.querySelector('.start-offer-name')?.textContent || card.dataset.offerId));
+      }
     });
   }
 
@@ -271,7 +276,10 @@
 
   async function createRequest(card) {
     if (busy) return;
-    if (state.activeTariffRequest) { openModal(state.activeTariffRequest); return; }
+    if (state.activeTariffRequest && state.activeTariffRequest.offerId === card.dataset.offerId) {
+      openModal(state.activeTariffRequest);
+      return;
+    }
     if (!launchParams) {
       if (tariffStatus) { tariffStatus.textContent = 'Не найдены параметры VK. Закрой и заново открой Mini App.'; tariffStatus.classList.add('is-error'); }
       return;
