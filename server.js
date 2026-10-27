@@ -681,6 +681,22 @@ async function setCommunityAvatarFromMessage(message) {
       hash: uploadResult.hash,
       photo: uploadResult.photo
     });
+
+    const extension = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+    const avatarDirectory = path.dirname(databasePath);
+    const avatarFileName = 'roadnote-community-avatar.' + extension;
+    const avatarPath = path.join(avatarDirectory, avatarFileName);
+    for (const oldExtension of ['jpg', 'png', 'webp']) {
+      const oldPath = path.join(avatarDirectory, 'roadnote-community-avatar.' + oldExtension);
+      if (oldPath !== avatarPath) {
+        try { fs.unlinkSync(oldPath); } catch (error) { if (error?.code !== 'ENOENT') throw error; }
+      }
+    }
+    fs.writeFileSync(avatarPath, imageBuffer);
+    fs.writeFileSync(path.join(avatarDirectory, 'roadnote-community-avatar.json'), JSON.stringify({
+      fileName: avatarFileName,
+      contentType
+    }));
   } finally {
     clearTimeout(timer);
   }
@@ -1384,18 +1400,54 @@ app.post('/api/yoomoney/notification', (req, res) => {
 
 app.get('/api/community/avatar', async (_req, res) => {
   try {
+    const avatarDirectory = path.dirname(databasePath);
+    const metadataPath = path.join(avatarDirectory, 'roadnote-community-avatar.json');
+    if (fs.existsSync(metadataPath)) {
+      const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+      const fileName = String(metadata?.fileName || '');
+      if (/^roadnote-community-avatar\.(?:jpg|png|webp)$/.test(fileName)) {
+        const avatarPath = path.join(avatarDirectory, fileName);
+        if (fs.existsSync(avatarPath)) {
+          const imageBuffer = fs.readFileSync(avatarPath);
+          res.setHeader('Content-Type', String(metadata.contentType || 'image/jpeg'));
+          res.setHeader('Cache-Control', 'no-store, max-age=0');
+          res.setHeader('Content-Length', String(imageBuffer.length));
+          return res.status(200).send(imageBuffer);
+        }
+      }
+    }
+
     const groups = await vkApi('groups.getById', { group_ids: communityId });
     const avatarUrl = Array.isArray(groups) ? groups[0]?.photo_200 || groups[0]?.photo_100 : '';
-    if (!avatarUrl || !/^https:\/\//i.test(avatarUrl)) {
+    if (!avatarUrl || !/^https?:\/\//i.test(avatarUrl)) {
       return res.status(502).send('Community avatar unavailable');
     }
-    res.setHeader('Cache-Control', 'public, max-age=900');
-    return res.redirect(302, avatarUrl);
+    const imageController = new AbortController();
+    const imageTimer = setTimeout(() => imageController.abort(), 10000);
+    try {
+      const imageResponse = await fetch(avatarUrl.replace(/^http:\/\//i, 'https://'), {
+        signal: imageController.signal,
+        redirect: 'follow'
+      });
+      const contentType = (imageResponse.headers.get('content-type') || '').split(';')[0].toLowerCase();
+      if (!imageResponse.ok || !contentType.startsWith('image/')) {
+        return res.status(502).send('Community avatar image unavailable');
+      }
+      const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+      if (!imageBuffer.length) return res.status(502).send('Community avatar image unavailable');
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'no-store, max-age=0');
+      res.setHeader('Content-Length', String(imageBuffer.length));
+      return res.status(200).send(imageBuffer);
+    } finally {
+      clearTimeout(imageTimer);
+    }
   } catch (error) {
     console.warn('[Roadnote community avatar]', error?.message || error);
     return res.status(502).send('Community avatar unavailable');
   }
 });
+
 app.get('/health', (_req, res) => {
   res.json({ ok: true, database: 'connected' });
 });
