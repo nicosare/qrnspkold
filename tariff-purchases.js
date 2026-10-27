@@ -75,7 +75,7 @@
     };
     window.roadnoteHasPurchased = state.hasPurchased;
     if (tariffNote) tariffNote.textContent = state.hasPurchased
-      ? 'Скидка на первую покупку уже использована. Для следующих покупок действуют обычные цены.'
+      ? 'Все тарифы доступны по указанным ценам. Выбирай то, что подходит именно тебе.'
       : 'Скидка действует только на первую покупку.';
     updatePrices();
     if (tariffStatus && next && next.notice) {
@@ -182,6 +182,19 @@
   cards.forEach(function (card) {
     const button = card.querySelector('.start-offer-details');
     if (!button) return;
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-label', 'Выбрать тариф: ' + (card.querySelector('.start-offer-count, .start-offer-duration')?.textContent.trim() || card.dataset.offerId));
+    card.addEventListener('click', function (event) {
+      if (event.target.closest('button')) return;
+      event.preventDefault();
+      createPurchase(card);
+    });
+    card.addEventListener('keydown', function (event) {
+      if (event.target !== card || (event.key !== 'Enter' && event.key !== ' ')) return;
+      event.preventDefault();
+      createPurchase(card);
+    });
     button.addEventListener('click', function (event) {
       event.preventDefault();
       createPurchase(card);
