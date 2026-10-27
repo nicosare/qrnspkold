@@ -1981,7 +1981,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
 
   async function copyReferralLink() {
     if (!currentReferralLink) {
-      if (referralStatus) referralStatus.textContent = 'Ссылка ещё загружается. Попробуй через секунду.';
+      if (referralStatus) referralStatus.textContent = '';
       return;
     }
 
@@ -1990,7 +1990,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     if (window.vkBridge && typeof window.vkBridge.send === 'function') {
       try {
         await window.vkBridge.send('VKWebAppCopyText', { text: currentReferralLink });
-        if (referralStatus) referralStatus.textContent = 'Ссылка скопирована';
+        if (referralStatus) referralStatus.textContent = '';
         return;
       } catch (error) {
         console.warn('VK native copy unavailable:', error);
@@ -2003,7 +2003,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       } else {
         throw new Error('Clipboard API unavailable');
       }
-      if (referralStatus) referralStatus.textContent = 'Ссылка скопирована';
+      if (referralStatus) referralStatus.textContent = '';
       return;
     } catch (error) {
       console.warn('Browser clipboard unavailable:', error);
@@ -2017,7 +2017,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       referralLinkInput.select();
       referralLinkInput.setSelectionRange(0, referralLinkInput.value.length);
       if (document.execCommand('copy')) {
-        if (referralStatus) referralStatus.textContent = 'Ссылка скопирована';
+        if (referralStatus) referralStatus.textContent = '';
         return;
       }
     } catch (error) {
@@ -2029,18 +2029,18 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       referralLinkInput.select();
       referralLinkInput.setSelectionRange(0, referralLinkInput.value.length);
     }
-    if (referralStatus) referralStatus.textContent = 'Ссылка выделена — нажми «Копировать» в меню устройства';
+    if (referralStatus) referralStatus.textContent = '';
   }
 
   async function shareReferralLink() {
     if (!currentReferralLink) {
-      if (referralStatus) referralStatus.textContent = 'Ссылка ещё загружается. Попробуй через секунду.';
+      if (referralStatus) referralStatus.textContent = '';
       return;
     }
 
     // Open VK's standard native share sheet; do not silently substitute copy.
     if (!window.vkBridge || typeof window.vkBridge.send !== 'function') {
-      if (referralStatus) referralStatus.textContent = 'Открой Roadnote внутри VK, чтобы поделиться через меню VK.';
+      if (referralStatus) referralStatus.textContent = '';
       return;
     }
 
@@ -2049,7 +2049,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       if (referralStatus) referralStatus.textContent = '';
     } catch (error) {
       console.error('VK native share failed:', error);
-      if (referralStatus) referralStatus.textContent = 'VK не открыло меню отправки. Закрой и заново открой Mini App.';
+      if (referralStatus) referralStatus.textContent = '';
     }
   }
 
@@ -2211,8 +2211,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   function currentLink() {
     return String(window.roadnoteReferralLink || (linkInput && linkInput.value) || '').trim();
   }
-  function report(message) {
-    if (status) status.textContent = message;
+  function report() {
+    if (status) status.textContent = '';
   }
 
   if (shareButton) {
