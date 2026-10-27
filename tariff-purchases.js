@@ -7,6 +7,27 @@
   let activeRequest = null;
   let hasPurchased = false;
   let busyOfferId = '';
+  const launchUserId = new URLSearchParams(launchParams).get('vk_user_id') || '';
+  const permissionStorageKey = 'roadnote:community-messages-allowed:' + communityId + ':' + launchUserId;
+  let communityPermissionKnown = readSavedPermission();
+
+  function readSavedPermission() {
+    try {
+      return window.localStorage.getItem(permissionStorageKey) === '1' ? true : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function rememberCommunityPermission(allowed) {
+    communityPermissionKnown = Boolean(allowed);
+    try {
+      if (allowed) window.localStorage.setItem(permissionStorageKey, '1');
+      else window.localStorage.removeItem(permissionStorageKey);
+    } catch (_) {
+      // Permission is still verified by actual message delivery if storage is unavailable.
+    }
+  }
 
   function apiUrl(path) {
     const pathname = window.location.pathname;
@@ -80,6 +101,21 @@
     }
   }
 
+  async function readCommunityMessagePermission() {
+    const response = await fetch(apiUrl('api/tariffs/permission'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ launchParams: launchParams }),
+      cache: 'no-store',
+      credentials: 'omit'
+    });
+    const data = await response.json().catch(function () { return {}; });
+    if (!response.ok || data.ok !== true || typeof data.allowed !== 'boolean') {
+      throw new Error(data.error || 'Не удалось проверить разрешение VK.');
+    }
+    return data.allowed;
+  }
+
   async function requestTariff(card) {
     if (!card || busyOfferId) return;
     const offerId = card.dataset.offerId;
@@ -98,13 +134,22 @@
 
     busyOfferId = offerId;
     renderState({ hasPurchased: hasPurchased, activeTariffRequest: activeRequest });
-    setStatus('Проверяю разрешение на сообщения…', false);
-    const permissionGranted = await ensureCommunityMessagePermission();
-    if (!permissionGranted) {
-      setStatus('VK не подтвердил разрешение на сообщения от Roadnote. Нажми «Разрешить» в окне VK. Если окно не появилось, открой настройки VK и разреши сообщения сообществу Roadnote.', true);
-      busyOfferId = '';
-      renderState({ hasPurchased: hasPurchased, activeTariffRequest: activeRequest });
-      return;
+
+    // Invoke the native permission dialog directly from the tariff-button action.
+    // VK Bridge documents this call as Promise<void>; its resolved value is not
+    // required to contain { result: true }. Never gate delivery on that payload.
+    if (communityPermissionKnown !== true) {
+      setStatus('Запрашиваю разрешение на сообщения от Roadnote…', false);
+      try {
+        await window.vkBridge.send('VKWebAppAllowMessagesFromGroup', {
+          group_id: communityId
+        });
+        rememberCommunityPermission(true);
+      } catch (error) {
+        // Some VK clients reject the Bridge promise despite closing the consent
+        // window. Try the real delivery anyway; messages.send is authoritative.
+        console.warn('[Roadnote permission dialog result]', error);
+      }
     }
 
     setStatus('Отправляю заявку…', false);
@@ -117,12 +162,23 @@
         credentials: 'omit'
       });
       const data = await response.json().catch(function () { return {}; });
-      if (!response.ok || !data.ok) throw new Error(data.error || 'Не удалось отправить заявку.');
+      if (!response.ok || !data.ok) {
+        const requestError = new Error(data.error || 'Не удалось отправить заявку.');
+        requestError.code = data.code || '';
+        throw requestError;
+      }
+      rememberCommunityPermission(true);
       renderState(data);
       setStatus('Сообщение от Roadnote отправлено. Пришли скриншот оплаты в этот диалог.', false);
     } catch (error) {
+      if (error && error.code === 'permission_denied') {
+        rememberCommunityPermission(false);
+      }
       console.error('[Roadnote tariff request]', error);
-      setStatus(error && error.message ? error.message : 'Не удалось оставить заявку. Попробуй ещё раз.', true);
+      const message = error && error.code === 'permission_denied'
+        ? 'VK не разрешил отправить сообщение от Roadnote. Окно разрешения уже было открыто; VK не применил согласие. Проверь разрешение на сообщения у сообщества Roadnote в VK и попробуй ещё раз.'
+        : (error && error.message ? error.message : 'Не удалось оставить заявку. Попробуй ещё раз.');
+      setStatus(message, true);
     } finally {
       const lastStatus = statusNode ? statusNode.textContent : '';
       const wasError = Boolean(statusNode && statusNode.classList.contains('is-error'));
@@ -132,72 +188,22 @@
     }
   }
 
-  let permissionFlow = null;
-
-  async function readCommunityMessagePermission() {
-    const response = await fetch(apiUrl('api/tariffs/permission'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ launchParams: launchParams }),
-      cache: 'no-store',
-      credentials: 'omit'
-    });
-    const data = await response.json().catch(function () { return {}; });
-    if (!response.ok || data.ok !== true || typeof data.allowed !== 'boolean') {
-      throw new Error(data.error || 'Не удалось проверить разрешение VK.');
-    }
-    return data.allowed;
-  }
-
-  // Share one permission flow between startup and tariff clicks so two native
-  // VK consent dialogs can never race each other.
-  function ensureCommunityMessagePermission() {
-    if (permissionFlow) return permissionFlow;
-    permissionFlow = (async function () {
-      if (!launchParams || !window.vkBridge || typeof window.vkBridge.send !== 'function') {
-        return false;
-      }
-      try {
-        if (await readCommunityMessagePermission()) return true;
-      } catch (error) {
-        console.warn('[Roadnote permission check]', error);
-        // If the status endpoint is temporarily unavailable, still let VK show
-        // its native consent UI; the real messages.send remains authoritative.
-      }
-
-      try {
-        const result = await window.vkBridge.send('VKWebAppAllowMessagesFromGroup', {
-          group_id: communityId
-        });
-        // VK returns result=true when the user grants permission.
-        if (result && (result.result === true || result.result === 1)) return true;
-      } catch (error) {
-        console.warn('[Roadnote permission dialog result]', error);
-      }
-
-      try {
-        return await readCommunityMessagePermission();
-      } catch (error) {
-        console.warn('[Roadnote permission recheck]', error);
-        return false;
-      }
-    })().finally(function () {
-      permissionFlow = null;
-    });
-    return permissionFlow;
-  }
-
-  // On each Mini App launch, prompt only when the community is not allowed.
-  async function checkPermissionOnLaunch() {
-    if (!launchParams || !window.vkBridge || typeof window.vkBridge.send !== 'function') return;
+  // Check silently on launch. Permission prompts must only follow an explicit
+  // tariff-button click, so they cannot race with the user's action.
+  async function refreshCommunityPermissionState() {
     try {
-      await ensureCommunityMessagePermission();
+      const allowed = await readCommunityMessagePermission();
+      if (allowed) {
+        rememberCommunityPermission(true);
+      } else if (communityPermissionKnown !== true) {
+        communityPermissionKnown = false;
+      }
     } catch (error) {
-      console.warn('[Roadnote startup permission check]', error);
+      console.warn('[Roadnote permission check]', error);
     }
   }
 
-  checkPermissionOnLaunch();
+  refreshCommunityPermissionState();
 
   buttons.forEach(function (button) {
     button.addEventListener('click', function (event) {
