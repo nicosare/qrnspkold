@@ -118,6 +118,24 @@
     return data.allowed;
   }
 
+  async function waitForCommunityMessagePermission(timeoutMs) {
+    var deadline = Date.now() + timeoutMs;
+    var lastAllowed = false;
+    var lastError = null;
+    while (Date.now() < deadline) {
+      try {
+        lastAllowed = await readCommunityMessagePermission();
+        lastError = null;
+        if (lastAllowed) return true;
+      } catch (error) {
+        lastError = error;
+      }
+      await new Promise(function (resolve) { window.setTimeout(resolve, 600); });
+    }
+    if (lastError && !lastAllowed) throw lastError;
+    return false;
+  }
+
   async function requestTariff(card) {
     if (!card || busyOfferId) return;
     const offerId = card.dataset.offerId;
@@ -167,11 +185,14 @@
 
       let permissionAllowed;
       try {
-        permissionAllowed = await readCommunityMessagePermission();
+        // VK can close the native dialog before its permission state becomes
+        // visible to messages.isMessagesFromGroupAllowed. Poll briefly instead
+        // of treating the first immediate "is_allowed: 0" as final denial.
+        permissionAllowed = await waitForCommunityMessagePermission(8000);
       } catch (error) {
         console.error('[Roadnote permission verification failed]', error);
         rememberCommunityPermission(false);
-        setStatus('VK открыл окно разрешения, но Roadnote не смог проверить результат. Заявка не отправлена. Нажми ещё раз.', true);
+        setStatus('Не удалось проверить разрешение VK. Заявка не отправлена. Нажми ещё раз.', true);
         return;
       }
       console.info('[Roadnote permission verified after dialog]', JSON.stringify({
@@ -181,7 +202,7 @@
       }));
       if (!permissionAllowed) {
         rememberCommunityPermission(false);
-        setStatus('VK закрыл окно, но разрешение на сообщения не применилось. Заявка не отправлена.', true);
+        setStatus('VK не подтвердил разрешение на сообщения от Roadnote. Заявка не отправлена.', true);
         return;
       }
       rememberCommunityPermission(true);
