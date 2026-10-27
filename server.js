@@ -1214,6 +1214,16 @@ app.post('/api/yoomoney/notification', (req, res) => {
     return res.status(403).send('invalid signature');
   }
 
+  // YooMoney's settings-page test uses a synthetic operation. Acknowledge it
+  // after validating its signature, without recording it as a real payment or
+  // notifying the administrator about a payment that needs review.
+  const testNotification = String(body.test_notification || '').toLowerCase() === 'true' ||
+    (String(body.operation_id || '').trim() === 'test-notification' && !String(body.label || '').trim());
+  if (testNotification) {
+    console.info('[YooMoney notification] test notification accepted');
+    return res.status(200).send('ok');
+  }
+
   const operationId = String(body.operation_id || '').trim();
   const label = String(body.label || '').trim();
   const amount = Number(body.amount);
