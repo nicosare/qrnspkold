@@ -494,6 +494,31 @@
             white-space: nowrap;
         }
         .scan-balance-extra[hidden] { display: none; }
+        .daily-free-scan-note {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-top: 12px;
+            padding-top: 11px;
+            border-top: 1px solid #ffffff35;
+            color: #e4f1ff;
+            font-size: 13px;
+            line-height: 1.35;
+            text-align: left;
+        }
+        .daily-free-scan-note-icon {
+            display: grid;
+            place-items: center;
+            flex: 0 0 21px;
+            width: 21px;
+            height: 21px;
+            border-radius: 7px;
+            background: #ffffff22;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 800;
+        }
+        .daily-free-scan-note strong { color: #fff; font-weight: 800; }
 
         .start-offers-section {
             margin: 0;
@@ -1051,6 +1076,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             <div class="start-card-eyebrow">ТВОЙ БАЛАНС</div>
             <span id="scan-balance-extra" class="scan-balance-extra" hidden></span>
             <div id="scan-balance-status" class="scan-balance-status" role="status" aria-live="polite">Проверяем баланс…</div>
+            <div class="daily-free-scan-note"><span class="daily-free-scan-note-icon" aria-hidden="true">＋</span><span><strong>1 бесплатный скан каждый день</strong> — доступен, когда платные сканы закончились. Сгорает в полночь.</span></div>
         </div>
 
         <div class="start-actions start-scan-actions">
