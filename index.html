@@ -741,7 +741,10 @@
         .start-referral-title { font-size: 16px; font-weight: 700; color: #27313d; }
         .start-referral-description { margin-top: 5px; color: #737d89; font-size: 13px; line-height: 1.4; }
         .start-referral-qr { display: grid; place-items: center; width: 100%; margin: 12px 0 2px; }
+        .start-referral-qr[hidden] { display: none !important; }
         .start-referral-qr canvas, .start-referral-qr img { display: block; width: 160px !important; height: 160px !important; max-width: 100%; border-radius: 8px; }
+        .start-referral-qr-toggle { width: 100%; min-height: 40px; margin-top: 9px; padding: 8px 10px; border: 1px solid #d9e6f7; border-radius: 10px; background: #eef4fc; color: #2875cc; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+        .start-referral-qr-toggle:disabled { opacity: .5; cursor: default; }
         .start-referral-link {
             display: block; width: 100%; margin-top: 12px; padding: 10px 11px;
             border: 1px solid #e1e6ed; border-radius: 10px; background: #f7f9fb;
@@ -1056,7 +1059,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         <section class="start-referral" aria-labelledby="start-referral-title">
             <div class="start-referral-title" id="start-referral-title">Пригласи друга</div>
             <p class="start-referral-description">Поделись Roadnote. Когда друг впервые успешно отсканирует QR-код, тебе начислим 3 скана.</p>
-            <div class="start-referral-qr" id="start-referral-qr" aria-label="QR-код реферальной ссылки"></div>
+            <button class="start-referral-qr-toggle" id="start-referral-qr-toggle" type="button" aria-expanded="false" disabled>Показать QR-код ссылки</button>
+            <div class="start-referral-qr" id="start-referral-qr" aria-label="QR-код реферальной ссылки" hidden></div>
             <input class="start-referral-link" id="start-referral-link" type="text" readonly aria-label="Твоя реферальная ссылка" value="Загружаем ссылку…">
             <div class="start-referral-actions">
                 <button class="start-referral-button" id="start-referral-share" type="button" disabled>Поделиться</button>
@@ -1127,6 +1131,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     const continueCurrentScanButton = document.getElementById('continue-current-scan');
     const referralLinkInput = document.getElementById('start-referral-link');
     const referralQrElement = document.getElementById('start-referral-qr');
+    const referralQrToggle = document.getElementById('start-referral-qr-toggle');
     const referralShareButton = document.getElementById('start-referral-share');
     const referralCopyButton = document.getElementById('start-referral-copy');
     const referralStatus = document.getElementById('start-referral-status');
@@ -1915,8 +1920,14 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     if (referralLinkInput) referralLinkInput.value = currentReferralLink || 'Не удалось получить ссылку';
     if (referralShareButton) referralShareButton.disabled = !currentReferralLink;
     if (referralCopyButton) referralCopyButton.disabled = !currentReferralLink;
+    if (referralQrToggle) referralQrToggle.disabled = !currentReferralLink;
     if (referralQrElement) {
       referralQrElement.replaceChildren();
+      if (referralQrToggle) {
+        referralQrElement.hidden = true;
+        referralQrToggle.setAttribute('aria-expanded', 'false');
+        referralQrToggle.textContent = 'Показать QR-код ссылки';
+      }
       if (currentReferralLink && typeof window.QRCode === 'function' && window.QRCode.CorrectLevel) {
         try {
           new window.QRCode(referralQrElement, {
@@ -1933,6 +1944,15 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         }
       }
     }
+  }
+
+  if (referralQrToggle && referralQrElement) {
+    referralQrToggle.addEventListener('click', function () {
+      const isOpening = referralQrElement.hidden;
+      referralQrElement.hidden = !isOpening;
+      referralQrToggle.setAttribute('aria-expanded', String(isOpening));
+      referralQrToggle.textContent = isOpening ? 'Скрыть QR-код' : 'Показать QR-код ссылки';
+    });
   }
 
   // Expose the current URL for the independent referral-button controller.
@@ -2379,6 +2399,6 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             </section>
         </div>
 
-<script src="tariff-purchases.js?v=20261027-referral-qr-spacing-1"></script>
+<script src="tariff-purchases.js?v=20261027-referral-qr-toggle-1"></script>
 </body>
 </html>
