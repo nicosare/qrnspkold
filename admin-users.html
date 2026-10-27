@@ -65,6 +65,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 .grant-grid button,.unlimited-toggle{white-space:nowrap}
 @media(max-width:420px){.grant-grid{grid-template-columns:1fr}.preset-grid button{font-size:12px}}
 .unlimited-toggle{width:100%;margin-top:8px;background:#f4f7fb}
+.reset-account{width:100%;margin-top:8px;background:#fff1f0;border-color:#ffccc7;color:#b42318}
 .action-status{font-size:12px;color:var(--muted);min-height:17px;margin-top:6px}
 .action-status.error{color:#b42318}
 .admin-nav{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px}
@@ -116,6 +117,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  const search = document.getElementById('search');
  const sort = document.getElementById('sort');
  let users = [];
+ let adminUserId = '';
  const date = value => value ? new Date(value).toLocaleString('ru-RU',{day:'numeric',month:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}) : '—';
  const remaining = value => {
    const ms=Date.parse(value)-Date.now();
@@ -173,6 +175,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
        '<button class="primary" type="button" data-action="grant-months" data-months="6">+6 мес.</button></div>'+
        '<div class="grant-grid"><input type="number" min="1" max="120" step="1" value="1" aria-label="Своё количество месяцев" data-months-input><button class="primary" type="button" data-action="grant-months-custom">Начислить</button></div></div>'+
        '<button class="unlimited-toggle" type="button" data-action="toggle-unlimited">'+(u.unlimited?'Отключить безлимит':'Включить безлимит')+'</button>'+
+       (String(u.vk_id)===String(adminUserId)?'<button class="reset-account" type="button" data-action="reset-account">Обнулить мой аккаунт</button>':'')+
        '<div class="action-status" aria-live="polite"></div></div></details></div></article>';
      }).join('');
    status.hidden=filtered.length>0;
@@ -187,7 +190,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
      const response=await fetch('../api/admin/users',{headers:{Authorization:auth},cache:'no-store'});
      const data=await response.json();
      if(!response.ok)throw new Error(response.status===403?'Доступ запрещён: этот аккаунт VK не является администратором.':data.error||'Не удалось загрузить список');
-     users=data.users||[];count.textContent='Всего: '+data.total;render();
+     users=data.users||[];adminUserId=String(data.adminUserId||'');count.textContent='Всего: '+data.total;render();
    }catch(e){status.hidden=false;status.className='status error';status.textContent=e.message;count.textContent='Нет доступа'}
  }
  async function performEntitlement(button){
@@ -204,6 +207,11 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
      const months=button.dataset.months!==undefined?Number(button.dataset.months):Number(card.querySelector('[data-months-input]').value);
      if(!Number.isSafeInteger(months)||months<1||months>120){message.className='action-status error';message.textContent='Введите количество месяцев от 1 до 120.';return}
      body={action:'grant_months',months};
+   }else if(button.dataset.action==='reset-account'){
+     if(vkId!==String(adminUserId)){message.className='action-status error';message.textContent='Можно обнулить только собственный аккаунт администратора.';return}
+     const confirmed=window.confirm('Обнулить твой аккаунт Roadnote?\n\nБаланс сканов и подписка будут сброшены, история покупок и отметки о покупках удалены. История сканирований останется. Скидка на первую покупку снова станет доступна. Это действие нельзя отменить.');
+     if(!confirmed)return;
+     body={action:'reset_account'};
    }else{
      const user=users.find(item=>String(item.vk_id)===vkId);
      body={action:'set_unlimited',enabled:!(user&&user.unlimited)};
