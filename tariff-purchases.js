@@ -87,7 +87,7 @@
       renderModal();
       setModalStatus('Оплата подтверждена. Покупка начислена.', false);
     }
-    if (typeof window.refreshRoadnoteMoodMessage === 'function') window.refreshRoadnoteMoodMessage();
+    // Mood message is chosen once by initializePage(); tariff state updates must not reroll it.
   }
   async function refreshState() {
     if (!launchParams || document.visibilityState === 'hidden') return;
