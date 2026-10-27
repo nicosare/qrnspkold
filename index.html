@@ -877,6 +877,28 @@
         }
 
     </style>
+<style>
+.start-applications-section{width:100%;margin:0 0 24px;padding:19px 16px 16px;border:1px solid #e3e8ef;border-radius:22px;background:#fff;box-shadow:0 8px 24px rgba(31,65,105,.045);text-align:left}
+.tariff-refresh{width:36px;height:36px;border:1px solid #e2e8f0;border-radius:12px;background:#f6f9fc;color:#2787f5;font-size:23px;line-height:1;cursor:pointer}
+.tariff-applications-group{margin-top:15px}.tariff-applications-label{margin-bottom:8px;color:#687586;font-size:12px;font-weight:800}
+.tariff-applications-empty{padding:12px 13px;border:1px dashed #dce4ed;border-radius:13px;color:#8792a0;font-size:13px;line-height:1.4}
+.tariff-application-row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:13px;border:1px solid #e4eaf1;border-radius:14px;background:#fbfcfe;text-align:left;color:#283341;font:inherit;cursor:pointer}
+.tariff-application-row:active{transform:scale(.99)}.tariff-application-main{min-width:0}.tariff-application-name{font-size:14px;font-weight:800;line-height:1.35}.tariff-application-meta{margin-top:4px;color:#738091;font-size:12px;line-height:1.4}.tariff-application-price{flex:0 0 auto;font-size:14px;font-weight:800;white-space:nowrap}
+.tariff-status-pill{display:inline-block;margin-top:6px;padding:4px 7px;border-radius:7px;background:#fff0d9;color:#a96000;font-size:10px;font-weight:800}.tariff-status-pill.review{background:#e8f3ff;color:#1766bc}.tariff-status-pill.approved{background:#e5f7ec;color:#16804a}.tariff-status-pill.rejected{background:#fff0f0;color:#bd3030}
+.tariff-applications-status,.tariff-modal-status{margin-top:10px;color:#647080;font-size:12px;line-height:1.45}.tariff-applications-status:empty,.tariff-modal-status:empty{display:none}.tariff-applications-status.is-error,.tariff-modal-status.is-error{color:#bd3030}
+.tariff-modal[hidden]{display:none}.tariff-modal{position:fixed;inset:0;z-index:30000;display:flex;align-items:flex-end;justify-content:center;padding:0;background:rgba(20,31,45,.45);overscroll-behavior:contain}
+.tariff-modal-backdrop{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent}
+.tariff-modal-sheet{position:relative;z-index:1;width:100%;max-width:480px;max-height:92vh;overflow:auto;padding:9px 20px calc(24px + env(safe-area-inset-bottom));border-radius:24px 24px 0 0;background:#fff;box-shadow:0 -8px 35px rgba(18,38,62,.15);animation:tariffSheetIn .2s ease-out}
+.tariff-modal-grabber{width:38px;height:4px;margin:0 auto 17px;border-radius:99px;background:#d9e0e8}.tariff-modal-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px}.tariff-modal-header h3{font-size:22px;line-height:1.25;color:#232a33}
+.tariff-modal-close{width:36px;height:36px;flex:0 0 36px;border:0;border-radius:50%;background:#f1f4f7;color:#5e6a78;font-size:25px;line-height:1;cursor:pointer}
+.tariff-modal-card{padding:15px;border:1px solid #e4eaf1;border-radius:16px;background:#f9fbfd}.tariff-modal-offer{font-size:17px;font-weight:800;color:#253140}.tariff-modal-price{margin-top:6px;font-size:25px;font-weight:850;color:#1766bc}.tariff-modal-note{margin-top:12px;color:#606d7c;font-size:14px;line-height:1.5}.tariff-modal-note p+p{margin-top:7px}
+.tariff-upload-title{margin:18px 0 8px;font-size:15px;font-weight:800;color:#253140}.tariff-file-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}.tariff-file-label{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:12px;border:1.5px dashed #9bbfe9;border-radius:13px;background:#f1f7ff;color:#1766bc;font-size:14px;font-weight:800;cursor:pointer}.tariff-file-preview{display:block;max-width:100%;max-height:230px;margin:12px auto 0;border-radius:12px;object-fit:contain}.tariff-file-preview[hidden]{display:none}
+.tariff-modal-actions{display:flex;flex-direction:column;gap:9px;margin-top:16px}.tariff-modal-primary,.tariff-modal-secondary,.tariff-modal-danger{width:100%;min-height:47px;padding:12px 15px;border:0;border-radius:13px;font:inherit;font-size:14px;font-weight:800;cursor:pointer}.tariff-modal-primary{background:#2787f5;color:#fff}.tariff-modal-secondary{background:#eef3f8;color:#334155}.tariff-modal-danger{background:#fff0f0;color:#bd3030}.tariff-modal-primary:disabled{opacity:.55;cursor:wait}
+@keyframes tariffSheetIn{from{transform:translateY(18px);opacity:.7}to{transform:translateY(0);opacity:1}}
+@media(min-width:600px){.tariff-modal{align-items:center;padding:20px}.tariff-modal-sheet{border-radius:24px;max-height:88vh}.tariff-modal-backdrop{cursor:pointer}}
+@media(prefers-reduced-motion:reduce){.tariff-modal-sheet{animation:none}}
+</style>
+
 </head>
 <body>
 <div class="wrapper">
@@ -1018,6 +1040,17 @@
                 </div></div>
             </div>
             <p class="start-offers-note">После первой подтверждённой покупки скидка пропадёт на всех тарифах.</p><p id="start-tariff-status" class="start-tariff-status" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="start-applications-section" aria-labelledby="start-applications-title">
+            <div class="start-offers-section-heading">
+                <div><div class="start-section-kicker">МОИ ПОКУПКИ</div><h3 id="start-applications-title">Заявки</h3></div>
+                <button id="tariff-applications-refresh" class="tariff-refresh" type="button" aria-label="Обновить заявки">↻</button>
+            </div>
+            <div id="tariff-applications-active" class="tariff-applications-group"><div class="tariff-applications-label">Активная заявка</div><div class="tariff-applications-empty">Активных заявок пока нет.</div></div>
+            <div id="tariff-applications-approved" class="tariff-applications-group"><div class="tariff-applications-label">Одобренные</div><div class="tariff-applications-empty">Пока нет одобренных заявок.</div></div>
+            <div id="tariff-applications-rejected" class="tariff-applications-group"><div class="tariff-applications-label">Отклонённые</div><div class="tariff-applications-empty">Пока нет отклонённых заявок.</div></div>
+            <p id="tariff-applications-status" class="tariff-applications-status" role="status" aria-live="polite"></p>
         </section>
 
         <div class="start-actions">
@@ -1806,7 +1839,7 @@
     })();
 </script>
 
-<script src="tariff-purchases.js?v=20261027-permission-fallback-2"></script>
+<script src="tariff-purchases.js?v=20261027-inapp-requests-1"></script>
 <script>
 (function () {
   function showAdminTools() {
@@ -2293,6 +2326,16 @@
   }
 })();
 </script>
+
+        <div id="tariff-application-modal" class="tariff-modal" hidden role="dialog" aria-modal="true" aria-labelledby="tariff-modal-title">
+            <button class="tariff-modal-backdrop" type="button" data-tariff-modal-close aria-label="Закрыть"></button>
+            <section class="tariff-modal-sheet">
+                <div class="tariff-modal-grabber" aria-hidden="true"></div>
+                <div class="tariff-modal-header"><div><div class="start-section-kicker">ROADNOTE PLUS</div><h3 id="tariff-modal-title">Заявка на тариф</h3></div><button class="tariff-modal-close" type="button" data-tariff-modal-close aria-label="Закрыть">×</button></div>
+                <div id="tariff-modal-content"></div>
+                <p id="tariff-modal-status" class="tariff-modal-status" role="status" aria-live="polite"></p>
+            </section>
+        </div>
 
 </body>
 </html>
