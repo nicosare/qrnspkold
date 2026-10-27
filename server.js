@@ -18,6 +18,7 @@ const communityToken = String(process.env.VK_GROUP_TOKEN || '');
 const callbackSecret = String(process.env.VK_CALLBACK_SECRET || '');
 const callbackConfirmation = String(process.env.VK_CALLBACK_CONFIRMATION || '');
 const vkApiVersion = '5.199';
+console.info('[Roadnote VK config]', JSON.stringify({ appId, communityId, communityIdSource: process.env.VK_GROUP_ID ? 'VK_GROUP_ID' : 'default', hasCommunityToken: Boolean(communityToken) }));
 
 const tariffOffers = Object.freeze({
   scans_9: { id: 'scans_9', name: 'Пакет «Старт» — 9 сканов', kind: 'pack', quantity: 9, regularPrice: 99, promoPrice: 69 },
@@ -878,7 +879,19 @@ app.post('/api/tariffs/permission', async (req, res) => {
     const value = typeof result === 'object' && result !== null
       ? (result.is_allowed ?? result.allowed ?? result.result)
       : result;
-    return res.json({ ok: true, allowed: Number(value) === 1 || value === true });
+    const allowed = Number(value) === 1 || value === true;
+    console.info('[Roadnote permission API result]', JSON.stringify({
+      userId,
+      groupId: communityId,
+      resultType: typeof result,
+      resultKeys: result && typeof result === 'object' ? Object.keys(result) : [],
+      is_allowed: result && typeof result === 'object' ? (result.is_allowed ?? null) : null,
+      allowedField: result && typeof result === 'object' ? (result.allowed ?? null) : null,
+      resultField: result && typeof result === 'object' ? (result.result ?? null) : null,
+      scalarValue: typeof result === 'number' || typeof result === 'boolean' ? result : null,
+      normalizedAllowed: allowed
+    }));
+    return res.json({ ok: true, allowed });
   } catch (error) {
     console.warn('[tariff permission check]', error?.message || error);
     return res.status(502).json({ error: 'Не удалось проверить разрешение VK.' });
@@ -1032,6 +1045,7 @@ app.post('/api/vk/callback', (req, res) => {
     const permissionEvent = event.object || {};
     console.info('[VK community message permission granted]', JSON.stringify({
       user_id: permissionEvent.user_id || null,
+      group_id: event.group_id || null,
       key: permissionEvent.key || null
     }));
   } else if (event.type === 'message_deny') {
