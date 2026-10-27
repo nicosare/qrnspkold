@@ -943,7 +943,7 @@ app.post('/api/tariffs/request', async (req, res) => {
     sentMessageId = vkMessageId(response);
     if (!sentMessageId) throw new Error('VK не вернул ID сообщения с тарифом.');
   } catch (error) {
-    console.error('[tariff request message]', error?.message || error);
+    console.error('[tariff request message]', 'VK error code:', error?.vkCode || 'unknown', error?.message || error);
     db.transaction(() => {
       db.prepare("UPDATE tariff_requests SET status = 'delivery_failed', updated_at = ? WHERE id = ? AND status IN ('awaiting_payment','awaiting_review')")
         .run(new Date().toISOString(), requestId);
@@ -956,7 +956,10 @@ app.post('/api/tariffs/request', async (req, res) => {
     })();
     sendLiveTariffState(userId);
     return res.status(502).json({
-      error: 'Не удалось написать тебе от сообщества. Проверь разрешение на сообщения и попробуй ещё раз.',
+      code: Number(error?.vkCode) === 901 ? 'permission_denied' : 'message_delivery_failed',
+      error: Number(error?.vkCode) === 901
+        ? 'VK отклонил отправку: разрешение на сообщения от сообщества не применилось.'
+        : 'Не удалось отправить сообщение от сообщества. Попробуй ещё раз.',
       ...getTariffState(userId)
     });
   }
