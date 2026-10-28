@@ -3040,8 +3040,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       }
       ctx.restore();
 
-      // Minimal, playful side-view plane: rounded body, one wing, and a tiny tail.
-      // Shapes use the same soft, flat treatment as the game's clouds and small planes.
+      // Simple blue cartoon airplane inspired by the user's reference image.
+      // Keep the silhouette bold and readable at the small decorative scale.
       ctx.save();
       ctx.translate(x, y);
       ctx.scale(direction * scale, scale);
@@ -3049,54 +3049,74 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       ctx.lineJoin = 'round';
 
       // Tail fin.
-      ctx.fillStyle = '#6ba8ef';
+      ctx.fillStyle = '#176dcc';
       ctx.beginPath();
-      ctx.moveTo(-17, -1);
-      ctx.quadraticCurveTo(-19, -7, -13, -5);
-      ctx.lineTo(-9, -1);
+      ctx.moveTo(-18, -1);
+      ctx.lineTo(-14, -7);
+      ctx.quadraticCurveTo(-12, -9, -10, -5);
+      ctx.lineTo(-8, -1);
       ctx.closePath();
       ctx.fill();
 
-      // Single clean wing silhouette.
-      ctx.fillStyle = '#82b8f5';
+      // High wing and two understated supports.
+      ctx.fillStyle = '#65baff';
       ctx.beginPath();
-      ctx.moveTo(-7, -1);
-      ctx.quadraticCurveTo(1, -5, 11, -3);
-      ctx.lineTo(16, -1);
-      ctx.lineTo(7, 1);
-      ctx.lineTo(-8, 1);
+      ctx.moveTo(-10, -3);
+      ctx.lineTo(-5, -8);
+      ctx.quadraticCurveTo(1, -10, 10, -7);
+      ctx.lineTo(15, -4);
+      ctx.lineTo(7, -2);
       ctx.closePath();
       ctx.fill();
-
-      // Soft white fuselage with a rounded nose.
-      ctx.fillStyle = '#f8fbff';
-      ctx.strokeStyle = '#9bb7d7';
-      ctx.lineWidth = 0.65;
+      ctx.strokeStyle = '#176dcc';
+      ctx.lineWidth = 0.85;
       ctx.beginPath();
-      ctx.moveTo(-20, 0);
-      ctx.quadraticCurveTo(-17, -2.2, -10, -2);
-      ctx.lineTo(17, -1.3);
-      ctx.quadraticCurveTo(23, -1, 24, 0);
-      ctx.quadraticCurveTo(22, 2, 16, 2);
-      ctx.lineTo(-15, 2.5);
-      ctx.quadraticCurveTo(-20, 2.2, -20, 0);
-      ctx.closePath();
-      ctx.fill();
+      ctx.moveTo(-7, -3);
+      ctx.lineTo(-3, -7);
+      ctx.moveTo(4, -3);
+      ctx.lineTo(5, -7);
       ctx.stroke();
 
-      // One blue cockpit window, kept deliberately graphic and simple.
-      ctx.fillStyle = '#70c8f5';
+      // Rounded blue fuselage with a slightly lifted nose.
+      ctx.fillStyle = '#2787f5';
       ctx.beginPath();
-      ctx.ellipse(7, -1.4, 3.1, 1.25, 0, 0, Math.PI * 2);
+      ctx.moveTo(-21, 0);
+      ctx.quadraticCurveTo(-20, -4, -13, -4);
+      ctx.lineTo(12, -3);
+      ctx.quadraticCurveTo(20, -2, 24, 0);
+      ctx.quadraticCurveTo(19, 2.5, 12, 2.5);
+      ctx.lineTo(-13, 3);
+      ctx.quadraticCurveTo(-20, 2.5, -21, 0);
+      ctx.closePath();
       ctx.fill();
 
-      // Tiny propeller, animated as a soft flicker rather than detailed machinery.
-      ctx.globalAlpha = 0.45 + Math.abs(Math.sin(elapsed * 18)) * 0.35;
-      ctx.strokeStyle = '#6d829b';
-      ctx.lineWidth = 1.25;
+      // Cockpit window and a small highlight.
+      ctx.fillStyle = '#174b83';
       ctx.beginPath();
-      ctx.moveTo(25, -3.2);
-      ctx.lineTo(25, 3.2);
+      ctx.moveTo(7, -3);
+      ctx.lineTo(13, -2.5);
+      ctx.quadraticCurveTo(16, -2, 17, -0.3);
+      ctx.lineTo(7, -0.3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 0.38;
+      ctx.fillStyle = '#dff3ff';
+      ctx.beginPath();
+      ctx.moveTo(-13, -2.4);
+      ctx.lineTo(-4, -2.4);
+      ctx.lineTo(-8, -1.4);
+      ctx.lineTo(-15, -1.4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Compact propeller with a gentle spinning flicker.
+      ctx.globalAlpha = 0.55 + Math.abs(Math.sin(elapsed * 18)) * 0.35;
+      ctx.strokeStyle = '#174b83';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(25, -4);
+      ctx.lineTo(25, 4);
       ctx.stroke();
       ctx.restore();
     }
