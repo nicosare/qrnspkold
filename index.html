@@ -2909,12 +2909,11 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
 <script>
 (function () {
   const canvas = document.getElementById('roadnote-game-canvas');
-  const button = document.getElementById('roadnote-game-start');
   const overlay = document.getElementById('roadnote-game-overlay');
   const overlayTitle = document.getElementById('roadnote-game-overlay-title');
   const overlayText = document.getElementById('roadnote-game-overlay-text');
   const recordNode = document.getElementById('roadnote-game-record');
-  if (!canvas || !button || !overlay || !recordNode) return;
+  if (!canvas || !overlay || !overlayTitle || !overlayText || !recordNode) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   const W = canvas.width, H = canvas.height, ground = 198;
@@ -2975,16 +2974,16 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   function showOverlay(title,text) { overlayTitle.textContent=title;overlayText.textContent=text;overlay.hidden=false; }
   function start() {
     cancelAnimationFrame(raf); running=true;over=false;elapsed=0;score=0;speed=230;spawnIn=.9;obstacles=[];particles=[];
-    player.y=ground-player.h;player.vy=0;player.onGround=true;last=0;overlay.hidden=true;button.textContent='Заново';raf=requestAnimationFrame(frame);
+    player.y=ground-player.h;player.vy=0;player.onGround=true;last=0;overlay.hidden=true;raf=requestAnimationFrame(frame);
   }
   function jump() {
-    if(!running){ if(over) start(); return; }
+    if(!running){ start(); return; }
     if(player.onGround){player.vy=-510;player.onGround=false;}
   }
   function endGame() {
     running=false;over=true;cancelAnimationFrame(raf);const finalScore=Math.floor(score);
     if(finalScore>best){best=finalScore;recordNode.textContent=String(best);try{localStorage.setItem(storageKey,String(best));}catch(_){}}
-    button.textContent='Ещё раз';showOverlay('Поездка окончена', 'Счёт: '+finalScore+'. Нажми «Ещё раз» и попробуй побить рекорд.');
+    showOverlay('Поездка окончена', 'Счёт: '+finalScore+'. Нажми, чтобы попробовать ещё раз.');
     draw();
   }
   function frame(now) {
@@ -3003,7 +3002,6 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     draw();raf=requestAnimationFrame(frame);
   }
   canvas.addEventListener('pointerdown',function(e){e.preventDefault();jump();},{passive:false});
-  button.addEventListener('click',function(){if(!running)start();else start();});
   document.addEventListener('visibilitychange',function(){if(document.hidden){last=0;}});
   draw();
 })();
