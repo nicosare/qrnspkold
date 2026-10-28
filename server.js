@@ -1788,9 +1788,8 @@ app.delete('/api/admin/promocodes/:id', requireAdmin, (req, res) => {
   const nowIso = new Date().toISOString();
   db.transaction(() => {
     db.prepare("UPDATE promo_codes SET is_active = 0, code = 'DELETED_' || id || '_' || code WHERE id = ?").run(id);
-    db.prepare("UPDATE promo_code_applications SET status = 'cancelled', tariff_request_id = NULL WHERE promo_code_id = ? AND status = 'selected' AND tariff_request_id IS NULL").run(id);
-    // Any already-created payment keeps its snapshotted price and code; only new uses are disabled.
-    db.prepare("UPDATE promo_code_applications SET status = 'cancelled', tariff_request_id = NULL WHERE promo_code_id = ? AND status = 'selected' AND tariff_request_id IN (SELECT id FROM tariff_requests WHERE status = 'replaced')").run(id);
+    // Keep applications attached to genuinely pending payments/reviews; cancel all other unused selections.
+    db.prepare("UPDATE promo_code_applications SET status = 'cancelled', tariff_request_id = NULL WHERE promo_code_id = ? AND status = 'selected' AND (tariff_request_id IS NULL OR tariff_request_id IN (SELECT id FROM tariff_requests WHERE status NOT IN ('awaiting_payment','awaiting_review')))").run(id);
   })();
   return res.json({ ok: true });
 });
