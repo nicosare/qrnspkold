@@ -1085,21 +1085,36 @@
 
         
         /* Roadnote mini-runner */
-        .roadnote-game { width:100%; margin:0 0 28px; padding:15px 13px 13px; border:1px solid #dfe7f1; border-radius:20px; background:linear-gradient(155deg,#fff 0%,#f4f8fd 100%); box-shadow:0 8px 22px rgba(31,65,105,.045); text-align:left; }
+        .roadnote-game { width:100%; margin:0; padding:13px; border:1px solid #dfe7f1; border-radius:20px; background:linear-gradient(155deg,#fff 0%,#f4f8fd 100%); box-shadow:0 8px 22px rgba(31,65,105,.045); text-align:left; }
         .roadnote-game-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
-        .roadnote-game-kicker { color:#2787f5; font-size:9px; font-weight:850; letter-spacing:1.5px; }
-        .roadnote-game-title { margin-top:2px; color:#232a33; font-size:17px; line-height:1.2; font-weight:850; }
-        .roadnote-game-record { flex:0 0 auto; padding:6px 9px; border:1px solid #dce8f8; border-radius:10px; background:#edf5ff; color:#2868ad; font-size:11px; font-weight:800; }
-        .roadnote-game-stage { position:relative; overflow:hidden; width:100%; border:1px solid #dce6f2; border-radius:13px; background:linear-gradient(180deg,#eaf5ff 0%,#f7fbff 78%,#e8f1fb 100%); touch-action:pan-y; }
-        .roadnote-game-canvas { display:block; width:100%; height:150px; touch-action:manipulation; }
-        .roadnote-game-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; padding:14px; background:rgba(238,246,255,.78); color:#26384d; text-align:center; pointer-events:none; }
+        .roadnote-game-kicker { color:#2787f5; font-size:14px; font-weight:850; letter-spacing:.2px; }
+        .roadnote-game-energy { display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border:1px solid #dce8f8;border-radius:11px;background:#edf5ff;color:#2868ad;font-size:14px;font-weight:850;font-variant-numeric:tabular-nums; }
+        .roadnote-game-energy svg,.game-streak-reward svg { width:16px;height:16px;display:block;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round; }
+        .roadnote-game-record { position:absolute;z-index:2;right:9px;top:9px;padding:6px 9px;border:1px solid #dce8f8;border-radius:10px;background:rgba(255,255,255,.94);color:#2868ad;font-size:12px;font-weight:800; }
+        .roadnote-game.is-playing .roadnote-game-record { display:none; }
+        .roadnote-game-stage { position:relative; overflow:hidden; width:100%; border:1px solid #dce6f2; border-radius:15px; background:linear-gradient(180deg,#eaf5ff 0%,#f7fbff 78%,#e8f1fb 100%); touch-action:pan-y; }
+        .roadnote-game-canvas { display:block; width:100%; height:158px; touch-action:manipulation; }
+        .roadnote-game-hud {position:absolute;z-index:2;top:9px;left:9px;right:9px;display:flex;justify-content:space-between;align-items:center;gap:8px;pointer-events:none}
+        .roadnote-game-hud span {display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border:1px solid #d8e5f4;border-radius:10px;background:rgba(255,255,255,.94);color:#29415b;font-size:12px;font-weight:850;box-shadow:0 2px 7px #29415b0a}
+        .roadnote-game-hud svg {display:block;width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+        .roadnote-game-hud.is-hidden {display:none}
+        .roadnote-game-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; padding:16px; background:rgba(238,246,255,.82); color:#26384d; text-align:center; }
         .roadnote-game-overlay[hidden] { display:none!important; }
-        .roadnote-game-overlay strong { font-size:17px; font-weight:850; }
-        .roadnote-game-overlay span { color:#5e7187; font-size:12px; line-height:1.35; }
-        .roadnote-game-bottom { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; }
-        .roadnote-game-hint { color:#788697; font-size:11px; line-height:1.35; }
-        .roadnote-game-start { flex:0 0 auto; min-height:38px; padding:8px 14px; border:0; border-radius:11px; background:#2787f5; color:#fff; font:inherit; font-size:12px; font-weight:800; touch-action:manipulation; }
-        .roadnote-game-start:active { transform:scale(.97); background:#176dcc; }
+        .roadnote-game-overlay strong { font-size:20px; line-height:1.2; font-weight:850; }
+        .roadnote-game-overlay span { color:#526a84; font-size:13px; line-height:1.4; }
+        .roadnote-game-overlay .roadnote-game-start { margin-top:5px;min-height:40px;padding:9px 22px;border:0;border-radius:12px;background:#2787f5;color:#fff;font:inherit;font-size:14px;font-weight:850;box-shadow:0 6px 15px #2787f533;touch-action:manipulation; }
+        .roadnote-game-overlay .roadnote-game-start:active {transform:scale(.97);background:#176dcc}
+        .game-streak-days{grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:0}
+        .game-streak-day{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:66px;padding:8px 2px;border:1px solid #e3e8ef;border-radius:12px;background:#f2f3f4;text-align:center}
+        .game-streak-day span{display:block;color:#424142;font-size:16px;font-weight:850;line-height:1}
+        .game-streak-day strong{display:none}
+        .game-streak-day.is-active{border-color:#f0bd73;background:#fff2df}
+        .game-streak-day.is-active span{color:#b86a12}
+        .game-streak-day.is-done{border-color:#9cc9ff;background:#eaf4ff}
+        .game-streak-day.is-done span{color:#176dcc}
+        .game-streak-reward{display:inline-flex;align-items:center;gap:2px;color:#6b7c90;font-size:10px;font-weight:800;line-height:1}
+        .game-streak-day.is-active .game-streak-reward{color:#b86a12}
+        .game-streak-day.is-done .game-streak-reward{color:#176dcc}
         @media (prefers-reduced-motion:reduce) { .roadnote-game * { animation:none!important; transition:none!important; } }
 
         .game-streak-card{width:100%;margin:0;padding:16px;border:1px solid #e3e8ef;border-radius:18px;background:#fff;box-shadow:none;color:#424142;text-align:left}
@@ -1302,13 +1317,9 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         </div>
         <div id="scan-status" class="start-status" role="status" aria-live="polite"></div>
 
-        <section class="game-streak-card" id="game-streak-card" aria-label="Серия ежедневных заходов">
-            <div class="game-streak-head">
-                <div><div class="game-streak-title">Серия заходов</div></div>
-                <div class="game-streak-count" id="game-streak-count"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22c4.2 0 7-3 7-7.1 0-2.8-1.5-5.1-4.1-7.9.1 2.3-.8 3.6-1.8 4.2C13.2 7.3 10.8 3.8 7 2c.5 4.1-2 6.3-2 11.1C5 17.6 7.9 22 12 22Z"/><path d="M12 22c-1.8-1-2.6-2.3-2.6-4.1 0-1.5.8-2.8 2.2-4 .1 1.7 1 2.5 1.8 3.1.7 1.9.2 3.9-1.4 5Z"/></svg><span id="game-streak-number">0</span></div>
-            </div>
+        <section class="game-streak-card" id="game-streak-card" aria-label="Награды за ежедневные заходы" style="padding:0;border:0;background:transparent">
             <div class="game-streak-days" id="game-streak-days">
-                <div class="game-streak-day"><span>День 1</span><strong>Заход</strong></div><div class="game-streak-day"><span>День 2</span><strong>Заход</strong></div><div class="game-streak-day"><span>День 3</span><strong>Заход</strong></div><div class="game-streak-day"><span>День 4</span><strong>Заход</strong></div><div class="game-streak-day"><span>День 5</span><strong>Заход</strong></div><div class="game-streak-day"><span>День 6</span><strong>Заход</strong></div><div class="game-streak-day"><span>День 7+</span><strong>Заход</strong></div>
+                <div class="game-streak-day"><span>1</span><small class="game-streak-reward">+1 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg></small></div><div class="game-streak-day"><span>2</span><small class="game-streak-reward">+1 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg></small></div><div class="game-streak-day"><span>3</span><small class="game-streak-reward">+1 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg></small></div><div class="game-streak-day"><span>4</span><small class="game-streak-reward">+1 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg></small></div><div class="game-streak-day"><span>5</span><small class="game-streak-reward">+1 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg></small></div><div class="game-streak-day"><span>6</span><small class="game-streak-reward">+1 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg></small></div><div class="game-streak-day"><span>7</span><small class="game-streak-reward">+1 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg></small></div>
             </div>
         </section>
 
@@ -1372,17 +1383,19 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             </button>
         </div>
 
-        <section class="roadnote-game" aria-labelledby="roadnote-game-title">
+        <section class="roadnote-game" id="roadnote-game" aria-labelledby="roadnote-game-title">
             <div class="roadnote-game-head">
-                <div class="roadnote-game-kicker">ROADNOTE ARCADE</div>
-                <div class="roadnote-game-record">Рекорд: <span id="roadnote-game-record">0</span></div>
+                <div class="roadnote-game-kicker" id="roadnote-game-title">Roadnote Arcade</div>
+                <div class="roadnote-game-energy" aria-label="Запас игровых попыток"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg><span id="roadnote-game-energy-count">—</span></div>
             </div>
             <div class="roadnote-game-stage">
+                <div class="roadnote-game-record">Рекорд: <span id="roadnote-game-record">0</span></div>
                 <canvas class="roadnote-game-canvas" id="roadnote-game-canvas" width="640" height="240" aria-label="Мини-игра: нажимай, чтобы перепрыгивать препятствия"></canvas>
-                <div class="roadnote-game-hud" id="roadnote-game-hud" aria-live="polite"><span id="roadnote-game-attempts"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> —</span><span id="roadnote-game-reward">3000 очков = бесплатный скан</span></div>
+                <div class="roadnote-game-hud is-hidden" id="roadnote-game-hud" aria-live="polite"><span id="roadnote-game-score">Счёт: 0</span><span id="roadnote-game-reward">3000 очков = бесплатный скан</span></div>
                 <div class="roadnote-game-overlay" id="roadnote-game-overlay">
-                    <strong id="roadnote-game-overlay-title"> </strong>
-                    <span id="roadnote-game-overlay-text"> </span>
+                    <strong id="roadnote-game-overlay-title">Roadnote Runner</strong>
+                    <span id="roadnote-game-overlay-text">Перепрыгивай препятствия и набирай очки.</span>
+                    <button class="roadnote-game-start" id="roadnote-game-start" type="button">Играть</button>
                 </div>
             </div>
         </section>
@@ -2992,9 +3005,9 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     if (!state) return;
     gameAttempts = Math.max(0, Number(state.attempts || 0));
     gameStreak = Math.max(0, Number(state.streak || 0));
+    const energyNode = document.getElementById('roadnote-game-energy-count');
+    if (energyNode) energyNode.textContent = String(gameAttempts);
     if (attemptsNode) attemptsNode.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> ' + gameAttempts;
-    const streakNumberNode = document.getElementById('game-streak-number');
-    if (streakNumberNode) streakNumberNode.textContent = String(gameStreak);
     if (streakDaysNode) [...streakDaysNode.children].forEach((node, i) => {
       node.classList.toggle('is-done', i < Math.min(gameStreak, 7));
       node.classList.toggle('is-active', i === Math.min(Math.max(gameStreak - 1, 0), 6));
@@ -3377,6 +3390,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     obstacles.forEach(drawObstacle);
     drawRoadnotePlane();
     drawPlayer();
+    const scoreNode = document.getElementById('roadnote-game-score'); if (scoreNode) scoreNode.textContent = 'Счёт: ' + String(Math.floor(score)).padStart(4,'0');
     ctx.fillStyle='#24415f';ctx.font='800 17px Circe, sans-serif';ctx.textAlign='right';ctx.fillText(String(Math.floor(score)).padStart(4,'0'),W-16,27);
   }
   function showOverlay(title,text) { overlayTitle.textContent=title;overlayText.textContent=text;overlay.hidden=false; }
@@ -3400,7 +3414,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       renderGameState(result);
       taptic('light');
       cancelAnimationFrame(raf); running=true;over=false;elapsed=0;score=0;speed=230;spawnIn=.9;obstacles=[];particles=[];
-      const hud = document.getElementById('roadnote-game-hud'); if (hud) hud.classList.add('is-hidden');
+      const hud = document.getElementById('roadnote-game-hud'); if (hud) hud.classList.remove('is-hidden');
+      const gameCard = document.getElementById('roadnote-game'); if (gameCard) gameCard.classList.add('is-playing');
       player.y=ground-player.h;player.vy=0;player.onGround=true;last=0;overlay.hidden=true;raf=requestAnimationFrame(frame);
     } catch (error) {
       showGameToast('Пока не выезжаем', error.message, 'info');
@@ -3408,9 +3423,14 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     } finally { startingGame = false; }
   }
   function jump() {
-    if(!running){ if (!startingGame) start(); return; }
+    if(!running){ if (!startingGame && over) start(); return; }
     if(player.onGround){taptic('light');player.vy=-510;player.onGround=false;}
   }
+  const gameStartButton = document.getElementById('roadnote-game-start');
+  if (gameStartButton) gameStartButton.addEventListener('click', function (event) {
+    event.preventDefault(); event.stopPropagation(); overlay.style.pointerEvents = 'none'; start();
+  });
+  overlay.style.pointerEvents = 'auto';
   async function endGame() {
     taptic('medium');
     running=false;over=true;cancelAnimationFrame(raf);const finalScore=Math.floor(score);
@@ -3431,8 +3451,11 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         endingText = 'Счёт: '+finalScore+'. Не удалось сохранить результат: '+error.message+'. Вернись на старт и проверь соединение.';
       }
     }
-    const hud = document.getElementById('roadnote-game-hud'); if (hud) hud.classList.remove('is-hidden');
-    showOverlay('Поездка окончена', endingText + ' Осталось попыток: ' + gameAttempts + '. 3000 очков за раунд — бесплатный скан.');
+    const hud = document.getElementById('roadnote-game-hud'); if (hud) hud.classList.add('is-hidden');
+    const gameCard = document.getElementById('roadnote-game'); if (gameCard) gameCard.classList.remove('is-playing');
+    showOverlay('Раунд завершён', endingText + ' Осталось попыток: ' + gameAttempts + '.');
+    const replayButton = document.getElementById('roadnote-game-start'); if (replayButton) replayButton.textContent = 'Играть ещё';
+    overlay.style.pointerEvents = 'auto';
     draw();
   }
   function frame(now) {
@@ -3471,6 +3494,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   canvas.addEventListener('pointerdown',function(e){e.preventDefault();jump();},{passive:false});
   document.addEventListener('visibilitychange',function(){if(document.hidden){last=0;}});
   draw();
+  overlay.style.pointerEvents = 'auto';
 })();
 </script>
 </body>
