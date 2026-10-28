@@ -1083,7 +1083,7 @@ app.post('/api/promocodes/apply', (req, res) => {
   if (promo.starts_at && Date.parse(promo.starts_at) > now) return res.status(400).json({ error: 'Срок действия этого промокода ещё не начался.' });
   if (promo.expires_at && Date.parse(promo.expires_at) < now) return res.status(400).json({ error: 'Срок действия этого промокода истёк.' });
   if (promo.max_redemptions != null) {
-    const reservations = db.prepare("SELECT COUNT(*) AS count FROM promo_code_applications WHERE promo_code_id = ? AND status IN ('used','selected') AND vk_id <> ?").get(Number(promo.id), String(userId));
+    const reservations = db.prepare("SELECT COUNT(*) AS count FROM promo_code_applications WHERE promo_code_id = ? AND (status = 'used' OR (status = 'selected' AND vk_id <> ?))").get(Number(promo.id), String(userId));
     if (Number(reservations?.count || 0) >= Number(promo.max_redemptions)) return res.status(409).json({ error: 'Не удалось применить промокод.' });
   }
   let offerIds;
@@ -1102,7 +1102,7 @@ app.post('/api/promocodes/apply', (req, res) => {
         if (activeRequest.promo_application_id) db.prepare("UPDATE promo_code_applications SET tariff_request_id = NULL WHERE id = ? AND status = 'selected'").run(activeRequest.promo_application_id);
       }
       if (promo.max_redemptions != null) {
-        const reservations = db.prepare("SELECT COUNT(*) AS count FROM promo_code_applications WHERE promo_code_id = ? AND status IN ('used','selected') AND vk_id <> ?").get(Number(promo.id), String(userId));
+        const reservations = db.prepare("SELECT COUNT(*) AS count FROM promo_code_applications WHERE promo_code_id = ? AND (status = 'used' OR (status = 'selected' AND vk_id <> ?))").get(Number(promo.id), String(userId));
         if (Number(reservations?.count || 0) >= Number(promo.max_redemptions)) {
           const error = new Error('Не удалось применить промокод.'); error.statusCode = 409; throw error;
         }
