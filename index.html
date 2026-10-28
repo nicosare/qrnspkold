@@ -1102,6 +1102,31 @@
         .roadnote-game-start:active { transform:scale(.97); background:#176dcc; }
         @media (prefers-reduced-motion:reduce) { .roadnote-game * { animation:none!important; transition:none!important; } }
 
+        .game-streak-card{margin:16px 0 20px;padding:17px 15px;border:1px solid #e3e8ef;border-radius:20px;background:linear-gradient(145deg,#fff 0%,#f6f9ff 100%);box-shadow:0 8px 22px rgba(31,65,105,.04);color:#26384d}
+        .game-streak-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+        .game-streak-title{font-size:17px;font-weight:850;line-height:1.2}.game-streak-subtitle{margin-top:4px;color:#788697;font-size:12px;line-height:1.35}
+        .game-streak-count{flex:0 0 auto;padding:7px 10px;border:1px solid #f4dca6;border-radius:12px;background:#fff5dc;color:#9a6200;font-size:12px;font-weight:850}
+        .game-streak-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-top:14px}
+        .game-streak-day{padding:7px 1px;border:1px solid #e6ebf2;border-radius:10px;background:#f8fafc;text-align:center}
+        .game-streak-day.is-active{border-color:#9cc9ff;background:#eaf4ff}
+        .game-streak-day.is-done{border-color:#c9e8d4;background:#effaf2}
+        .game-streak-day span{display:block;color:#8290a0;font-size:10px}.game-streak-day strong{display:block;margin-top:3px;color:#35475d;font-size:12px}
+        .game-streak-day.is-active strong{color:#176dcc}.game-streak-day.is-done strong{color:#21834b}
+        .game-streak-foot{margin-top:11px;color:#5e7187;font-size:12px;line-height:1.4}
+        .roadnote-game-stage{position:relative}
+        .roadnote-game-hud{position:absolute;z-index:2;top:7px;left:7px;right:7px;display:flex;justify-content:space-between;align-items:center;gap:7px;pointer-events:none}
+        .roadnote-game-hud span{padding:5px 8px;border:1px solid #d8e5f4;border-radius:9px;background:rgba(255,255,255,.91);color:#29415b;font-size:10px;font-weight:850;box-shadow:0 2px 7px #29415b0a}
+        .roadnote-game-hud .is-close{background:#fff3d6;border-color:#f1d58d;color:#8b5b00}
+        .roadnote-game-overlay{z-index:3}
+        .roadnote-game-toast-host{position:fixed;z-index:30000;top:calc(env(safe-area-inset-top,0px) + 14px);left:14px;right:14px;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+        .roadnote-game-toast{display:flex;align-items:center;gap:10px;width:min(100%,440px);box-sizing:border-box;padding:12px 14px;border:1px solid #3a4657;border-radius:15px;background:#202936;color:#fff;box-shadow:0 12px 36px #0c1b2b30;animation:roadnoteToastIn .22s ease both}
+        .roadnote-game-toast-icon{font-size:22px;line-height:1}.roadnote-game-toast strong{display:block;font-size:13px;line-height:1.3}.roadnote-game-toast small{display:block;margin-top:3px;color:#d5dce5;font-size:11px;line-height:1.35}
+        .roadnote-game-toast.is-leaving{animation:roadnoteToastOut .18s ease both}
+        @keyframes roadnoteToastIn{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+        @keyframes roadnoteToastOut{to{opacity:0;transform:translateY(-6px) scale(.98)}}
+        @media(prefers-reduced-motion:reduce){.roadnote-game-toast,.roadnote-game-toast.is-leaving{animation:none!important}}
+
+
 </style>
 <style>
 .start-applications-section{width:100%;margin:0;padding:19px 16px 16px;border:1px solid #e3e8ef;border-radius:22px;background:#fff;box-shadow:0 8px 24px rgba(31,65,105,.045);text-align:left}
@@ -1219,7 +1244,10 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             <details><summary><span class="faq-number">05</span><span>Что даёт подписка?</span></summary><div class="faq-answer"><p>Подписка открывает безлимитное сканирование на выбранный срок — 1, 3 или 6 месяцев. Пока подписка активна, пакетные сканы не расходуются. Дата окончания отображается в карточке баланса. Если продлить активную подписку, новый срок добавляется к оставшемуся.</p></div></details>
             <details><summary><span class="faq-number">06</span><span>Как работает реферальная система?</span></summary><div class="faq-answer"><p>Поделись своей ссылкой из блока «Пригласи друга». Если новый пользователь впервые откроет Roadnote по твоей ссылке, его аккаунт будет связан с тобой. После первого успешного сканирования друга тебе начислят 3 бонусных скана. Повторные сканирования этого пользователя новых бонусов не дают.</p></div></details>
             <details><summary><span class="faq-number">07</span><span>Как работает скидка на первую покупку?</span></summary><div class="faq-answer"><p>Скидка действует до первого подтверждённого подключения любого платного тарифа. После начисления цены всех тарифов переключаются на обычные. Если оплата не состоялась, первая покупка ещё не считается совершённой и скидка сохраняется.</p></div></details>
-            <details><summary><span class="faq-number">08</span><span>Можно ли оплатить проезд через Roadnote?</span></summary><div class="faq-answer"><p>Нет. Roadnote не продаёт билеты, не принимает оплату за проезд и не является платёжным средством. Приложение предназначено для считывания и отображения информации из транспортных QR-кодов.</p></div></details>
+            <details><summary><span class="faq-number">08</span><span>Как работает серия ежедневных заходов?</span></summary><div class="faq-answer"><p>Открывай Roadnote каждый день — запускать игру необязательно. За заход начисляются игровые попытки: в первый и второй день по одной, в третий и четвёртый по две, в пятый и шестой по три, а начиная с седьмого — по пять каждый день. Если пропустить целый день, серия начнётся заново. Уже полученные попытки не сгорают.</p></div></details>
+            <details><summary><span class="faq-number">09</span><span>Как получить дополнительные игровые попытки?</span></summary><div class="faq-answer"><p>За каждый успешный скан начисляются ещё 3 игровые попытки. Попытки также выдаются за ежедневные заходы в Roadnote. Их остаток виден прямо в игре, а накопленные попытки сохраняются.</p></div></details>
+            <details><summary><span class="faq-number">10</span><span>Как получить бесплатный скан за игру?</span></summary><div class="faq-answer"><p>Набери 3000 очков за один раунд — и получишь один бесплатный скан. Награда начисляется не чаще одного раза в день. Твой рекорд и общий прогресс не сбрасываются. Когда бесплатный скан будет начислен, Roadnote покажет уведомление.</p></div></details>
+            <details><summary><span class="faq-number">11</span><span>Можно ли оплатить проезд через Roadnote?</span></summary><div class="faq-answer"><p>Нет. Roadnote не продаёт билеты, не принимает оплату за проезд и не является платёжным средством. Приложение предназначено для считывания и отображения информации из транспортных QR-кодов.</p></div></details>
             <details><summary><span class="faq-number">09</span><span>Насколько точны данные?</span></summary><div class="faq-answer"><p>Roadnote показывает данные, полученные от внешнего сервиса, и не гарантирует их постоянную доступность, полноту или точность. Используй приложение на свой страх и риск и самостоятельно проверяй важную информацию. Roadnote не заменяет официальный билет или подтверждение оплаты.</p></div></details>
             <details><summary><span class="faq-number">10</span><span>Что важно знать о безопасности и ответственности?</span></summary><div class="faq-answer"><p>Не используй отображённую информацию как единственное подтверждение оплаты. За фактическую оплату проезда отвечают официальные транспортные сервисы и перевозчик. Roadnote — информационный инструмент; использование приложения не создаёт платёжных обязательств и не гарантирует принятие QR-кода перевозчиком.</p></div></details>
         </div>
@@ -1273,6 +1301,17 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             </button>
         </div>
         <div id="scan-status" class="start-status" role="status" aria-live="polite"></div>
+
+        <section class="game-streak-card" id="game-streak-card" aria-label="Серия ежедневных заходов">
+            <div class="game-streak-head">
+                <div><div class="game-streak-title">Твоя серия 🔥</div><div class="game-streak-subtitle">Заглядывай в Roadnote каждый день</div></div>
+                <div class="game-streak-count" id="game-streak-count">0 дней подряд</div>
+            </div>
+            <div class="game-streak-days" id="game-streak-days">
+                <div class="game-streak-day"><span>День 1</span><strong>+1</strong></div><div class="game-streak-day"><span>День 2</span><strong>+1</strong></div><div class="game-streak-day"><span>День 3</span><strong>+2</strong></div><div class="game-streak-day"><span>День 4</span><strong>+2</strong></div><div class="game-streak-day"><span>День 5</span><strong>+3</strong></div><div class="game-streak-day"><span>День 6</span><strong>+3</strong></div><div class="game-streak-day"><span>День 7+</span><strong>+5</strong></div>
+            </div>
+            <div class="game-streak-foot" id="game-streak-foot">Заходи каждый день — попытки копятся и не сгорают 🎁</div>
+        </section>
 
 
 
@@ -1341,6 +1380,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             </div>
             <div class="roadnote-game-stage">
                 <canvas class="roadnote-game-canvas" id="roadnote-game-canvas" width="640" height="240" aria-label="Мини-игра: нажимай, чтобы перепрыгивать препятствия"></canvas>
+                <div class="roadnote-game-hud" id="roadnote-game-hud" aria-live="polite"><span id="roadnote-game-attempts">Попытки: —</span><span id="roadnote-game-reward">🎁 3000 очков = скан</span></div>
                 <div class="roadnote-game-overlay" id="roadnote-game-overlay">
                     <strong id="roadnote-game-overlay-title"> </strong>
                     <span id="roadnote-game-overlay-text"> </span>
@@ -2905,6 +2945,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         </div>
 
 <script src="tariff-purchases.js?v=20261028-mood-stable-1"></script>
+<div class="roadnote-game-toast-host" id="roadnote-game-toast-host" aria-live="polite" aria-atomic="true"></div>
 
 <script>
 (function () {
@@ -2913,7 +2954,59 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   const overlayTitle = document.getElementById('roadnote-game-overlay-title');
   const overlayText = document.getElementById('roadnote-game-overlay-text');
   const recordNode = document.getElementById('roadnote-game-record');
+  const attemptsNode = document.getElementById('roadnote-game-attempts');
+  const rewardNode = document.getElementById('roadnote-game-reward');
+  const streakCountNode = document.getElementById('game-streak-count');
+  const streakDaysNode = document.getElementById('game-streak-days');
+  const streakFootNode = document.getElementById('game-streak-foot');
+  const toastHost = document.getElementById('roadnote-game-toast-host');
   if (!canvas || !overlay || !overlayTitle || !overlayText || !recordNode) return;
+  const launchParams = window.location.search.slice(1);
+  let gameAttempts = 0, gameStreak = 0, gameSessionId = null, startingGame = false;
+  function showGameToast(title, message, icon) {
+    if (!toastHost) return;
+    const toast = document.createElement('div'); toast.className = 'roadnote-game-toast';
+    const iconNode = document.createElement('span'); iconNode.className = 'roadnote-game-toast-icon'; iconNode.textContent = icon || '✨';
+    const body = document.createElement('div'); body.style.minWidth = '0';
+    const heading = document.createElement('strong'); heading.textContent = title;
+    const detail = document.createElement('small'); detail.textContent = message;
+    body.append(heading, detail); toast.append(iconNode, body); toastHost.append(toast);
+    window.setTimeout(() => { toast.classList.add('is-leaving'); window.setTimeout(() => toast.remove(), 220); }, 3600);
+  }
+  async function gameRequest(path, payload) {
+    const response = await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({launchParams, ...(payload || {})}), cache:'no-store', credentials:'omit' });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Не удалось обновить игровую награду.');
+    return data;
+  }
+  function renderGameState(state) {
+    if (!state) return;
+    gameAttempts = Math.max(0, Number(state.attempts || 0));
+    gameStreak = Math.max(0, Number(state.streak || 0));
+    if (attemptsNode) attemptsNode.textContent = '🎮 Попытки: ' + gameAttempts;
+    if (streakCountNode) streakCountNode.textContent = gameStreak + (gameStreak === 1 ? ' день подряд' : ' дней подряд');
+    if (streakDaysNode) [...streakDaysNode.children].forEach((node, i) => {
+      node.classList.toggle('is-done', i < Math.min(gameStreak, 7));
+      node.classList.toggle('is-active', i === Math.min(Math.max(gameStreak - 1, 0), 6));
+    });
+    if (streakFootNode) {
+      const reward = [1,1,2,2,3,3,5][Math.min(Math.max(gameStreak - 1,0),6)] || 1;
+      streakFootNode.textContent = state.loginRewardToday
+        ? 'Сегодня уже начислено. Следующий бонус: +' + reward + ' попыток при следующем ежедневном заходе 🎁'
+        : 'Заходи каждый день — попытки копятся и не сгорают 🎁';
+    }
+    if (rewardNode) rewardNode.textContent = state.freeScanClaimedToday ? '🏆 Бесплатный скан уже получен сегодня' : '🎁 3000 очков = 1 бесплатный скан';
+  }
+  async function refreshGameState(showLoginToast) {
+    if (!launchParams) return;
+    try {
+      const state = await gameRequest('/api/game/state', {});
+      renderGameState(state);
+      if (state.awarded > 0 && showLoginToast) showGameToast('Заглянул — держи бонус! 🎁', '+' + state.awarded + ' игровых попыток за сегодняшний заход', '🎁');
+    } catch (error) { console.warn('[Roadnote game state]', error.message); }
+  }
+  refreshGameState(true);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshGameState(false); });
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   const W = canvas.width, H = canvas.height, ground = 198;
@@ -3290,20 +3383,46 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     } catch (_) {}
     if (typeof navigator.vibrate === 'function') navigator.vibrate(style === 'medium' ? 28 : 10);
   }
-  function start() {
-    taptic('light');
-    cancelAnimationFrame(raf); running=true;over=false;elapsed=0;score=0;speed=230;spawnIn=.9;obstacles=[];particles=[];
-    player.y=ground-player.h;player.vy=0;player.onGround=true;last=0;overlay.hidden=true;raf=requestAnimationFrame(frame);
+  async function start() {
+    if (startingGame || running) return;
+    startingGame = true;
+    try {
+      const result = await gameRequest('/api/game/start', {});
+      gameSessionId = result.sessionId;
+      renderGameState(result);
+      taptic('light');
+      cancelAnimationFrame(raf); running=true;over=false;elapsed=0;score=0;speed=230;spawnIn=.9;obstacles=[];particles=[];
+      player.y=ground-player.h;player.vy=0;player.onGround=true;last=0;overlay.hidden=true;raf=requestAnimationFrame(frame);
+    } catch (error) {
+      showGameToast('Пока не выезжаем', error.message, '🛣️');
+      await refreshGameState(false);
+    } finally { startingGame = false; }
   }
   function jump() {
-    if(!running){ start(); return; }
+    if(!running){ if (!startingGame) start(); return; }
     if(player.onGround){taptic('light');player.vy=-510;player.onGround=false;}
   }
-  function endGame() {
+  async function endGame() {
     taptic('medium');
     running=false;over=true;cancelAnimationFrame(raf);const finalScore=Math.floor(score);
     if(finalScore>best){best=finalScore;recordNode.textContent=String(best);try{localStorage.setItem(storageKey,String(best));}catch(_){}}
-    showOverlay('Поездка окончена', 'Счёт: '+finalScore+'. Нажми, чтобы попробовать ещё раз.');
+    let endingText = 'Счёт: '+finalScore+'. Нажми, чтобы попробовать ещё раз.';
+    if (gameSessionId) {
+      const sessionToFinish = gameSessionId; gameSessionId = null;
+      try {
+        const result = await gameRequest('/api/game/finish', {sessionId:sessionToFinish, score:finalScore});
+        renderGameState(result);
+        if (result.freeScanAwarded) {
+          endingText = 'Счёт: '+finalScore+'. Ты выбил бесплатный скан! 🎉';
+          showGameToast('Красиво! Скан за наш счёт 🏆', 'Бесплатный скан начислен за 3000 очков', '🎁');
+        } else if (finalScore >= 3000) {
+          endingText = 'Счёт: '+finalScore+'. Награда за сегодня уже получена — попробуем ещё?';
+        }
+      } catch (error) {
+        endingText = 'Счёт: '+finalScore+'. Не удалось сохранить результат: '+error.message+'. Вернись на старт и проверь соединение.';
+      }
+    }
+    showOverlay('Поездка окончена', endingText);
     draw();
   }
   function frame(now) {
