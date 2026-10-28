@@ -1102,16 +1102,16 @@
         .roadnote-game-start:active { transform:scale(.97); background:#176dcc; }
         @media (prefers-reduced-motion:reduce) { .roadnote-game * { animation:none!important; transition:none!important; } }
 
-        .game-streak-card{margin:12px 0;padding:12px;border:1px solid #e3e8ef;border-radius:14px;background:#fff;box-shadow:none;color:#26384d}
+        .game-streak-card{width:100%;margin:0;padding:16px;border:1px solid #e3e8ef;border-radius:18px;background:#fff;box-shadow:none;color:#424142;text-align:left}
         .game-streak-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
-        .game-streak-title{font-size:14px;font-weight:750;line-height:1.2}
-        .game-streak-count{flex:0 0 auto;padding:5px 8px;border:1px solid #d8e5f4;border-radius:9px;background:#f5f9ff;color:#29415b;font-size:12px;font-weight:750}
-        .game-streak-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-top:10px}
-        .game-streak-day{padding:7px 1px;border:1px solid #e6ebf2;border-radius:10px;background:#f8fafc;text-align:center}
+        .game-streak-title{font-size:16px;font-weight:700;line-height:24px;color:#424142}
+        .game-streak-count{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;padding:0;border:0;background:transparent;color:#2787f5;font-size:16px;font-weight:700;line-height:24px} .game-streak-count svg{display:block;width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+        .game-streak-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-top:12px}
+        .game-streak-day{padding:7px 1px;border:1px solid #e3e8ef;border-radius:10px;background:#f2f3f4;text-align:center}
         .game-streak-day.is-active{border-color:#9cc9ff;background:#eaf4ff}
-        .game-streak-day.is-done{border-color:#c9e8d4;background:#effaf2}
-        .game-streak-day span{display:block;color:#8290a0;font-size:10px}.game-streak-day strong{display:block;margin-top:3px;color:#35475d;font-size:12px}
-        .game-streak-day.is-active strong{color:#176dcc}.game-streak-day.is-done strong{color:#21834b}
+        .game-streak-day.is-done{border-color:#b9d9fa;background:#eaf4ff}
+        .game-streak-day span{display:block;color:#727983;font-size:11px}.game-streak-day strong{display:block;margin-top:3px;color:#424142;font-size:13px}
+        .game-streak-day.is-active strong,.game-streak-day.is-done strong{color:#176dcc}
         .roadnote-game-stage{position:relative}
         .roadnote-game-hud{position:absolute;z-index:2;top:7px;left:7px;right:7px;display:flex;justify-content:space-between;align-items:center;gap:7px;pointer-events:none}
         .roadnote-game-hud span{padding:5px 8px;border:1px solid #d8e5f4;border-radius:9px;background:rgba(255,255,255,.91);color:#29415b;font-size:10px;font-weight:850;box-shadow:0 2px 7px #29415b0a}
@@ -1120,7 +1120,7 @@
         .roadnote-game-overlay{z-index:3}
         .roadnote-game-toast-host{position:fixed;z-index:30000;top:calc(env(safe-area-inset-top,0px) + 14px);left:14px;right:14px;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
         .roadnote-game-toast{display:flex;align-items:center;gap:10px;width:min(100%,440px);box-sizing:border-box;padding:12px 14px;border:1px solid #3a4657;border-radius:15px;background:#202936;color:#fff;box-shadow:0 12px 36px #0c1b2b30;animation:roadnoteToastIn .22s ease both}
-        .roadnote-game-toast-icon{font-size:22px;line-height:1}.roadnote-game-toast strong{display:block;font-size:13px;line-height:1.3}.roadnote-game-toast small{display:block;margin-top:3px;color:#d5dce5;font-size:11px;line-height:1.35}
+        .faq-inline-bolt{display:inline-block;width:15px;height:15px;vertical-align:-3px;fill:none;stroke:#2787f5;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.roadnote-game-toast-icon svg{display:block;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.roadnote-game-toast-icon{font-size:22px;line-height:1}.roadnote-game-toast strong{display:block;font-size:13px;line-height:1.3}.roadnote-game-toast small{display:block;margin-top:3px;color:#d5dce5;font-size:11px;line-height:1.35}
         .roadnote-game-toast.is-leaving{animation:roadnoteToastOut .18s ease both}
         @keyframes roadnoteToastIn{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
         @keyframes roadnoteToastOut{to{opacity:0;transform:translateY(-6px) scale(.98)}}
@@ -1245,7 +1245,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             <details><summary><span class="faq-number">06</span><span>Как работает реферальная система?</span></summary><div class="faq-answer"><p>Поделись своей ссылкой из блока «Пригласи друга». Если новый пользователь впервые откроет Roadnote по твоей ссылке, его аккаунт будет связан с тобой. После первого успешного сканирования друга тебе начислят 3 бонусных скана. Повторные сканирования этого пользователя новых бонусов не дают.</p></div></details>
             <details><summary><span class="faq-number">07</span><span>Как работает скидка на первую покупку?</span></summary><div class="faq-answer"><p>Скидка действует до первого подтверждённого подключения любого платного тарифа. После начисления цены всех тарифов переключаются на обычные. Если оплата не состоялась, первая покупка ещё не считается совершённой и скидка сохраняется.</p></div></details>
             <details><summary><span class="faq-number">08</span><span>Как работает серия ежедневных заходов?</span></summary><div class="faq-answer"><p>Открывай Roadnote каждый день — запускать игру необязательно. За заход начисляются игровые попытки: в первый и второй день по одной, в третий и четвёртый по две, в пятый и шестой по три, а начиная с седьмого — по пять каждый день. Если пропустить целый день, серия начнётся заново. Уже полученные попытки не сгорают.</p></div></details>
-            <details><summary><span class="faq-number">09</span><span>Как получить дополнительные игровые попытки?</span></summary><div class="faq-answer"><p>За каждый успешный скан начисляются ещё 3 игровые попытки. Попытки также выдаются за ежедневные заходы в Roadnote. Их остаток виден прямо в игре, а накопленные попытки сохраняются.</p></div></details>
+            <details><summary><span class="faq-number">09</span><span>Как получить дополнительные игровые попытки?</span></summary><div class="faq-answer"><p>За каждый успешный скан начисляются ещё 3 <svg class="faq-inline-bolt" viewBox="0 0 24 24" aria-label="игровые попытки"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> игровых попытки. Попытки также выдаются за ежедневные заходы в Roadnote. Их остаток виден прямо в игре, а накопленные попытки сохраняются.</p></div></details>
             <details><summary><span class="faq-number">10</span><span>Как получить бесплатный скан за игру?</span></summary><div class="faq-answer"><p>Набери 3000 очков за один раунд — и получишь один бесплатный скан. Награда начисляется не чаще одного раза в день. Твой рекорд и общий прогресс не сбрасываются. Когда бесплатный скан будет начислен, Roadnote покажет уведомление.</p></div></details>
             <details><summary><span class="faq-number">11</span><span>Можно ли оплатить проезд через Roadnote?</span></summary><div class="faq-answer"><p>Нет. Roadnote не продаёт билеты, не принимает оплату за проезд и не является платёжным средством. Приложение предназначено для считывания и отображения информации из транспортных QR-кодов.</p></div></details>
             <details><summary><span class="faq-number">12</span><span>Насколько точны данные?</span></summary><div class="faq-answer"><p>Roadnote показывает данные, полученные от внешнего сервиса, и не гарантирует их постоянную доступность, полноту или точность. Используй приложение на свой страх и риск и самостоятельно проверяй важную информацию. Roadnote не заменяет официальный билет или подтверждение оплаты.</p></div></details>
@@ -1305,10 +1305,10 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         <section class="game-streak-card" id="game-streak-card" aria-label="Серия ежедневных заходов">
             <div class="game-streak-head">
                 <div><div class="game-streak-title">Серия заходов</div></div>
-                <div class="game-streak-count" id="game-streak-count">0 дней подряд</div>
+                <div class="game-streak-count" id="game-streak-count"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22c4.2 0 7-3 7-7.1 0-2.8-1.5-5.1-4.1-7.9.1 2.3-.8 3.6-1.8 4.2C13.2 7.3 10.8 3.8 7 2c.5 4.1-2 6.3-2 11.1C5 17.6 7.9 22 12 22Z"/><path d="M12 22c-1.8-1-2.6-2.3-2.6-4.1 0-1.5.8-2.8 2.2-4 .1 1.7 1 2.5 1.8 3.1.7 1.9.2 3.9-1.4 5Z"/></svg><span id="game-streak-number">0</span></div>
             </div>
             <div class="game-streak-days" id="game-streak-days">
-                <div class="game-streak-day"><span>День 1</span><strong>+1</strong></div><div class="game-streak-day"><span>День 2</span><strong>+1</strong></div><div class="game-streak-day"><span>День 3</span><strong>+2</strong></div><div class="game-streak-day"><span>День 4</span><strong>+2</strong></div><div class="game-streak-day"><span>День 5</span><strong>+3</strong></div><div class="game-streak-day"><span>День 6</span><strong>+3</strong></div><div class="game-streak-day"><span>День 7+</span><strong>+5</strong></div>
+                <div class="game-streak-day"><span>День 1</span><strong>Заход</strong></div><div class="game-streak-day"><span>День 2</span><strong>Заход</strong></div><div class="game-streak-day"><span>День 3</span><strong>Заход</strong></div><div class="game-streak-day"><span>День 4</span><strong>Заход</strong></div><div class="game-streak-day"><span>День 5</span><strong>Заход</strong></div><div class="game-streak-day"><span>День 6</span><strong>Заход</strong></div><div class="game-streak-day"><span>День 7+</span><strong>Заход</strong></div>
             </div>
         </section>
 
@@ -2965,7 +2965,10 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   function showGameToast(title, message, icon) {
     if (!toastHost) return;
     const toast = document.createElement('div'); toast.className = 'roadnote-game-toast';
-    const iconNode = document.createElement('span'); iconNode.className = 'roadnote-game-toast-icon'; iconNode.textContent = icon || '✨';
+    const iconNode = document.createElement('span'); iconNode.className = 'roadnote-game-toast-icon';
+    if (icon === 'bolt') { iconNode.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg>'; }
+    else if (icon === 'award') { iconNode.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="m8.5 13-1 9 4.5-2.5 4.5 2.5-1-9"/></svg>'; }
+    else iconNode.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg>';
     const body = document.createElement('div'); body.style.minWidth = '0';
     const heading = document.createElement('strong'); heading.textContent = title;
     const detail = document.createElement('small'); detail.textContent = message;
@@ -2989,13 +2992,14 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     if (!state) return;
     gameAttempts = Math.max(0, Number(state.attempts || 0));
     gameStreak = Math.max(0, Number(state.streak || 0));
-    if (attemptsNode) attemptsNode.textContent = '⚡ ' + gameAttempts;
-    if (streakCountNode) streakCountNode.textContent = gameStreak + (gameStreak === 1 ? ' день подряд' : ' дней подряд');
+    if (attemptsNode) attemptsNode.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> ' + gameAttempts;
+    const streakNumberNode = document.getElementById('game-streak-number');
+    if (streakNumberNode) streakNumberNode.textContent = String(gameStreak);
     if (streakDaysNode) [...streakDaysNode.children].forEach((node, i) => {
       node.classList.toggle('is-done', i < Math.min(gameStreak, 7));
       node.classList.toggle('is-active', i === Math.min(Math.max(gameStreak - 1, 0), 6));
     });
-    if (rewardNode) rewardNode.textContent = state.freeScanClaimedToday ? '🏆 Бесплатный скан уже получен сегодня' : '🎁 3000 очков = 1 бесплатный скан';
+    if (rewardNode) rewardNode.textContent = state.freeScanClaimedToday ? 'Бесплатный скан уже получен сегодня' : '3000 очков = 1 бесплатный скан';
   }
   async function refreshGameState(showLoginToast) {
     if (!launchParams) return;
@@ -3399,7 +3403,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       const hud = document.getElementById('roadnote-game-hud'); if (hud) hud.classList.add('is-hidden');
       player.y=ground-player.h;player.vy=0;player.onGround=true;last=0;overlay.hidden=true;raf=requestAnimationFrame(frame);
     } catch (error) {
-      showGameToast('Пока не выезжаем', error.message, '🛣️');
+      showGameToast('Пока не выезжаем', error.message, 'info');
       await refreshGameState(false);
     } finally { startingGame = false; }
   }
@@ -3418,8 +3422,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         const result = await gameRequest('/api/game/finish', {sessionId:sessionToFinish, score:finalScore});
         renderGameState(result);
         if (result.freeScanAwarded) {
-          endingText = 'Счёт: '+finalScore+'. Ты выбил бесплатный скан! 🎉';
-          showGameToast('Красиво! Скан за наш счёт 🏆', 'Бесплатный скан начислен за 3000 очков', '🎁');
+          endingText = 'Счёт: '+finalScore+'. Ты получил бесплатный скан.';
+          showGameToast('Бесплатный скан начислен', 'Награда за 3000 очков', 'award');
         } else if (finalScore >= 3000) {
           endingText = 'Счёт: '+finalScore+'. Награда за сегодня уже получена — попробуем ещё?';
         }
