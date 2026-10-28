@@ -1793,6 +1793,7 @@ app.post('/api/paytag', async (req, res) => {
     return res.json({
       ok: true,
       data,
+      scannedAt: scannedAt,
       source: 'direct-api',
       scanBalance,
       subscriptionUntil: balanceRow?.subscription_until || null,
