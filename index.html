@@ -816,6 +816,24 @@
             width: 100%; margin: 0; padding: 16px; border: 1px solid #e1e6ed;
             border-radius: 18px; background: #fff;
         }
+        .start-promo { width:100%; margin:0; padding:16px; border:1px solid #dfe6ef; border-radius:18px; background:linear-gradient(145deg,#fff 0%,#f8fbff 100%); }
+        .start-promo-title { display:flex; align-items:center; gap:8px; color:#27313d; font-size:16px; font-weight:750; }
+        .start-promo-title svg { flex:0 0 auto; color:#2787f5; }
+        .start-promo-description { margin:5px 0 11px; color:#737d89; font-size:12px; line-height:1.4; }
+        .start-promo-form { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
+        .start-promo-input { width:100%; min-width:0; min-height:44px; padding:10px 12px; border:1px solid #d9e1eb; border-radius:11px; background:#fff; color:#27313d; font:inherit; font-size:14px; font-weight:700; text-transform:uppercase; outline:none; }
+        .start-promo-input:focus { border-color:#2787f5; box-shadow:0 0 0 3px rgba(39,135,245,.12); }
+        .start-promo-button { min-height:44px; padding:10px 14px; border:1px solid #2787f5; border-radius:11px; background:#2787f5; color:#fff; font:inherit; font-size:13px; font-weight:750; white-space:nowrap; touch-action:manipulation; }
+        .start-promo-button:active:not(:disabled) { transform:scale(.98); background:#176dcc; }
+        .start-promo-button:disabled { opacity:.65; }
+        .start-promo-current { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-top:10px; padding:10px 11px; border:1px solid #cfe9d9; border-radius:11px; background:#effaf3; color:#176b3b; font-size:12px; line-height:1.4; }
+        .start-promo-current[hidden] { display:none!important; }
+        .start-promo-current strong { display:block; font-size:13px; }
+        .start-promo-remove { flex:0 0 auto; min-height:34px; padding:6px 9px; border:1px solid #cfe2d5; border-radius:8px; background:#fff; color:#176b3b; font:inherit; font-size:12px; font-weight:700; }
+        .start-promo-status { margin:9px 0 0; color:#647080; font-size:11px; line-height:1.4; }
+        .start-promo-status:empty { display:none; }
+        .start-promo-status.is-error { color:#c43b43; }
+        @media(max-width:360px) { .start-promo-form { grid-template-columns:minmax(0,1fr); } .start-promo-button { width:100%; } }
         .start-referral-title { font-size: 16px; font-weight: 700; color: #27313d; }
         .start-referral-description { margin-top: 5px; color: #737d89; font-size: 13px; line-height: 1.4; }
         .start-referral-qr { display: grid; place-items: center; width: 100%; margin: 12px 0 2px; }
@@ -1270,6 +1288,20 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             </div>
             <div class="start-referral-qr" id="start-referral-qr" aria-label="QR-код реферальной ссылки" hidden></div>
             <p id="start-referral-status" class="start-tariff-status" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="start-promo" aria-labelledby="start-promo-title">
+            <div class="start-promo-title" id="start-promo-title"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m20.6 13.4-7.2 7.2a2 2 0 0 1-2.8 0L3.4 13.4a2 2 0 0 1 0-2.8l7.2-7.2a2 2 0 0 1 1.4-.6h6a2 2 0 0 1 2 2v6a2 2 0 0 1-.6 1.4Z"/><circle cx="16.5" cy="7.5" r="1"/></svg>Промокод</div>
+            <p class="start-promo-description">Введи код, чтобы получить скидку на подходящие тарифы. Скидка закрепится после успешной оплаты.</p>
+            <form class="start-promo-form" id="start-promo-form" autocomplete="off">
+                <input class="start-promo-input" id="start-promo-input" name="promoCode" type="text" inputmode="text" autocapitalize="characters" spellcheck="false" maxlength="32" placeholder="Введи промокод" aria-label="Промокод">
+                <button class="start-promo-button" id="start-promo-apply" type="submit">Применить</button>
+            </form>
+            <div class="start-promo-current" id="start-promo-current" hidden>
+                <div><strong id="start-promo-current-title"></strong><span id="start-promo-current-description"></span></div>
+                <button class="start-promo-remove" id="start-promo-remove" type="button">Отменить</button>
+            </div>
+            <p class="start-promo-status" id="start-promo-status" role="status" aria-live="polite"></p>
         </section>
 
         <div class="start-actions">
