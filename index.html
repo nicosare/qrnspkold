@@ -1335,7 +1335,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         <div id="scan-status" class="start-status" role="status" aria-live="polite"></div>
 
         <section class="game-streak-card" id="game-streak-card" aria-label="Награды за ежедневные заходы" style="padding:0;border:0;background:transparent">
-            <div class="game-streak-days" id="game-streak-days" aria-label="Награды по дням серии"></div>       </section>
+            <div class="game-streak-days" id="game-streak-days" aria-label="Награды по дням серии"></div>
+        </section>
 
 
 
@@ -3024,7 +3025,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     if (attemptsNode) attemptsNode.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> ' + gameAttempts;
     if (streakDaysNode) {
       const rewards = [1, 1, 2, 2, 3, 3, 5];
-      const dayCount = Math.max(7, gameStreak);
+      const dayCount = Math.max(7, gameStreak + 3);
       const fragment = document.createDocumentFragment();
       for (let day = 1; day <= dayCount; day++) {
         const card = document.createElement('div');
