@@ -1079,6 +1079,10 @@ app.post('/api/game/state', (req, res) => {
   const nowIso = now.toISOString();
   const today = yekaterinburgDayKey(now);
   ensureUserForScan.run(userId, nowIso, nowIso);
+  const legacyBestScore = Number(req.body?.legacyBestScore);
+  if (Number.isSafeInteger(legacyBestScore) && legacyBestScore >= 0 && legacyBestScore <= 100000) {
+    db.prepare('UPDATE users SET game_best_score = MAX(COALESCE(game_best_score, 0), ?) WHERE vk_id = ?').run(legacyBestScore, userId);
+  }
   let awarded = 0;
   let streak = 0;
   db.transaction(() => {
