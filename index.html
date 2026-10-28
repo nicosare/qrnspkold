@@ -3009,7 +3009,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     if (energyNode) energyNode.textContent = String(gameAttempts);
     if (attemptsNode) attemptsNode.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> ' + gameAttempts;
     if (streakDaysNode) [...streakDaysNode.children].forEach((node, i) => {
-      node.classList.toggle('is-done', i < Math.min(gameStreak, 7));
+      node.classList.toggle('is-done', i < Math.min(Math.max(gameStreak - 1, 0), 7));
       node.classList.toggle('is-active', i === Math.min(Math.max(gameStreak - 1, 0), 6));
     });
     if (rewardNode) rewardNode.textContent = state.freeScanClaimedToday ? 'Бесплатный скан уже получен сегодня' : '3000 очков = 1 бесплатный скан';
@@ -3391,7 +3391,6 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     drawRoadnotePlane();
     drawPlayer();
     const scoreNode = document.getElementById('roadnote-game-score'); if (scoreNode) scoreNode.textContent = 'Счёт: ' + String(Math.floor(score)).padStart(4,'0');
-    ctx.fillStyle='#24415f';ctx.font='800 17px Circe, sans-serif';ctx.textAlign='right';ctx.fillText(String(Math.floor(score)).padStart(4,'0'),W-16,27);
   }
   function showOverlay(title,text) { overlayTitle.textContent=title;overlayText.textContent=text;overlay.hidden=false; }
   function taptic(style) {
@@ -3453,6 +3452,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     }
     const hud = document.getElementById('roadnote-game-hud'); if (hud) hud.classList.add('is-hidden');
     const gameCard = document.getElementById('roadnote-game'); if (gameCard) gameCard.classList.remove('is-playing');
+    overlay.style.pointerEvents = 'auto';
     showOverlay('Раунд завершён', endingText + ' Осталось попыток: ' + gameAttempts + '.');
     const replayButton = document.getElementById('roadnote-game-start'); if (replayButton) replayButton.textContent = 'Играть ещё';
     overlay.style.pointerEvents = 'auto';
