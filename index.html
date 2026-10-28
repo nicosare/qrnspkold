@@ -1850,8 +1850,9 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         return 'VK ' + encoded;
     }
 
-    function resetPaymentTimer() {
-        const now = new Date();
+    function resetPaymentTimer(startAt = new Date()) {
+        const parsedStart = startAt instanceof Date ? startAt : new Date(startAt);
+        const now = Number.isFinite(parsedStart.getTime()) ? parsedStart : new Date();
         startTime = now;
         localStorage.setItem('timerStartTime', now.getTime().toString());
 
@@ -1891,7 +1892,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             localStorage.setItem('ticketPrice', String(data.price));
         }
 
-        resetPaymentTimer();
+        resetPaymentTimer(data.scannedAt ? new Date(data.scannedAt) : new Date());
         generateQR();
     }
 
