@@ -795,6 +795,10 @@ function decideTariffRequest(requestId, decision) {
 
     let subscriptionUntil = null;
     if (decision === 'approve') {
+      if (request.promo_application_id) {
+        db.prepare("UPDATE promo_code_applications SET status = 'used', used_at = ?, tariff_request_id = ? WHERE id = ? AND vk_id = ? AND status = 'selected'")
+          .run(nowIso, requestId, Number(request.promo_application_id), String(request.vk_id));
+      }
       if (request.offer_kind === 'pack') {
         const grant = grantPack.run(Number(request.quantity), String(request.vk_id));
         if (grant.changes !== 1) throw new Error('Не удалось начислить пакет сканов: пользователь не найден.');
@@ -904,6 +908,7 @@ async function handleIncomingCommunityMessage(message) {
     'Пользователь: ' + displayName + ' (VK ID ' + userId + ')',
     'Профиль: https://vk.com/id' + userId,
     'Тариф: ' + active.offer_name,
+    ...(active.promo_code ? ['Промокод: ' + active.promo_code, 'Скидка промокода: ' + Number(active.promo_discount_percent || 0) + '% (' + formatRubles(active.promo_discount_rub || 0) + ')'] : []),
     'Стоимость: ' + formatRubles(active.price_rub),
     'Скриншот оплаты приложен. Подтверди начисление или отклони заявку.'
   ].join('\n');
