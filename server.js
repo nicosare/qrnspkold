@@ -1072,7 +1072,7 @@ app.post('/api/game/state', (req, res) => {
     streak = Number(user?.game_streak || 0);
     if (lastDay !== today) {
       const yesterday = yekaterinburgDayKey(new Date(now.getTime() - 86400000));
-      streak = lastDay === yesterday ? Math.min(7, streak + 1) : 1;
+      streak = lastDay === yesterday ? streak + 1 : 1;
       awarded = GAME_DAILY_REWARDS[streak - 1] || 5;
       db.prepare('UPDATE users SET game_attempts = COALESCE(game_attempts, 0) + ?, game_streak = ?, game_last_login_day = ? WHERE vk_id = ?')
         .run(awarded, streak, today, userId);
