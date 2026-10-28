@@ -129,6 +129,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    <label class="promo-field"><span>Скидка, %</span><input id="promo-discount" name="discountPercent" type="number" min="1" max="99" step="1" value="10" required></label>
    <div class="promo-field"><span>Действует с (необязательно)</span><input id="promo-starts" name="startsAt" type="datetime-local"></div>
    <div class="promo-field"><span>Действует до (необязательно)</span><input id="promo-expires" name="expiresAt" type="datetime-local"></div>
+   <label class="promo-field"><span>Лимит активаций (необязательно)</span><input id="promo-max-redemptions" name="maxRedemptions" type="number" min="1" max="1000000" step="1" placeholder="Без ограничений"></label>
    <div class="promo-field promo-offers-field"><span>Тарифы, на которые действует код</span><div id="promo-offers" class="promo-offers"><div class="status">Загружаем тарифы…</div></div></div>
    <button class="primary promo-create-button" type="submit" id="promo-create-button">Создать промокод</button>
    <div id="promo-form-status" class="action-status" role="status" aria-live="polite"></div>
@@ -155,6 +156,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  const promoDiscountInput = document.getElementById('promo-discount');
  const promoStartsInput = document.getElementById('promo-starts');
  const promoExpiresInput = document.getElementById('promo-expires');
+ const promoMaxRedemptionsInput = document.getElementById('promo-max-redemptions');
  const promoOffers = document.getElementById('promo-offers');
  const promoFormStatus = document.getElementById('promo-form-status');
  const promoListStatus = document.getElementById('promo-list-status');
@@ -342,7 +344,8 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
        const badgeClass=p.status==='expired'?' expired':p.status==='scheduled'?' scheduled':'';
        const names=(p.offerIds||[]).map(id=>offersById[id]||id).join(', ');
        const dates=(p.startsAt?'С '+promoDate(p.startsAt):'Сразу')+' · '+(p.expiresAt?'до '+promoDate(p.expiresAt):'без даты окончания');
-       return '<article class="promo-card" data-promo-card="'+esc(p.id)+'"><div class="promo-card-top"><div class="promo-code-name">'+esc(p.code)+'</div><span class="promo-badge'+badgeClass+'">'+statusLabel+'</span></div><div class="promo-meta"><strong>Скидка '+esc(p.discountPercent)+'%</strong><br>'+esc(names)+'<br>'+esc(dates)+'<br>Оплачено: '+esc(p.redemptions)+' · Ожидают оплаты: '+esc(p.selectedCount)+'</div><div class="promo-card-actions"><span class="promo-meta">Создан '+esc(promoDate(p.createdAt))+'</span><button type="button" data-delete-promo="'+esc(p.id)+'">Удалить</button></div></article>';
+       const cap=p.maxRedemptions==null?'Без лимита активаций':('Использовано: '+p.redemptions+' из '+p.maxRedemptions);
+       return '<article class="promo-card" data-promo-card="'+esc(p.id)+'"><div class="promo-card-top"><div class="promo-code-name">'+esc(p.code)+'</div><span class="promo-badge'+badgeClass+'">'+statusLabel+'</span></div><div class="promo-meta"><strong>Скидка '+esc(p.discountPercent)+'%</strong><br>'+esc(names)+'<br>'+esc(dates)+'<br>'+esc(cap)+' · Ожидают оплаты: '+esc(p.selectedCount)+'</div><div class="promo-card-actions"><span class="promo-meta">Создан '+esc(promoDate(p.createdAt))+'</span><button type="button" data-delete-promo="'+esc(p.id)+'">Удалить</button></div></article>';
      }).join('');
      promoList.hidden=!promos.length;promoListStatus.hidden=Boolean(promos.length);promoListStatus.className='status';promoListStatus.textContent=promos.length?'':'Промокодов пока нет.';
    }catch(error){promoListStatus.hidden=false;promoListStatus.className='status error';promoListStatus.textContent=error.message;}
@@ -358,7 +361,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    if(startsAt&&expiresAt&&Date.parse(startsAt)>=Date.parse(expiresAt)){promoMessage('Окончание срока должно быть позже начала.',true);return;}
    const button=document.getElementById('promo-create-button');button.disabled=true;button.textContent='Создаём…';
    try{
-     const response=await fetch('../api/admin/promocodes',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify({code,discountPercent:Number(promoDiscountInput.value),offerIds,startsAt,expiresAt}),cache:'no-store'});
+     const response=await fetch('../api/admin/promocodes',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify({code,discountPercent:Number(promoDiscountInput.value),offerIds,startsAt,expiresAt,maxRedemptions:promoMaxRedemptionsInput.value===''?null:Number(promoMaxRedemptionsInput.value)}),cache:'no-store'});
      const data=await response.json();if(!response.ok)throw new Error(data.error||'Не удалось создать промокод.');
      promoForm.reset();promoDiscountInput.value='10';promoMessage('Промокод '+code+' создан.',false);await loadPromos();
    }catch(error){promoMessage(error.message,true);}
