@@ -1730,6 +1730,44 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     let scanProcessing = false;
     let scanSessionReady = false;
     let currentScanCount = 0;
+    let latestHistoryTicketRestored = false;
+
+    function restoreLatestTicketFromHistory(scan) {
+        if (latestHistoryTicketRestored || !scan || !scan.scanned_at) return;
+        const historyStart = new Date(scan.scanned_at);
+        if (!Number.isFinite(historyStart.getTime())) return;
+
+        latestHistoryTicketRestored = true;
+        startTime = historyStart;
+        dateElement.textContent = getCurrentDateTimeString(historyStart);
+        ticketNumber = generateTicketNumber(historyStart);
+        ticketNumberElement.textContent = ticketNumber;
+        localStorage.setItem('timerStartTime', String(historyStart.getTime()));
+        localStorage.setItem('ticketNumber', ticketNumber);
+
+        if (scan.transport_type) {
+            vehicleTypeElement.textContent = scan.transport_type;
+            localStorage.setItem('vehicleType', scan.transport_type);
+        }
+        if (scan.route_number) {
+            const normalizedRoute = scan.route_number.startsWith('№') ? scan.route_number : `№${scan.route_number}`;
+            routeNumberElement.innerHTML = formatRouteNumber(normalizedRoute);
+            localStorage.setItem('routeNumber', normalizedRoute);
+        }
+        if (scan.vehicle_number) {
+            vehicleNumberElement.textContent = scan.vehicle_number;
+            localStorage.setItem('vehicleNumber', scan.vehicle_number);
+        }
+        if (scan.price !== null && scan.price !== undefined && Number.isFinite(Number(scan.price))) {
+            priceElement.textContent = String(scan.price);
+            localStorage.setItem('ticketPrice', String(scan.price));
+        }
+
+        updateTimer();
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(updateTimer, 1000);
+        generateQR();
+    }
 
     function updateContinueTicketButton(scanCount) {
         const parsedCount = Number(scanCount);
@@ -2791,6 +2829,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       scanSessionReady = true;
       updateScanBalance(session.scanBalance, session.subscriptionUntil, session.unlimited, session.subscriptionActive);
       updateContinueTicketButton(session.scanCount);
+      restoreLatestTicketFromHistory(session.lastScan);
 
       try {
         sessionStorage.setItem('roadnoteAdminForNavigation', session.isAdmin === true ? '1' : '0');
