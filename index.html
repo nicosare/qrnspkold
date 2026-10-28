@@ -1991,6 +1991,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             throw new Error(payload.error || `Сервер Roadnote вернул HTTP ${response.status}`);
         }
 
+        window.dispatchEvent(new CustomEvent('roadnote:scan-success'));
         const source = payload?.data || {};
         return {
             vehicleType: normalizeTransportType(source.transportType || source.vehicleType || ''),
@@ -2973,8 +2974,15 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     body.append(heading, detail); toast.append(iconNode, body); toastHost.append(toast);
     window.setTimeout(() => { toast.classList.add('is-leaving'); window.setTimeout(() => toast.remove(), 220); }, 3600);
   }
+  const gamePathname = window.location.pathname;
+  const gameApiBase = gamePathname.endsWith('/')
+    ? gamePathname
+    : (gamePathname.slice(gamePathname.lastIndexOf('/') + 1).includes('.')
+      ? gamePathname.slice(0, gamePathname.lastIndexOf('/') + 1)
+      : gamePathname + '/');
   async function gameRequest(path, payload) {
-    const response = await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({launchParams, ...(payload || {})}), cache:'no-store', credentials:'omit' });
+    const endpoint = gameApiBase + path.replace(/^\\//, '');
+    const response = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({launchParams, ...(payload || {})}), cache:'no-store', credentials:'omit' });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || 'Не удалось обновить игровую награду.');
     return data;
@@ -3007,6 +3015,10 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   }
   refreshGameState(true);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshGameState(false); });
+  window.addEventListener('roadnote:scan-success', async () => {
+    await refreshGameState(false);
+    showGameToast('Красиво! Ещё +3 попытки 🚀', 'За успешный скан', '✨');
+  });
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   const W = canvas.width, H = canvas.height, ground = 198;
