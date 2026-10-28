@@ -15,7 +15,111 @@
         if (!isRoadnoteVkLaunch) {
             // Stop parsing this document before any external scripts or app assets load.
             document.open();
-            document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body></body></html>');
+            document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>
+<script>
+(function () {
+  const canvas = document.getElementById('roadnote-game-canvas');
+  const button = document.getElementById('roadnote-game-start');
+  const overlay = document.getElementById('roadnote-game-overlay');
+  const overlayTitle = document.getElementById('roadnote-game-overlay-title');
+  const overlayText = document.getElementById('roadnote-game-overlay-text');
+  const recordNode = document.getElementById('roadnote-game-record');
+  if (!canvas || !button || !overlay || !recordNode) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const W = canvas.width, H = canvas.height, ground = 198;
+  const storageKey = 'roadnoteRunnerBestV1';
+  let best = 0;
+  try { best = Math.max(0, Number(localStorage.getItem(storageKey)) || 0); } catch (_) {}
+  recordNode.textContent = String(best);
+  let running = false, over = false, raf = 0, last = 0, elapsed = 0, score = 0, speed = 230, spawnIn = 1.05;
+  let obstacles = [], particles = [];
+  const player = { x: 78, y: ground - 37, w: 32, h: 37, vy: 0, onGround: true };
+  function roundRect(x,y,w,h,r,fill) {
+    ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); if(fill) ctx.fill();
+  }
+  function drawRoad() {
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = '#eaf5ff'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = '#d9eafa'; ctx.beginPath(); ctx.arc(520,35,19,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#d5e8fb';
+    for (let i=0;i<4;i++) { const x = ((i*180 - (elapsed*speed*.12)%720)+W+720)%720-40; roundRect(x,50+(i%2)*17,58,5,3,true); }
+    ctx.fillStyle = '#c8d9eb'; ctx.fillRect(0,ground,W,3);
+    ctx.fillStyle = '#dbe8f5';
+    for(let i=0;i<18;i++){const x=((i*48-(elapsed*speed)%864)+864)%864;ctx.fillRect(x,ground+13,24,3);}
+  }
+  function drawPlayer() {
+    const bob = running && player.onGround ? Math.sin(elapsed*18)*1.2 : 0;
+    ctx.save(); ctx.translate(player.x,player.y+bob);
+    // Friendly blue road-trip bot: rounded body, wheels, windshield and antenna.
+    ctx.fillStyle = '#176dcc'; roundRect(1,8,30,25,8,true);
+    ctx.fillStyle = '#2787f5'; roundRect(0,5,30,25,8,true);
+    ctx.fillStyle = '#dff1ff'; roundRect(5,10,20,9,4,true);
+    ctx.fillStyle = '#176dcc'; ctx.beginPath(); ctx.arc(11,14,2,0,Math.PI*2);ctx.arc(20,14,2,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#2787f5';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(15,5);ctx.lineTo(15,1);ctx.stroke();
+    ctx.fillStyle='#ffc84a';ctx.beginPath();ctx.arc(15,1,3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#24364a';ctx.beginPath();ctx.arc(7,33,5,0,Math.PI*2);ctx.arc(24,33,5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#b9d6f5';ctx.beginPath();ctx.arc(7,33,2,0,Math.PI*2);ctx.arc(24,33,2,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+  function drawObstacle(o) {
+    ctx.save();ctx.translate(o.x,ground);
+    if(o.kind===0){
+      ctx.fillStyle='#ffbd59';roundRect(0,-26,22,26,5,true);
+      ctx.fillStyle='#ed8d35';roundRect(3,-23,5,20,2,true);roundRect(14,-23,5,20,2,true);
+      ctx.fillStyle='#fff0d7';ctx.fillRect(2,-17,18,3);
+    } else {
+      ctx.fillStyle='#6a8ba9';roundRect(0,-31,29,31,6,true);
+      ctx.fillStyle='#dff1ff';roundRect(5,-25,19,9,3,true);
+      ctx.fillStyle='#3d5d7b';ctx.fillRect(5,-8,19,3);
+    }
+    ctx.restore();
+  }
+  function draw() {
+    drawRoad();
+    obstacles.forEach(drawObstacle);
+    drawPlayer();
+    ctx.fillStyle='#24415f';ctx.font='800 17px Circe, sans-serif';ctx.textAlign='right';ctx.fillText(String(Math.floor(score)).padStart(4,'0'),W-16,27);
+    ctx.fillStyle='#7c94ac';ctx.font='700 9px Circe, sans-serif';ctx.fillText('DISTANCE',W-16,40);
+  }
+  function showOverlay(title,text) { overlayTitle.textContent=title;overlayText.textContent=text;overlay.hidden=false; }
+  function start() {
+    cancelAnimationFrame(raf); running=true;over=false;elapsed=0;score=0;speed=230;spawnIn=.9;obstacles=[];particles=[];
+    player.y=ground-player.h;player.vy=0;player.onGround=true;last=0;overlay.hidden=true;button.textContent='Заново';raf=requestAnimationFrame(frame);
+  }
+  function jump() {
+    if(!running){ if(over) start(); return; }
+    if(player.onGround){player.vy=-510;player.onGround=false;}
+  }
+  function endGame() {
+    running=false;over=true;cancelAnimationFrame(raf);const finalScore=Math.floor(score);
+    if(finalScore>best){best=finalScore;recordNode.textContent=String(best);try{localStorage.setItem(storageKey,String(best));}catch(_){}}
+    button.textContent='Ещё раз';showOverlay('Поездка окончена', 'Счёт: '+finalScore+'. Нажми «Ещё раз» и попробуй побить рекорд.');
+    draw();
+  }
+  function frame(now) {
+    if(!running)return;
+    if(document.hidden){last=0;raf=requestAnimationFrame(frame);return;}
+    const dt=last?Math.min((now-last)/1000,.035):0;last=now;elapsed+=dt;score+=dt*10;speed=Math.min(440,230+score*.42);
+    player.vy+=1250*dt;player.y+=player.vy*dt;
+    if(player.y>=ground-player.h){player.y=ground-player.h;player.vy=0;player.onGround=true;}
+    spawnIn-=dt;
+    if(spawnIn<=0){obstacles.push({x:W+15,kind:Math.random()<.68?0:1,w:Math.random()<.68?22:29});spawnIn=Math.max(.58,1.2+Math.random()*.7-(speed-230)/600);}
+    obstacles.forEach(o=>o.x-=speed*dt);obstacles=obstacles.filter(o=>o.x>-40);
+    for(const o of obstacles){
+      const ow=o.kind===0?22:29,oh=o.kind===0?26:31,ox=o.x,oy=ground-oh;
+      if(player.x+player.w-5>ox+3&&player.x+5<ox+ow-3&&player.y+player.h-3>oy+2){endGame();return;}
+    }
+    draw();raf=requestAnimationFrame(frame);
+  }
+  canvas.addEventListener('pointerdown',function(e){e.preventDefault();jump();},{passive:false});
+  button.addEventListener('click',function(){if(!running)start();else start();});
+  document.addEventListener('visibilitychange',function(){if(document.hidden){last=0;}});
+  draw();
+})();
+</script>
+
+</body></html>');
             document.close();
         }
     })();
@@ -1085,7 +1189,26 @@
             }
         }
 
-        </style>
+        
+        /* Roadnote mini-runner */
+        .roadnote-game { width:100%; margin-top:8px; padding:15px 13px 13px; border:1px solid #dfe7f1; border-radius:20px; background:linear-gradient(155deg,#fff 0%,#f4f8fd 100%); box-shadow:0 8px 22px rgba(31,65,105,.045); text-align:left; }
+        .roadnote-game-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+        .roadnote-game-kicker { color:#2787f5; font-size:9px; font-weight:850; letter-spacing:1.5px; }
+        .roadnote-game-title { margin-top:2px; color:#232a33; font-size:17px; line-height:1.2; font-weight:850; }
+        .roadnote-game-record { flex:0 0 auto; padding:6px 9px; border:1px solid #dce8f8; border-radius:10px; background:#edf5ff; color:#2868ad; font-size:11px; font-weight:800; }
+        .roadnote-game-stage { position:relative; overflow:hidden; width:100%; border:1px solid #dce6f2; border-radius:13px; background:linear-gradient(180deg,#eaf5ff 0%,#f7fbff 78%,#e8f1fb 100%); touch-action:pan-y; }
+        .roadnote-game-canvas { display:block; width:100%; height:150px; touch-action:pan-y; }
+        .roadnote-game-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; padding:14px; background:rgba(238,246,255,.78); color:#26384d; text-align:center; pointer-events:none; }
+        .roadnote-game-overlay[hidden] { display:none!important; }
+        .roadnote-game-overlay strong { font-size:17px; font-weight:850; }
+        .roadnote-game-overlay span { color:#5e7187; font-size:12px; line-height:1.35; }
+        .roadnote-game-bottom { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; }
+        .roadnote-game-hint { color:#788697; font-size:11px; line-height:1.35; }
+        .roadnote-game-start { flex:0 0 auto; min-height:38px; padding:8px 14px; border:0; border-radius:11px; background:#2787f5; color:#fff; font:inherit; font-size:12px; font-weight:800; touch-action:manipulation; }
+        .roadnote-game-start:active { transform:scale(.97); background:#176dcc; }
+        @media (prefers-reduced-motion:reduce) { .roadnote-game * { animation:none!important; transition:none!important; } }
+
+</style>
 <style>
 .start-applications-section{width:100%;margin:0;padding:19px 16px 16px;border:1px solid #e3e8ef;border-radius:22px;background:#fff;box-shadow:0 8px 24px rgba(31,65,105,.045);text-align:left}
 .start-applications-section.is-collapsed .tariff-applications-group{display:none}
@@ -1316,6 +1439,25 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                 Пользователи
             </button>
         </div>
+
+        <section class="roadnote-game" aria-labelledby="roadnote-game-title">
+            <div class="roadnote-game-head">
+                <div><div class="roadnote-game-kicker">ROADNOTE ARCADE</div><h3 class="roadnote-game-title" id="roadnote-game-title">Поехали?</h3></div>
+                <div class="roadnote-game-record">Рекорд: <span id="roadnote-game-record">0</span></div>
+            </div>
+            <div class="roadnote-game-stage">
+                <canvas class="roadnote-game-canvas" id="roadnote-game-canvas" width="640" height="240" aria-label="Мини-игра: нажимай, чтобы перепрыгивать препятствия"></canvas>
+                <div class="roadnote-game-overlay" id="roadnote-game-overlay">
+                    <strong id="roadnote-game-overlay-title">Поймай ритм дороги</strong>
+                    <span id="roadnote-game-overlay-text">Нажми «Играть», затем тапай по экрану, чтобы перепрыгивать препятствия.</span>
+                </div>
+            </div>
+            <div class="roadnote-game-bottom">
+                <div class="roadnote-game-hint">Тап по полю — прыжок<br>Сколько продержишься?</div>
+                <button class="roadnote-game-start" id="roadnote-game-start" type="button">Играть</button>
+            </div>
+        </section>
+
 
 
     </div>
