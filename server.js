@@ -558,7 +558,7 @@ function getTariffState(userId) {
   const id = String(userId);
   const completed = db.prepare("SELECT EXISTS(SELECT 1 FROM tariff_requests WHERE vk_id = ? AND status = 'approved') AS value").get(id);
   const activeRequests = db.prepare(
-    "SELECT id, offer_id, offer_name, offer_kind, quantity, price_rub, status, created_at, updated_at, completed_at, screenshot_attachment " +
+    "SELECT id, offer_id, offer_name, offer_kind, quantity, price_rub, status, created_at, updated_at, completed_at, screenshot_attachment, promo_code, promo_discount_percent " +
     "FROM tariff_requests WHERE vk_id = ? AND status IN ('awaiting_payment','awaiting_review') ORDER BY CASE status WHEN 'awaiting_payment' THEN 0 ELSE 1 END, id DESC LIMIT 20"
   ).all(id);
   const active = activeRequests.find(request => request.status === 'awaiting_payment') || activeRequests[0] || null;
@@ -571,6 +571,8 @@ function getTariffState(userId) {
     offerId: request.offer_id,
     name: request.offer_name,
     kind: request.offer_kind,
+    promoCode: request.promo_code || null,
+    promoDiscountPercent: request.promo_discount_percent == null ? null : Number(request.promo_discount_percent),
     quantity: Number(request.quantity),
     priceRub: Number(request.price_rub),
     status: request.status,
@@ -1780,7 +1782,7 @@ app.delete('/api/admin/promocodes/:id', requireAdmin, (req, res) => {
   if (!promo) return res.status(404).json({ error: 'Промокод уже удалён или не найден.' });
   const nowIso = new Date().toISOString();
   db.transaction(() => {
-    db.prepare('UPDATE promo_codes SET is_active = 0 WHERE id = ?').run(id);
+    db.prepare("UPDATE promo_codes SET is_active = 0, code = 'DELETED_' || id || '_' || code WHERE id = ?").run(id);
     db.prepare("UPDATE promo_code_applications SET status = 'cancelled', tariff_request_id = NULL WHERE promo_code_id = ? AND status = 'selected' AND tariff_request_id IS NULL").run(id);
     // Any already-created payment keeps its snapshotted price and code; only new uses are disabled.
     db.prepare("UPDATE promo_code_applications SET status = 'cancelled', tariff_request_id = NULL WHERE promo_code_id = ? AND status = 'selected' AND tariff_request_id IN (SELECT id FROM tariff_requests WHERE status = 'replaced')").run(id);
