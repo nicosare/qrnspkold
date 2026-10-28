@@ -1716,7 +1716,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     }
 
     function loadFromLocalStorage() {
-        // Локальная копия остаётся быстрым резервом, серверная запись имеет приоритет.
+        // Данные билета хранятся локально; пересборка сервера не затрагивает localStorage.
         const savedPrice = localStorage.getItem('ticketPrice');
         if (savedPrice) priceElement.textContent = savedPrice;
         const savedRouteNumber = localStorage.getItem('routeNumber');
@@ -1725,85 +1725,6 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         if (savedVehicleNumber) vehicleNumberElement.textContent = savedVehicleNumber;
         const savedVehicleType = localStorage.getItem('vehicleType');
         if (savedVehicleType) vehicleTypeElement.textContent = savedVehicleType;
-    }
-
-    function ticketApiUrl() {
-        const pathname = window.location.pathname;
-        const base = pathname.endsWith('/') ? pathname : (pathname.slice(pathname.lastIndexOf('/') + 1).includes('.') ? pathname.slice(0, pathname.lastIndexOf('/') + 1) : pathname + '/');
-        return base + 'api/ticket/state';
-    }
-
-    function currentTicketSnapshot() {
-        return {
-            ticketSeries,
-            ticketNumber,
-            startedAt: startTime instanceof Date && Number.isFinite(startTime.getTime()) ? startTime.getTime() : Date.now(),
-            routeNumber: routeNumberElement.textContent.trim(),
-            vehicleNumber: vehicleNumberElement.textContent.trim(),
-            vehicleType: vehicleTypeElement.textContent.trim(),
-            price: priceElement.textContent.trim()
-        };
-    }
-
-    async function requestTicketState(action) {
-        const launchParams = window.location.search.slice(1);
-        if (!launchParams) return null;
-        const response = await fetch(ticketApiUrl(), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ launchParams, action, ticket: currentTicketSnapshot() }),
-            cache: 'no-store',
-            credentials: 'omit'
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || 'Не удалось сохранить текущий билет.');
-        return data.ticket || null;
-    }
-
-    function applySavedTicketState(ticket) {
-        if (!ticket) return;
-        ticketSeries = String(ticket.ticketSeries || ticketSeries);
-        ticketSeriesElement.textContent = ticketSeries;
-        ticketNumber = String(ticket.ticketNumber || ticketNumber);
-        ticketNumberElement.textContent = ticketNumber;
-        const timestamp = Number(ticket.startedAt);
-        if (Number.isSafeInteger(timestamp) && timestamp > 0) {
-            startTime = new Date(timestamp);
-            localStorage.setItem('timerStartTime', String(timestamp));
-            dateElement.textContent = getCurrentDateTimeString(startTime);
-        }
-        localStorage.setItem('ticketNumber', ticketNumber);
-        const routeNumber = String(ticket.routeNumber || '');
-        routeNumberElement.innerHTML = formatRouteNumber(routeNumber);
-        localStorage.setItem('routeNumber', routeNumber);
-        const vehicleNumber = String(ticket.vehicleNumber || '');
-        vehicleNumberElement.textContent = vehicleNumber;
-        localStorage.setItem('vehicleNumber', vehicleNumber);
-        const vehicleType = String(ticket.vehicleType || '');
-        vehicleTypeElement.textContent = vehicleType;
-        localStorage.setItem('vehicleType', vehicleType);
-        const price = String(ticket.price || '');
-        priceElement.textContent = price;
-        localStorage.setItem('ticketPrice', price);
-        updateTimer();
-        if (timerInterval) clearInterval(timerInterval);
-        timerInterval = setInterval(updateTimer, 1000);
-        generateQR();
-    }
-
-    async function restoreTicketStateFromServer() {
-        try {
-            const ticket = await requestTicketState('sync');
-            if (ticket) applySavedTicketState(ticket);
-            else await requestTicketState('save');
-        } catch (error) {
-            console.warn('[Roadnote ticket state]', error.message);
-        }
-    }
-
-    async function persistTicketState() {
-        try { await requestTicketState('save'); }
-        catch (error) { console.warn('[Roadnote ticket state save]', error.message); }
     }
 
     let scanProcessing = false;
@@ -1908,7 +1829,6 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             clearInterval(timerInterval);
         }
         timerInterval = setInterval(updateTimer, 1000);
-        void persistTicketState();
     }
 
     function applyTransportData(data) {
@@ -2604,7 +2524,6 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
 
         loadFromLocalStorage();
         loadTimer();
-        void restoreTicketStateFromServer();
 
         startScanButton.addEventListener('click', scanWithVkBridge);
         continueCurrentScanButton.addEventListener('click', closeStartOverlay);
