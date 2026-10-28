@@ -249,17 +249,6 @@ if (!userColumns.some(column => column.name === 'game_best_score')) {
   db.exec('ALTER TABLE users ADD COLUMN game_best_score INTEGER NOT NULL DEFAULT 0');
 }
 db.exec(`
-  CREATE TABLE IF NOT EXISTS ticket_state (
-    vk_id TEXT PRIMARY KEY,
-    ticket_series TEXT NOT NULL DEFAULT '',
-    ticket_number TEXT NOT NULL DEFAULT '',
-    started_at INTEGER NOT NULL,
-    route_number TEXT NOT NULL DEFAULT '',
-    vehicle_number TEXT NOT NULL DEFAULT '',
-    vehicle_type TEXT NOT NULL DEFAULT '',
-    price TEXT NOT NULL DEFAULT '',
-    updated_at TEXT NOT NULL
-  );
   CREATE TABLE IF NOT EXISTS game_sessions (
     id TEXT PRIMARY KEY,
     vk_id TEXT NOT NULL,
@@ -1151,74 +1140,6 @@ app.post('/api/game/finish', (req, res) => {
   })();
   if (freeScanAwarded) sendLiveEntitlement(userId);
   return res.json({ ok: true, score, freeScanAwarded, ...gamePublicState(userId) });
-});
-
-app.post('/api/ticket/state', (req, res) => {
-  let userId;
-  try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
-  catch { return res.status(401).json({ error: 'Открой Roadnote внутри VK и попробуй ещё раз.' }); }
-
-  const action = String(req.body?.action || 'sync');
-  const nowIso = new Date().toISOString();
-  const ticket = req.body?.ticket && typeof req.body.ticket === 'object' ? req.body.ticket : {};
-  const toText = (value, max = 160) => String(value ?? '').slice(0, max);
-  const toTimestamp = value => {
-    const number = Number(value);
-    return Number.isSafeInteger(number) && number > 0 ? number : null;
-  };
-  const readSavedTicket = () => {
-    const row = db.prepare('SELECT ticket_series, ticket_number, started_at, route_number, vehicle_number, vehicle_type, price, updated_at FROM ticket_state WHERE vk_id = ?').get(userId);
-    return row ? {
-      ticketSeries: row.ticket_series,
-      ticketNumber: row.ticket_number,
-      startedAt: row.started_at,
-      routeNumber: row.route_number,
-      vehicleNumber: row.vehicle_number,
-      vehicleType: row.vehicle_type,
-      price: row.price,
-      updatedAt: row.updated_at
-    } : null;
-  };
-
-  if (action === 'sync') {
-    const existing = readSavedTicket();
-    if (existing) return res.json({ ok: true, ticket: existing, source: 'server' });
-  } else if (action !== 'save') {
-    return res.status(400).json({ error: 'Неизвестная операция сохранения билета.' });
-  }
-
-  const startedAt = toTimestamp(ticket.startedAt);
-  const ticketNumber = toText(ticket.ticketNumber, 64);
-  if (!startedAt || !ticketNumber) {
-    if (action === 'sync') return res.json({ ok: true, ticket: null, source: 'empty' });
-    return res.status(400).json({ error: 'Не удалось сохранить текущий билет.' });
-  }
-
-  const values = {
-    vkId: userId,
-    ticketSeries: toText(ticket.ticketSeries, 64),
-    ticketNumber,
-    startedAt,
-    routeNumber: toText(ticket.routeNumber, 100),
-    vehicleNumber: toText(ticket.vehicleNumber, 100),
-    vehicleType: toText(ticket.vehicleType, 100),
-    price: toText(ticket.price, 32),
-    updatedAt: nowIso
-  };
-  db.prepare(`
-    INSERT INTO ticket_state (vk_id, ticket_series, ticket_number, started_at, route_number, vehicle_number, vehicle_type, price, updated_at)
-    VALUES (@vkId, @ticketSeries, @ticketNumber, @startedAt, @routeNumber, @vehicleNumber, @vehicleType, @price, @updatedAt)
-    ON CONFLICT(vk_id) DO UPDATE SET
-      ticket_series = excluded.ticket_series,
-      ticket_number = excluded.ticket_number,
-      started_at = excluded.started_at,
-      route_number = excluded.route_number,
-      vehicle_number = excluded.vehicle_number,
-      vehicle_type = excluded.vehicle_type,
-      price = excluded.price,
-      updated_at = excluded.updated_at
-  `).run(values);
-  return res.json({ ok: true, ticket: readSavedTicket(), source: 'server' });
 });
 
 app.post('/api/tariffs/permission', async (req, res) => {
