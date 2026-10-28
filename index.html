@@ -455,7 +455,7 @@
             max-width: 460px;
             min-height: 100%;
             box-sizing: border-box;
-            padding-bottom: 18px;
+            padding-bottom: 30px;
             display: flex;
             flex-direction: column;
             gap: 11px;
@@ -1085,7 +1085,7 @@
 
         
         /* Roadnote mini-runner */
-        .roadnote-game { width:100%; margin-top:8px; padding:15px 13px 13px; border:1px solid #dfe7f1; border-radius:20px; background:linear-gradient(155deg,#fff 0%,#f4f8fd 100%); box-shadow:0 8px 22px rgba(31,65,105,.045); text-align:left; }
+        .roadnote-game { width:100%; margin-top:0; padding:15px 13px 13px; border:1px solid #dfe7f1; border-radius:20px; background:linear-gradient(155deg,#fff 0%,#f4f8fd 100%); box-shadow:0 8px 22px rgba(31,65,105,.045); text-align:left; }
         .roadnote-game-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
         .roadnote-game-kicker { color:#2787f5; font-size:9px; font-weight:850; letter-spacing:1.5px; }
         .roadnote-game-title { margin-top:2px; color:#232a33; font-size:17px; line-height:1.2; font-weight:850; }
@@ -2969,7 +2969,6 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     obstacles.forEach(drawObstacle);
     drawPlayer();
     ctx.fillStyle='#24415f';ctx.font='800 17px Circe, sans-serif';ctx.textAlign='right';ctx.fillText(String(Math.floor(score)).padStart(4,'0'),W-16,27);
-    ctx.fillStyle='#7c94ac';ctx.font='700 9px Circe, sans-serif';ctx.fillText('DISTANCE',W-16,40);
   }
   function showOverlay(title,text) { overlayTitle.textContent=title;overlayText.textContent=text;overlay.hidden=false; }
   function start() {
