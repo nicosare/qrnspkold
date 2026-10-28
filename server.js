@@ -167,6 +167,7 @@ db.exec(`
     offer_ids_json TEXT NOT NULL,
     starts_at TEXT DEFAULT NULL,
     expires_at TEXT DEFAULT NULL,
+    max_redemptions INTEGER DEFAULT NULL CHECK(max_redemptions IS NULL OR max_redemptions >= 1),
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL,
     created_by TEXT NOT NULL
@@ -187,6 +188,10 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_promo_app_user_status ON promo_code_applications(vk_id, status, id DESC);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_promo_app_one_selected_per_user ON promo_code_applications(vk_id) WHERE status = 'selected';
 `);
+const promoCodeColumns = db.pragma('table_info(promo_codes)');
+if (!promoCodeColumns.some(column => column.name === 'max_redemptions')) {
+  db.exec('ALTER TABLE promo_codes ADD COLUMN max_redemptions INTEGER DEFAULT NULL');
+}
 db.exec(`
   CREATE TABLE IF NOT EXISTS yoomoney_operations (
     operation_id TEXT PRIMARY KEY, request_id INTEGER DEFAULT NULL, label TEXT NOT NULL DEFAULT '',
@@ -1077,6 +1082,10 @@ app.post('/api/promocodes/apply', (req, res) => {
   if (!promo) return res.status(404).json({ error: 'Такой промокод не найден или уже отключён.' });
   if (promo.starts_at && Date.parse(promo.starts_at) > now) return res.status(400).json({ error: 'Срок действия этого промокода ещё не начался.' });
   if (promo.expires_at && Date.parse(promo.expires_at) < now) return res.status(400).json({ error: 'Срок действия этого промокода истёк.' });
+  if (promo.max_redemptions != null) {
+    const reservations = db.prepare("SELECT COUNT(*) AS count FROM promo_code_applications WHERE promo_code_id = ? AND status IN ('used','selected') AND vk_id <> ?").get(Number(promo.id), String(userId));
+    if (Number(reservations?.count || 0) >= Number(promo.max_redemptions)) return res.status(409).json({ error: 'Не удалось применить промокод.' });
+  }
   let offerIds;
   try { offerIds = JSON.parse(promo.offer_ids_json); } catch (_) { offerIds = []; }
   offerIds = Array.isArray(offerIds) ? offerIds.filter(id => Object.prototype.hasOwnProperty.call(tariffOffers, id)) : [];
@@ -1091,6 +1100,12 @@ app.post('/api/promocodes/apply', (req, res) => {
       if (activeRequest && activeRequest.status === 'awaiting_payment') {
         db.prepare("UPDATE tariff_requests SET status = 'replaced', updated_at = ?, completed_at = ? WHERE id = ? AND status = 'awaiting_payment'").run(nowIso, nowIso, activeRequest.id);
         if (activeRequest.promo_application_id) db.prepare("UPDATE promo_code_applications SET tariff_request_id = NULL WHERE id = ? AND status = 'selected'").run(activeRequest.promo_application_id);
+      }
+      if (promo.max_redemptions != null) {
+        const reservations = db.prepare("SELECT COUNT(*) AS count FROM promo_code_applications WHERE promo_code_id = ? AND status IN ('used','selected') AND vk_id <> ?").get(Number(promo.id), String(userId));
+        if (Number(reservations?.count || 0) >= Number(promo.max_redemptions)) {
+          const error = new Error('Не удалось применить промокод.'); error.statusCode = 409; throw error;
+        }
       }
       db.prepare("UPDATE promo_code_applications SET status = 'cancelled', tariff_request_id = NULL WHERE vk_id = ? AND status = 'selected'").run(userId);
       db.prepare("INSERT INTO promo_code_applications (vk_id, promo_code_id, promo_code, discount_percent, offer_ids_json, status, selected_at) VALUES (?, ?, ?, ?, ?, 'selected', ?)")
@@ -1160,10 +1175,11 @@ app.post('/api/tariffs/request', async (req, res) => {
   if (!user) return res.status(409).json({ error: 'Сначала дождись загрузки баланса и попробуй снова.' });
 
   const stateBefore = getTariffState(userId);
-  const discounted = !stateBefore.hasPurchased;
-  const basePriceRub = discounted ? offer.promoPrice : offer.regularPrice;
   const selectedPromo = stateBefore.activePromoCode && stateBefore.activePromoCode.offerIds.includes(offerId)
     ? stateBefore.activePromoCode : null;
+  // A promo code replaces the first-purchase price rather than stacking on it.
+  const discounted = !stateBefore.hasPurchased && !selectedPromo;
+  const basePriceRub = selectedPromo ? offer.regularPrice : (discounted ? offer.promoPrice : offer.regularPrice);
   const priceRub = selectedPromo
     ? Math.max(1, Math.round(basePriceRub * (100 - selectedPromo.discountPercent) / 100))
     : basePriceRub;
@@ -1743,7 +1759,7 @@ app.get('/api/admin/promocodes', requireAdmin, (req, res) => {
     return {
       id: Number(promo.id), code: promo.code, discountPercent: Number(promo.discount_percent),
       offerIds: Array.isArray(offerIds) ? offerIds : [], startsAt: promo.starts_at || null,
-      expiresAt: promo.expires_at || null, createdAt: promo.created_at,
+      expiresAt: promo.expires_at || null, maxRedemptions: promo.max_redemptions == null ? null : Number(promo.max_redemptions), createdAt: promo.created_at,
       redemptions: Number(promo.redemptions || 0), selectedCount: Number(promo.selected_count || 0),
       status: (promo.starts_at && Date.parse(promo.starts_at) > now) ? 'scheduled' : (promo.expires_at && Date.parse(promo.expires_at) < now ? 'expired' : 'active')
     };
@@ -1755,6 +1771,8 @@ app.post('/api/admin/promocodes', requireAdmin, (req, res) => {
   const code = String(req.body?.code || '').trim().toUpperCase();
   const discountPercent = Number(req.body?.discountPercent);
   const offerIds = Array.isArray(req.body?.offerIds) ? [...new Set(req.body.offerIds.map(String))] : [];
+  const maxRedemptions = req.body?.maxRedemptions == null || req.body?.maxRedemptions === '' ? null : Number(req.body.maxRedemptions);
+  if (maxRedemptions !== null && (!Number.isSafeInteger(maxRedemptions) || maxRedemptions < 1 || maxRedemptions > 1000000)) return res.status(400).json({ error: 'Лимит активаций должен быть от 1 до 1000000 или пустым.' });
   if (!/^[A-Z0-9_-]{3,32}$/.test(code)) return res.status(400).json({ error: 'Код: 3–32 символа, латинские буквы, цифры, дефис или подчёркивание.' });
   if (!Number.isInteger(discountPercent) || discountPercent < 1 || discountPercent > 99) return res.status(400).json({ error: 'Скидка должна быть от 1 до 99%.' });
   if (!offerIds.length || offerIds.some(id => !Object.prototype.hasOwnProperty.call(tariffOffers, id))) return res.status(400).json({ error: 'Выбери хотя бы один тариф.' });
@@ -1770,8 +1788,8 @@ app.post('/api/admin/promocodes', requireAdmin, (req, res) => {
   if (startsAt && expiresAt && Date.parse(startsAt) >= Date.parse(expiresAt)) return res.status(400).json({ error: 'Окончание срока должно быть позже начала.' });
   const nowIso = new Date().toISOString();
   try {
-    const result = db.prepare('INSERT INTO promo_codes (code, discount_percent, offer_ids_json, starts_at, expires_at, is_active, created_at, created_by) VALUES (?, ?, ?, ?, ?, 1, ?, ?)')
-      .run(code, discountPercent, JSON.stringify(offerIds), startsAt, expiresAt, nowIso, req.vkUserId);
+    const result = db.prepare('INSERT INTO promo_codes (code, discount_percent, offer_ids_json, starts_at, expires_at, max_redemptions, is_active, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)')
+      .run(code, discountPercent, JSON.stringify(offerIds), startsAt, expiresAt, maxRedemptions, nowIso, req.vkUserId);
     return res.status(201).json({ ok: true, id: Number(result.lastInsertRowid) });
   } catch (error) {
     if (String(error?.code || '').includes('CONSTRAINT') || /UNIQUE/i.test(String(error?.message || ''))) return res.status(409).json({ error: 'Промокод с таким названием уже существует.' });
