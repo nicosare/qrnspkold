@@ -64,7 +64,7 @@
       if (discount) {
         if (!discount.dataset.defaultText) discount.dataset.defaultText = discount.textContent;
         discount.hidden = promoApplies ? regular === price : (state.hasPurchased || regular === basePrice);
-        discount.textContent = promoApplies ? '−' + Math.max(0, Math.round((1 - price / regular) * 100)) + '% с кодом' : discount.dataset.defaultText;
+        discount.textContent = promoApplies ? '−' + Number(activePromo.discountPercent) + '% по коду' : discount.dataset.defaultText;
       }
       if (unitPrice) {
         const quantity = Math.max(1, Number(card.dataset.quantity) || 1);
