@@ -2997,8 +2997,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     drawPlane(285, -1, 23, 82);
     drawPlane(605, 1, 18, 112);
 
-    // Rare high-altitude crop-duster flyby with a gently rippling Roadnote banner.
-    // It is purely decorative and stays far above the player's jump range.
+    // A distinct, oversized in-game flyby: a bright crop-duster towing a living fabric banner.
+    // Its flight lane stays near the top edge, far outside the player's jump envelope.
     function drawRoadnotePlane() {
       const cycleLength = 46;
       const cycle = elapsed % cycleLength;
@@ -3006,81 +3006,108 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       if (cycle > flightDuration) return;
       const direction = Math.floor(elapsed / cycleLength) % 2 === 0 ? 1 : -1;
       const progress = cycle / flightDuration;
-      const x = direction > 0 ? -65 + progress * (W + 130) : W + 65 - progress * (W + 130);
-      const y = 13 + Math.sin(cycle * 0.55) * 1.1;
-      const wave = cycle * 2.2;
-      const bannerLength = 94;
-      const bannerHeight = 10;
-      const attachX = x - direction * 17;
-      const attachY = y + 2;
+      const scale = 2.05;
+      const planeW = 42 * scale;
+      const bannerLength = 158 * scale;
+      const bannerHeight = 13 * scale;
+      const x = direction > 0 ? -planeW - bannerLength + progress * (W + planeW * 2 + bannerLength) : W + planeW + bannerLength - progress * (W + planeW * 2 + bannerLength);
+      const y = 27 + Math.sin(cycle * 0.5) * 2;
+      const wave = elapsed * 4.2;
+      const attachX = x - direction * (17 * scale);
+      const attachY = y + 3 * scale;
       const points = [];
-      for (let i = 0; i <= 12; i++) {
-        const t = i / 12;
+      for (let i = 0; i <= 24; i++) {
+        const t = i / 24;
         const px = attachX - direction * (t * bannerLength);
-        const flutter = Math.sin(wave - t * 8) * (1.1 + t * 1.5) + Math.sin(wave * 0.63 - t * 13) * 0.45;
+        const flutter = Math.sin(wave - t * 8.5) * (1.5 + t * 5.5) + Math.sin(wave * 0.72 - t * 15) * (0.7 + t * 2.2);
         points.push({ x: px, y: attachY + flutter });
       }
       ctx.save();
-      // Thin tow rope and a softly shaded, waving fabric strip.
-      ctx.globalAlpha = 0.58;
-      ctx.strokeStyle = paletteColor('dash');
-      ctx.lineWidth = 0.8;
+      // Tow cable, gold-edged red-orange fabric, and a moving highlight make it read as a foreground object.
+      ctx.lineCap = 'round';
+      ctx.globalAlpha = 0.95;
+      ctx.strokeStyle = '#70452f';
+      ctx.lineWidth = 1.5 * scale;
       ctx.beginPath();
-      ctx.moveTo(x - direction * 12, y + 2);
+      ctx.moveTo(x - direction * 13 * scale, y + 2 * scale);
       ctx.lineTo(points[0].x, points[0].y);
       ctx.stroke();
-      ctx.globalAlpha = 0.76;
-      ctx.fillStyle = paletteColor('cloud');
+
       ctx.beginPath();
       points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y - bannerHeight / 2) : ctx.moveTo(p.x, p.y - bannerHeight / 2));
       for (let i = points.length - 1; i >= 0; i--) ctx.lineTo(points[i].x, points[i].y + bannerHeight / 2);
       ctx.closePath();
+      ctx.fillStyle = '#f06a3c';
       ctx.fill();
-      ctx.globalAlpha = 0.64;
-      ctx.strokeStyle = paletteColor('dash');
-      ctx.lineWidth = 0.7;
+      ctx.globalAlpha = 0.95;
+      ctx.strokeStyle = '#ffd36a';
+      ctx.lineWidth = 1.6 * scale;
       ctx.beginPath();
-      points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+      points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y - bannerHeight / 2) : ctx.moveTo(p.x, p.y - bannerHeight / 2));
       ctx.stroke();
-      // Keep the word readable in either flight direction; the fabric itself does the waving.
-      const textX = attachX - direction * (bannerLength * 0.51);
-      const textY = attachY + Math.sin(wave - 4.1) * 1.7;
-      ctx.globalAlpha = 0.82;
-      ctx.fillStyle = paletteColor('ground');
-      ctx.font = '700 7px Circe, sans-serif';
+      // Fabric seam and moving folds accentuate the wave without making the word wobble unreadably.
+      ctx.globalAlpha = 0.45;
+      ctx.strokeStyle = '#a83d2d';
+      ctx.lineWidth = 1.1 * scale;
+      ctx.beginPath();
+      points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y + Math.sin(wave - i * 0.48) * 2.1 * scale) : ctx.moveTo(p.x, p.y));
+      ctx.stroke();
+      const textX = attachX - direction * bannerLength * 0.51;
+      const textY = attachY + Math.sin(wave - 4.2) * 2.1;
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#fff7dc';
+      ctx.font = '900 ' + (8.2 * scale) + 'px Circe, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(91, 44, 30, 0.32)';
+      ctx.shadowBlur = 2 * scale;
       ctx.fillText('roadnote', textX, textY);
       ctx.restore();
 
-      // A tiny, recognizable single-engine agricultural biplane with a rotating propeller.
+      // Large, saturated yellow-and-teal crop-duster with visible cockpit, struts and spinning propeller.
       ctx.save();
       ctx.translate(x, y);
-      ctx.scale(direction, 1);
-      ctx.globalAlpha = 0.78;
-      ctx.fillStyle = paletteColor('dash');
-      // Upper wing
+      ctx.scale(direction * scale, scale);
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      // Lower wing and wing shadow
+      ctx.fillStyle = '#b84d31';
       ctx.beginPath();
-      ctx.moveTo(-7, -3); ctx.lineTo(5, -4); ctx.lineTo(10, -2);
-      ctx.lineTo(3, -1); ctx.lineTo(-8, -1); ctx.closePath(); ctx.fill();
-      // Fuselage and tail
+      ctx.moveTo(-8, 0); ctx.lineTo(3, 0); ctx.lineTo(10, 5); ctx.lineTo(5, 6); ctx.lineTo(-8, 2); ctx.closePath(); ctx.fill();
+      // Main fuselage
+      ctx.fillStyle = '#f4b72f';
       ctx.beginPath();
-      ctx.moveTo(12, 0); ctx.lineTo(6, 2); ctx.lineTo(-8, 2);
-      ctx.lineTo(-13, 4); ctx.lineTo(-14, 2); ctx.lineTo(-9, -1);
-      ctx.lineTo(5, -1); ctx.closePath(); ctx.fill();
-      // Lower wing and tailplane
+      ctx.moveTo(15, 0); ctx.lineTo(9, 2.4); ctx.lineTo(-9, 2.4); ctx.lineTo(-15, 5); ctx.lineTo(-16, 2); ctx.lineTo(-9, -1.7); ctx.lineTo(10, -1.7); ctx.closePath(); ctx.fill();
+      // Teal nose and tail accent
+      ctx.fillStyle = '#167f83';
       ctx.beginPath();
-      ctx.moveTo(-3, 0); ctx.lineTo(2, 0); ctx.lineTo(7, 4);
-      ctx.lineTo(3, 4); ctx.lineTo(-5, 1); ctx.closePath(); ctx.fill();
+      ctx.moveTo(15, 0); ctx.lineTo(10, 2.2); ctx.lineTo(6, 2.2); ctx.lineTo(8, -1.5); ctx.lineTo(12, -1.5); ctx.closePath(); ctx.fill();
       ctx.beginPath();
-      ctx.moveTo(-10, 1); ctx.lineTo(-14, -2); ctx.lineTo(-12, 1);
-      ctx.lineTo(-15, 3); ctx.lineTo(-10, 3); ctx.closePath(); ctx.fill();
-      // Propeller flickers subtly as it spins.
-      ctx.globalAlpha = 0.48 + Math.abs(Math.sin(elapsed * 18)) * 0.28;
-      ctx.strokeStyle = paletteColor('ground');
-      ctx.lineWidth = 1;
+      ctx.moveTo(-10, 1); ctx.lineTo(-15, -3); ctx.lineTo(-13, 1); ctx.lineTo(-17, 3.5); ctx.lineTo(-10, 3.5); ctx.closePath(); ctx.fill();
+      // Big upper wing with bright leading edge
+      ctx.fillStyle = '#ffd45b';
       ctx.beginPath();
-      ctx.moveTo(13, -3); ctx.lineTo(13, 4); ctx.stroke();
+      ctx.moveTo(-9, -4.8); ctx.lineTo(5, -5.4); ctx.lineTo(11, -2.9); ctx.lineTo(5, -1.6); ctx.lineTo(-11, -1.8); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#fff0ad';
+      ctx.lineWidth = 0.75;
+      ctx.beginPath(); ctx.moveTo(-8, -4.5); ctx.lineTo(6, -4.9); ctx.stroke();
+      // Wing struts
+      ctx.strokeStyle = '#167f83';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath(); ctx.moveTo(-4, -1.7); ctx.lineTo(-1, -4.2); ctx.moveTo(4, -1.7); ctx.lineTo(5, -4.5); ctx.stroke();
+      // Cockpit
+      ctx.fillStyle = '#d9f6ef';
+      ctx.beginPath(); ctx.ellipse(2.5, -1.9, 2.6, 1.55, -0.12, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#167f83'; ctx.lineWidth = 0.55; ctx.stroke();
+      // Wheels
+      ctx.fillStyle = '#344b52';
+      ctx.beginPath(); ctx.arc(-4, 4.2, 1.25, 0, Math.PI * 2); ctx.arc(4, 4.2, 1.25, 0, Math.PI * 2); ctx.fill();
+      // Spinning propeller
+      ctx.globalAlpha = 0.7 + Math.abs(Math.sin(elapsed * 22)) * 0.3;
+      ctx.strokeStyle = '#fff7dc';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(16, -3.5); ctx.lineTo(16, 3.8); ctx.stroke();
       ctx.restore();
     }
     drawRoadnotePlane();
