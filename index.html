@@ -2955,7 +2955,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
 
     // Soft, layered roadside scenery: distant town silhouettes and nearer trees.
     const skylineOffset = (elapsed * speed * .075) % 420;
-    ctx.fillStyle = mixColor(paletteColor('ground'), paletteColor('sky'), .42);
+    ctx.fillStyle = mixColor(paletteColor('ground'), paletteColor('sky'), .18);
     for (let i=0;i<8;i++) {
       const x = i*64 - skylineOffset;
       const bw = 25 + (i%3)*8, bh = 27 + ((i*7)%4)*9;
@@ -2970,7 +2970,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     for (let i=0;i<5;i++) {
       const x = i*250 - treeOffset + 30;
       const h = 25 + (i%3)*6;
-      ctx.fillStyle = '#8aa995';
+      ctx.fillStyle = mixColor(paletteColor('ground'), paletteColor('sun'), .16);
       ctx.fillRect(x-2, ground-h*.42, 4, h*.42);
       ctx.beginPath(); ctx.moveTo(x,ground-h); ctx.lineTo(x-13,ground-h*.43); ctx.lineTo(x-7,ground-h*.43); ctx.lineTo(x-15,ground-h*.12); ctx.lineTo(x+15,ground-h*.12); ctx.lineTo(x+7,ground-h*.43); ctx.lineTo(x+13,ground-h*.43); ctx.closePath(); ctx.fill();
     }
@@ -3035,15 +3035,28 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     ctx.fillStyle='#24415f';ctx.font='800 17px Circe, sans-serif';ctx.textAlign='right';ctx.fillText(String(Math.floor(score)).padStart(4,'0'),W-16,27);
   }
   function showOverlay(title,text) { overlayTitle.textContent=title;overlayText.textContent=text;overlay.hidden=false; }
+  function taptic(style) {
+    try {
+      if (window.vkBridge && typeof window.vkBridge.send === 'function') {
+        Promise.resolve(window.vkBridge.send('VKWebAppTapticImpactOccurred', { style: style })).catch(function () {
+          if (typeof navigator.vibrate === 'function') navigator.vibrate(style === 'medium' ? 28 : 10);
+        });
+        return;
+      }
+    } catch (_) {}
+    if (typeof navigator.vibrate === 'function') navigator.vibrate(style === 'medium' ? 28 : 10);
+  }
   function start() {
+    taptic('light');
     cancelAnimationFrame(raf); running=true;over=false;elapsed=0;score=0;speed=230;spawnIn=.9;obstacles=[];particles=[];
     player.y=ground-player.h;player.vy=0;player.onGround=true;last=0;overlay.hidden=true;raf=requestAnimationFrame(frame);
   }
   function jump() {
     if(!running){ start(); return; }
-    if(player.onGround){player.vy=-510;player.onGround=false;}
+    if(player.onGround){taptic('light');player.vy=-510;player.onGround=false;}
   }
   function endGame() {
+    taptic('medium');
     running=false;over=true;cancelAnimationFrame(raf);const finalScore=Math.floor(score);
     if(finalScore>best){best=finalScore;recordNode.textContent=String(best);try{localStorage.setItem(storageKey,String(best));}catch(_){}}
     showOverlay('Поездка окончена', 'Счёт: '+finalScore+'. Нажми, чтобы попробовать ещё раз.');
