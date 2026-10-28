@@ -1103,6 +1103,12 @@
         .roadnote-game-overlay strong { font-size:20px; line-height:1.2; font-weight:850; }
         .roadnote-game-overlay span { color:#526a84; font-size:13px; line-height:1.4; }
         .roadnote-game-overlay .roadnote-game-start { margin-top:5px;min-height:40px;padding:9px 22px;border:0;border-radius:12px;background:#2787f5;color:#fff;font:inherit;font-size:14px;font-weight:850;box-shadow:0 6px 15px #2787f533;touch-action:manipulation; }
+        /* Reusable reward/rules card for the game preview; never shown over active gameplay. */
+        .roadnote-game-reward-preview{position:relative;z-index:1;width:min(100%,310px);margin:4px 0 1px;padding:11px 14px;border:1px solid rgba(39,135,245,.24);border-radius:14px;background:rgba(255,255,255,.94);box-shadow:0 5px 18px rgba(35,76,126,.10);text-align:left}
+        .roadnote-game-reward-label{display:block;margin-bottom:4px;color:#2787f5;font-size:9px;font-weight:900;letter-spacing:1.5px}
+        .roadnote-game-reward-title{display:block;color:#24364a;font-size:15px;font-weight:900;line-height:1.25}
+        .roadnote-game-reward-caption{display:block;margin-top:4px;color:#65758a;font-size:11px;line-height:1.35}
+        .roadnote-game-hud #roadnote-game-reward{display:none!important}
         .roadnote-game-overlay .roadnote-game-start:active {transform:scale(.97);background:#176dcc}
         .game-streak-days{grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:0}
         .game-streak-day{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:66px;padding:8px 2px;border:1px solid #e3e8ef;border-radius:12px;background:#f2f3f4;text-align:center}
@@ -1410,6 +1416,11 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                 <div class="roadnote-game-overlay" id="roadnote-game-overlay">
                     <strong id="roadnote-game-overlay-title">Roadnote Runner</strong>
                     <span id="roadnote-game-overlay-text">Перепрыгивай препятствия и набирай очки.</span>
+                    <div class="roadnote-game-reward-preview" data-game-rule="reward">
+                        <span class="roadnote-game-reward-label">НАГРАДА</span>
+                        <strong class="roadnote-game-reward-title">3000 очков → 1 бесплатный скан</strong>
+                        <span class="roadnote-game-reward-caption">За один раунд · не чаще одного раза в день</span>
+                    </div>
                     <button class="roadnote-game-start" id="roadnote-game-start" type="button">Играть</button>
                 </div>
             </div>
