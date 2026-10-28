@@ -1379,7 +1379,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             </div>
             <div class="roadnote-game-stage">
                 <canvas class="roadnote-game-canvas" id="roadnote-game-canvas" width="640" height="240" aria-label="Мини-игра: нажимай, чтобы перепрыгивать препятствия"></canvas>
-                <div class="roadnote-game-hud" id="roadnote-game-hud" aria-live="polite"><span id="roadnote-game-attempts">⚡ —</span><span id="roadnote-game-reward">3000 очков = бесплатный скан</span></div>
+                <div class="roadnote-game-hud" id="roadnote-game-hud" aria-live="polite"><span id="roadnote-game-attempts"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> —</span><span id="roadnote-game-reward">3000 очков = бесплатный скан</span></div>
                 <div class="roadnote-game-overlay" id="roadnote-game-overlay">
                     <strong id="roadnote-game-overlay-title"> </strong>
                     <span id="roadnote-game-overlay-text"> </span>
@@ -3006,14 +3006,14 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     try {
       const state = await gameRequest('/api/game/state', {});
       renderGameState(state);
-      if (state.awarded > 0 && showLoginToast) showGameToast('Заглянул — держи бонус! 🎁', '+' + state.awarded + ' игровых попыток за сегодняшний заход', '🎁');
+      if (state.awarded > 0 && showLoginToast) showGameToast('Начислены игровые попытки', '+' + state.awarded + ' попыток за сегодняшний заход', 'bolt');
     } catch (error) { console.warn('[Roadnote game state]', error.message); }
   }
   refreshGameState(true);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshGameState(false); });
   window.addEventListener('roadnote:scan-success', async () => {
     await refreshGameState(false);
-    showGameToast('Красиво! Ещё +3 попытки 🚀', 'За успешный скан', '✨');
+    showGameToast('Начислены игровые попытки', '+3 за успешный скан', 'bolt');
   });
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -3432,7 +3432,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       }
     }
     const hud = document.getElementById('roadnote-game-hud'); if (hud) hud.classList.remove('is-hidden');
-    showOverlay('Поездка окончена', endingText + ' Осталось ⚡ ' + gameAttempts + '. 3000 очков за раунд — бесплатный скан.');
+    showOverlay('Поездка окончена', endingText + ' Осталось попыток: ' + gameAttempts + '. 3000 очков за раунд — бесплатный скан.');
     draw();
   }
   function frame(now) {
