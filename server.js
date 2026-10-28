@@ -230,6 +230,32 @@ if (!userColumns.some(column => column.name === 'daily_scan_date')) {
 if (!userColumns.some(column => column.name === 'daily_scan_available')) {
   db.exec('ALTER TABLE users ADD COLUMN daily_scan_available INTEGER NOT NULL DEFAULT 0');
 }
+if (!userColumns.some(column => column.name === 'game_attempts')) {
+  db.exec('ALTER TABLE users ADD COLUMN game_attempts INTEGER NOT NULL DEFAULT 0');
+}
+if (!userColumns.some(column => column.name === 'game_streak')) {
+  db.exec('ALTER TABLE users ADD COLUMN game_streak INTEGER NOT NULL DEFAULT 0');
+}
+if (!userColumns.some(column => column.name === 'game_last_login_day')) {
+  db.exec('ALTER TABLE users ADD COLUMN game_last_login_day TEXT DEFAULT NULL');
+}
+if (!userColumns.some(column => column.name === 'game_reward_day')) {
+  db.exec('ALTER TABLE users ADD COLUMN game_reward_day TEXT DEFAULT NULL');
+}
+if (!userColumns.some(column => column.name === 'game_total_score')) {
+  db.exec('ALTER TABLE users ADD COLUMN game_total_score INTEGER NOT NULL DEFAULT 0');
+}
+db.exec(`
+  CREATE TABLE IF NOT EXISTS game_sessions (
+    id TEXT PRIMARY KEY,
+    vk_id TEXT NOT NULL,
+    started_at INTEGER NOT NULL,
+    finished_at INTEGER DEFAULT NULL,
+    score INTEGER DEFAULT NULL,
+    reward_granted INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS idx_game_sessions_user_time ON game_sessions(vk_id, started_at DESC);
+`);
 
 // Older accounts with an unassigned balance receive the welcome scans once.
 // Accounts that already had an assigned balance are treated as previously onboarded.
@@ -1015,6 +1041,99 @@ async function handleAdminMessageEvent(event) {
 }
 
 
+
+// Roadnote Arcade: streak rewards, server-backed attempts and one daily free scan reward.
+const GAME_DAILY_REWARDS = [1, 1, 2, 2, 3, 3, 5];
+function gamePublicState(userId) {
+  const row = db.prepare('SELECT game_attempts, game_streak, game_last_login_day, game_reward_day, game_total_score FROM users WHERE vk_id = ?').get(userId);
+  const today = yekaterinburgDayKey();
+  return {
+    attempts: Math.max(0, Number(row?.game_attempts || 0)),
+    streak: Math.max(0, Number(row?.game_streak || 0)),
+    loginRewardToday: row?.game_last_login_day === today,
+    freeScanClaimedToday: row?.game_reward_day === today,
+    totalScore: Math.max(0, Number(row?.game_total_score || 0)),
+    rewardThreshold: 3000
+  };
+}
+app.post('/api/game/state', (req, res) => {
+  let userId;
+  try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
+  catch { return res.status(401).json({ error: 'Открой Roadnote внутри VK и попробуй ещё раз.' }); }
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const today = yekaterinburgDayKey(now);
+  ensureUserForScan.run(userId, nowIso, nowIso);
+  let awarded = 0;
+  let streak = 0;
+  db.transaction(() => {
+    const user = db.prepare('SELECT game_attempts, game_streak, game_last_login_day FROM users WHERE vk_id = ?').get(userId);
+    const lastDay = user?.game_last_login_day || null;
+    streak = Number(user?.game_streak || 0);
+    if (lastDay !== today) {
+      const yesterday = yekaterinburgDayKey(new Date(now.getTime() - 86400000));
+      streak = lastDay === yesterday ? Math.min(7, streak + 1) : 1;
+      awarded = GAME_DAILY_REWARDS[streak - 1] || 5;
+      db.prepare('UPDATE users SET game_attempts = COALESCE(game_attempts, 0) + ?, game_streak = ?, game_last_login_day = ? WHERE vk_id = ?')
+        .run(awarded, streak, today, userId);
+    }
+  })();
+  return res.json({ ok: true, ...gamePublicState(userId), awarded, streak });
+});
+app.post('/api/game/start', (req, res) => {
+  let userId;
+  try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
+  catch { return res.status(401).json({ error: 'Открой Roadnote внутри VK и попробуй ещё раз.' }); }
+  const now = Date.now();
+  const sessionId = crypto.randomUUID();
+  let started = false;
+  db.transaction(() => {
+    const spend = db.prepare('UPDATE users SET game_attempts = game_attempts - 1 WHERE vk_id = ? AND game_attempts > 0').run(userId);
+    if (spend.changes !== 1) return;
+    db.prepare('INSERT INTO game_sessions (id, vk_id, started_at) VALUES (?, ?, ?)').run(sessionId, userId, now);
+    started = true;
+  })();
+  if (!started) return res.status(402).json({ error: 'Игровые попытки закончились. Загляни завтра или получи +3 за успешный скан.', ...gamePublicState(userId) });
+  return res.json({ ok: true, sessionId, ...gamePublicState(userId) });
+});
+app.post('/api/game/finish', (req, res) => {
+  let userId;
+  try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
+  catch { return res.status(401).json({ error: 'Открой Roadnote внутри VK и попробуй ещё раз.' }); }
+  const sessionId = String(req.body?.sessionId || '');
+  const score = Number(req.body?.score);
+  if (!/^[0-9a-f-]{36}$/i.test(sessionId) || !Number.isSafeInteger(score) || score < 0 || score > 100000) {
+    return res.status(400).json({ error: 'Не удалось подтвердить результат игры.' });
+  }
+  const session = db.prepare('SELECT * FROM game_sessions WHERE id = ? AND vk_id = ?').get(sessionId, userId);
+  if (!session) return res.status(404).json({ error: 'Игровая попытка не найдена.' });
+  if (session.finished_at) return res.json({ ok: true, alreadyFinished: true, ...gamePublicState(userId) });
+  const now = Date.now();
+  const elapsedSeconds = Math.max(0, (now - Number(session.started_at)) / 1000);
+  // Score is time-based in this runner. Reject scores impossible for the recorded run duration.
+  if (elapsedSeconds < 1 || score > Math.floor(elapsedSeconds * 12) + 15) {
+    return res.status(400).json({ error: 'Результат не прошёл проверку.' });
+  }
+  const today = yekaterinburgDayKey(new Date(now));
+  let freeScanAwarded = false;
+  db.transaction(() => {
+    const marked = db.prepare('UPDATE game_sessions SET finished_at = ?, score = ? WHERE id = ? AND vk_id = ? AND finished_at IS NULL')
+      .run(now, score, sessionId, userId);
+    if (marked.changes !== 1) return;
+    db.prepare('UPDATE users SET game_total_score = COALESCE(game_total_score, 0) + ? WHERE vk_id = ?').run(score, userId);
+    if (score >= 3000) {
+      const reward = db.prepare(`UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + 1, game_reward_day = ?
+        WHERE vk_id = ? AND (game_reward_day IS NULL OR game_reward_day <> ?)`).run(today, userId, today);
+      if (reward.changes === 1) {
+        recordScanCredit.run(userId, new Date(now).toISOString(), 1, 'game_reward', 'Бесплатный скан за 3000 очков');
+        freeScanAwarded = true;
+      }
+    }
+  })();
+  if (freeScanAwarded) sendLiveEntitlement(userId);
+  return res.json({ ok: true, score, freeScanAwarded, ...gamePublicState(userId) });
+});
+
 app.post('/api/tariffs/permission', async (req, res) => {
   let userId;
   let launchUserId = '';
@@ -1639,7 +1758,7 @@ app.post('/api/paytag', async (req, res) => {
     const scanBalance = getDisplayedScanBalance(currentEntitlement);
 
     const scannedAt = new Date().toISOString();
-    db.prepare('UPDATE users SET last_scan_at = ?, last_transport_number = ? WHERE vk_id = ?')
+    db.prepare('UPDATE users SET last_scan_at = ?, last_transport_number = ?, game_attempts = COALESCE(game_attempts, 0) + 3 WHERE vk_id = ?')
       .run(scannedAt, String(data.vehicleNumber || '').trim() || null, userId);
     let referralRewarded = false;
     db.transaction(() => {
