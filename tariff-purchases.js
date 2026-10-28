@@ -6,7 +6,15 @@
   const modalStatus = document.getElementById('tariff-modal-status');
   const tariffStatus = document.getElementById('start-tariff-status');
   const tariffNote = document.getElementById('start-offers-note');
-  let state = { hasPurchased: false, activeTariffRequests: [], activeTariffRequest: null, tariffRequestHistory: [] };
+  const promoForm = document.getElementById('start-promo-form');
+  const promoInput = document.getElementById('start-promo-input');
+  const promoApplyButton = document.getElementById('start-promo-apply');
+  const promoRemoveButton = document.getElementById('start-promo-remove');
+  const promoCurrent = document.getElementById('start-promo-current');
+  const promoCurrentTitle = document.getElementById('start-promo-current-title');
+  const promoCurrentDescription = document.getElementById('start-promo-current-description');
+  const promoStatus = document.getElementById('start-promo-status');
+  let state = { hasPurchased: false, activePromoCode: null, activeTariffRequests: [], activeTariffRequest: null, tariffRequestHistory: [] };
   let busy = false;
   let activePurchase = null;
   let lockedScrollY = 0;
@@ -42,15 +50,22 @@
   function updatePrices() {
     cards.forEach(function (card) {
       const regular = Number(card.dataset.regularPrice);
-      const promo = Number(card.dataset.promoPrice);
-      const price = state.hasPurchased ? regular : promo;
+      const firstPurchasePrice = Number(card.dataset.promoPrice);
+      const basePrice = state.hasPurchased ? regular : firstPurchasePrice;
+      const activePromo = state.activePromoCode;
+      const promoApplies = Boolean(activePromo && Array.isArray(activePromo.offerIds) && activePromo.offerIds.includes(card.dataset.offerId));
+      const price = promoApplies ? Math.max(1, Math.round(basePrice * (100 - Number(activePromo.discountPercent)) / 100)) : basePrice;
       const oldPrice = card.querySelector('.start-offer-old-price');
       const currentPrice = card.querySelector('.start-offer-current-price');
       const discount = card.querySelector('.start-offer-discount');
       const unitPrice = card.querySelector('.start-offer-unit-price');
-      if (oldPrice) oldPrice.hidden = state.hasPurchased || regular === price;
+      if (oldPrice) oldPrice.hidden = (state.hasPurchased && !promoApplies) || (!state.hasPurchased && !promoApplies) || regular === price;
       if (currentPrice) currentPrice.textContent = rubles(price);
-      if (discount) discount.hidden = state.hasPurchased || regular === price;
+      if (discount) {
+        if (!discount.dataset.defaultText) discount.dataset.defaultText = discount.textContent;
+        discount.hidden = promoApplies ? regular === price : (state.hasPurchased || regular === basePrice);
+        discount.textContent = promoApplies ? '−' + Math.max(0, Math.round((1 - price / regular) * 100)) + '% с кодом' : discount.dataset.defaultText;
+      }
       if (unitPrice) {
         const quantity = Math.max(1, Number(card.dataset.quantity) || 1);
         unitPrice.textContent = card.dataset.offerKind === 'subscription'
@@ -68,6 +83,7 @@
   function renderState(next) {
     state = {
       hasPurchased: Boolean(next && next.hasPurchased),
+      activePromoCode: next && next.activePromoCode && typeof next.activePromoCode === 'object' ? next.activePromoCode : null,
       activeTariffRequests: next && Array.isArray(next.activeTariffRequests) ? next.activeTariffRequests :
         (next && next.activeTariffRequest ? [next.activeTariffRequest] : []),
       activeTariffRequest: next && next.activeTariffRequest || null,
@@ -78,6 +94,7 @@
       ? 'Все тарифы доступны по указанным ценам. Выбирай то, что подходит именно тебе.'
       : 'Скидка действует только на первую покупку.';
     updatePrices();
+    renderPromoState();
     if (tariffStatus && next && next.notice) {
       tariffStatus.textContent = next.notice;
       tariffStatus.classList.remove('is-error');
@@ -89,6 +106,67 @@
     }
     // Mood message is chosen once by initializePage(); tariff state updates must not reroll it.
   }
+  function setPromoStatus(message, isError) {
+    if (!promoStatus) return;
+    promoStatus.textContent = message || '';
+    promoStatus.classList.toggle('is-error', Boolean(isError));
+  }
+  function renderPromoState() {
+    if (!promoCurrent) return;
+    const promo = state.activePromoCode;
+    promoCurrent.hidden = !promo;
+    if (promo) {
+      if (promoCurrentTitle) promoCurrentTitle.textContent = String(promo.code || '') + ' · скидка ' + Number(promo.discountPercent || 0) + '%';
+      if (promoCurrentDescription) promoCurrentDescription.textContent = 'Действует на ' + (Array.isArray(promo.offerIds) ? promo.offerIds.length : 0) + ' тариф(а/ов). Промокод будет использован после успешной оплаты.';
+      if (promoApplyButton) promoApplyButton.textContent = 'Заменить';
+      if (promoInput && !promoInput.value) promoInput.placeholder = 'Введи другой код';
+    } else {
+      if (promoApplyButton) promoApplyButton.textContent = 'Применить';
+      if (promoInput) promoInput.placeholder = 'Введи промокод';
+    }
+  }
+  async function applyPromo(event) {
+    if (event) event.preventDefault();
+    if (busy) return;
+    const code = String(promoInput && promoInput.value || '').trim().toUpperCase();
+    if (!code) { setPromoStatus('Введи промокод.', true); return; }
+    busy = true;
+    if (promoApplyButton) { promoApplyButton.disabled = true; promoApplyButton.textContent = 'Проверяем…'; }
+    try {
+      const data = await apiPost('api/promocodes/apply', { code: code });
+      if (modal && !modal.hidden) closeModal();
+      renderState(data);
+      if (promoInput) promoInput.value = '';
+      setPromoStatus(data.notice || 'Промокод применён. Скидка будет закреплена после успешной оплаты.', false);
+    } catch (error) {
+      if (error.data) renderState(error.data);
+      setPromoStatus(error.message || 'Не удалось применить промокод.', true);
+    } finally {
+      busy = false;
+      if (promoApplyButton) { promoApplyButton.disabled = false; promoApplyButton.textContent = state.activePromoCode ? 'Заменить' : 'Применить'; }
+    }
+  }
+  async function removePromo() {
+    if (busy) return;
+    busy = true;
+    if (promoRemoveButton) { promoRemoveButton.disabled = true; promoRemoveButton.textContent = 'Отменяем…'; }
+    try {
+      const data = await apiPost('api/promocodes/remove', {});
+      if (modal && !modal.hidden) closeModal();
+      renderState(data);
+      setPromoStatus(data.notice || 'Промокод отменён.', false);
+    } catch (error) {
+      if (error.data) renderState(error.data);
+      setPromoStatus(error.message || 'Не удалось отменить промокод.', true);
+    } finally {
+      busy = false;
+      if (promoRemoveButton) { promoRemoveButton.disabled = false; promoRemoveButton.textContent = 'Отменить'; }
+    }
+  }
+  if (promoForm) promoForm.addEventListener('submit', applyPromo);
+  if (promoRemoveButton) promoRemoveButton.addEventListener('click', removePromo);
+  if (promoInput) promoInput.addEventListener('input', function () { promoInput.value = promoInput.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''); });
+
   async function refreshState() {
     if (!launchParams || document.visibilityState === 'hidden') return;
     try { renderState(await apiPost('api/tariffs/state')); }
