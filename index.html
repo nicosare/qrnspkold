@@ -2964,7 +2964,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       const x = direction > 0
         ? -travelExtent + progress * travelDistance
         : W + travelExtent - progress * travelDistance;
-      const y = 29 + Math.sin(cycle * 0.5) * 1.5;
+      const y = 29 + Math.sin(cycle * 0.5) * 1.05;
       const wave = elapsed * 4.1;
       const attachX = x - direction * 43;
       const attachY = y + 1;
@@ -3075,13 +3075,13 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         ctx.translate(x, y);
         // The reference SVG faces left; flip it to face the direction of travel.
         ctx.scale(-direction, 1);
+        // Gentle vertical bob; the propeller remains attached to the nose in either direction.
+        ctx.translate(0, Math.sin(elapsed * 2.2) * 1.1);
         ctx.drawImage(planeImage, -35, -18, 70, 36);
 
         // Animated propeller in the same dark blue as the player character.
-        const propX = -direction * 28.1;
-        const propY = 1.8;
-        ctx.translate(propX, propY);
-        ctx.rotate(elapsed * 22);
+        ctx.translate(-28.1, 1.8);
+        ctx.rotate(elapsed * 30);
         ctx.strokeStyle = '#24364a';
         ctx.fillStyle = '#24364a';
         ctx.lineCap = 'round';
@@ -3148,7 +3148,59 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     drawPlane(285, -1, 23, 82);
     drawPlane(605, 1, 18, 112);
 
-    // Keep the horizon clean: only the sky, clouds and road remain in the background.
+    // Soft, continuous city silhouette along the horizon for a little depth.
+    const skylineBase = ground + 2;
+    const skylineWidth = 420;
+    const skylineOffset = (elapsed * speed * 0.045) % skylineWidth;
+    ctx.save();
+    ctx.globalAlpha = 0.52;
+    ctx.fillStyle = paletteColor('ground');
+    for (let tile = -1; tile < Math.ceil(W / skylineWidth) + 1; tile++) {
+      const bx = tile * skylineWidth - skylineOffset;
+      ctx.beginPath();
+      ctx.moveTo(bx, skylineBase);
+      ctx.lineTo(bx, skylineBase - 17);
+      ctx.lineTo(bx + 18, skylineBase - 17);
+      ctx.lineTo(bx + 18, skylineBase - 29);
+      ctx.lineTo(bx + 35, skylineBase - 29);
+      ctx.lineTo(bx + 35, skylineBase - 12);
+      ctx.lineTo(bx + 53, skylineBase - 12);
+      ctx.lineTo(bx + 53, skylineBase - 38);
+      ctx.lineTo(bx + 77, skylineBase - 38);
+      ctx.lineTo(bx + 77, skylineBase - 22);
+      ctx.lineTo(bx + 96, skylineBase - 22);
+      ctx.lineTo(bx + 96, skylineBase - 33);
+      ctx.lineTo(bx + 121, skylineBase - 33);
+      ctx.lineTo(bx + 121, skylineBase - 14);
+      ctx.lineTo(bx + 145, skylineBase - 14);
+      ctx.lineTo(bx + 145, skylineBase - 25);
+      ctx.lineTo(bx + 166, skylineBase - 25);
+      ctx.lineTo(bx + 166, skylineBase - 19);
+      ctx.lineTo(bx + 185, skylineBase - 19);
+      ctx.lineTo(bx + 185, skylineBase - 35);
+      ctx.lineTo(bx + 209, skylineBase - 35);
+      ctx.lineTo(bx + 209, skylineBase - 11);
+      ctx.lineTo(bx + 232, skylineBase - 11);
+      ctx.lineTo(bx + 232, skylineBase - 27);
+      ctx.lineTo(bx + 252, skylineBase - 27);
+      ctx.lineTo(bx + 252, skylineBase - 17);
+      ctx.lineTo(bx + 275, skylineBase - 17);
+      ctx.lineTo(bx + 275, skylineBase - 31);
+      ctx.lineTo(bx + 299, skylineBase - 31);
+      ctx.lineTo(bx + 299, skylineBase - 13);
+      ctx.lineTo(bx + 321, skylineBase - 13);
+      ctx.lineTo(bx + 321, skylineBase - 24);
+      ctx.lineTo(bx + 345, skylineBase - 24);
+      ctx.lineTo(bx + 345, skylineBase - 16);
+      ctx.lineTo(bx + 369, skylineBase - 16);
+      ctx.lineTo(bx + 369, skylineBase - 28);
+      ctx.lineTo(bx + 393, skylineBase - 28);
+      ctx.lineTo(bx + 393, skylineBase);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+
     ctx.fillStyle = paletteColor('ground'); ctx.fillRect(0,ground,W,3);
     ctx.fillStyle = paletteColor('dash');
     for(let i=0;i<18;i++){const x=((i*48-(elapsed*speed)%864)+864)%864;ctx.fillRect(x,ground+13,24,3);}
