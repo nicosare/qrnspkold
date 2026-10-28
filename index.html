@@ -2966,7 +2966,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         : W + travelExtent - progress * travelDistance;
       const y = 29 + Math.sin(cycle * 0.5) * 1.5;
       const wave = elapsed * 4.1;
-      const attachX = x - direction * 18;
+      const attachX = x - direction * 43;
       const attachY = y + 1;
       const points = [];
       for (let i = 0; i <= 32; i++) {
@@ -2983,7 +2983,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       ctx.strokeStyle = '#176dcc';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(x - direction * 15, y + 1);
+      ctx.moveTo(x - direction * 35, y + 1);
       ctx.lineTo(points[0].x, points[0].y);
       ctx.stroke();
 
@@ -3046,7 +3046,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       if (!drawRoadnotePlane.planeImageReady) {
         const planeSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="130 100 590 300" width="590" height="300">
           <style>
-            .plane-body{fill:#00a0e9}.plane-body-dark{fill:#0077b6}.plane-body-light{fill:#33b5f0}.plane-glass{fill:#1e293b}.plane-wing{fill:#0081cc}.plane-outline{stroke:#1e293b;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}.plane-strut{stroke:#1e293b;stroke-width:3.5;stroke-linecap:round;fill:none}.plane-tire{fill:#1e293b}
+             .plane-body{fill:#2787f5}.plane-body-dark{fill:#176dcc}.plane-body-light{fill:#69b5ff}.plane-glass{fill:#24364a}.plane-wing{fill:#176dcc}.plane-outline{stroke:#1e293b;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}.plane-strut{stroke:#1e293b;stroke-width:3.5;stroke-linecap:round;fill:none}.plane-tire{fill:#1e293b}
           </style>
           <g transform="translate(40 20)">
             <path class="plane-body-dark plane-outline" d="M600 240L635 125Q655 115 670 130Q685 150 675 200L665 240Z"/>
@@ -3065,11 +3065,6 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             <circle cx="295" cy="360" r="18" class="plane-tire plane-outline"/>
             <path class="plane-body plane-outline" d="M260 345C260 330 290 325 320 338C335 345 340 360 330 370C315 373 275 373 260 360Z"/>
             <circle cx="622" cy="292" r="6" class="plane-tire plane-outline"/>
-            <g transform="translate(148 245)">
-              <path class="plane-tire" d="M-4 -80C-10 -30 -4 -8 0 0C4 -8 10 -30 4 -80Z"/>
-              <path class="plane-tire" d="M-4 80C-10 30 -4 8 0 0C4 8 10 30 4 80Z"/>
-              <circle r="9" class="plane-tire plane-outline"/><circle r="3" fill="#cbd5e1"/>
-            </g>
           </g>
         </svg>`;
         planeImage.onload = () => { drawRoadnotePlane.planeImageReady = true; };
@@ -3081,6 +3076,23 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         // The reference SVG faces left; flip it to face the direction of travel.
         ctx.scale(-direction, 1);
         ctx.drawImage(planeImage, -35, -18, 70, 36);
+
+        // Animated propeller in the same dark blue as the player character.
+        const propX = -direction * 28.1;
+        const propY = 1.8;
+        ctx.translate(propX, propY);
+        ctx.rotate(elapsed * 22);
+        ctx.strokeStyle = '#24364a';
+        ctx.fillStyle = '#24364a';
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 1.7;
+        ctx.beginPath();
+        ctx.ellipse(0, -3.3, 1.35, 3.3, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 3.3, 1.35, 3.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(0, 0, 1.7, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       }
     }
