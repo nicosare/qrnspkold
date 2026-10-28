@@ -1716,26 +1716,94 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     }
 
     function loadFromLocalStorage() {
-        // Загружаем сохраненные значения
+        // Локальная копия остаётся быстрым резервом, серверная запись имеет приоритет.
         const savedPrice = localStorage.getItem('ticketPrice');
-        if (savedPrice) {
-            priceElement.textContent = savedPrice;
-        }
-        
+        if (savedPrice) priceElement.textContent = savedPrice;
         const savedRouteNumber = localStorage.getItem('routeNumber');
-        if (savedRouteNumber) {
-            routeNumberElement.innerHTML = formatRouteNumber(savedRouteNumber);
-        }
-        
+        if (savedRouteNumber) routeNumberElement.innerHTML = formatRouteNumber(savedRouteNumber);
         const savedVehicleNumber = localStorage.getItem('vehicleNumber');
-        if (savedVehicleNumber) {
-            vehicleNumberElement.textContent = savedVehicleNumber;
-        }
-        
+        if (savedVehicleNumber) vehicleNumberElement.textContent = savedVehicleNumber;
         const savedVehicleType = localStorage.getItem('vehicleType');
-        if (savedVehicleType) {
-            vehicleTypeElement.textContent = savedVehicleType;
+        if (savedVehicleType) vehicleTypeElement.textContent = savedVehicleType;
+    }
+
+    function ticketApiUrl() {
+        const pathname = window.location.pathname;
+        const base = pathname.endsWith('/') ? pathname : (pathname.slice(pathname.lastIndexOf('/') + 1).includes('.') ? pathname.slice(0, pathname.lastIndexOf('/') + 1) : pathname + '/');
+        return base + 'api/ticket/state';
+    }
+
+    function currentTicketSnapshot() {
+        return {
+            ticketSeries,
+            ticketNumber,
+            startedAt: startTime instanceof Date && Number.isFinite(startTime.getTime()) ? startTime.getTime() : Date.now(),
+            routeNumber: routeNumberElement.textContent.trim(),
+            vehicleNumber: vehicleNumberElement.textContent.trim(),
+            vehicleType: vehicleTypeElement.textContent.trim(),
+            price: priceElement.textContent.trim()
+        };
+    }
+
+    async function requestTicketState(action) {
+        const launchParams = window.location.search.slice(1);
+        if (!launchParams) return null;
+        const response = await fetch(ticketApiUrl(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ launchParams, action, ticket: currentTicketSnapshot() }),
+            cache: 'no-store',
+            credentials: 'omit'
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Не удалось сохранить текущий билет.');
+        return data.ticket || null;
+    }
+
+    function applySavedTicketState(ticket) {
+        if (!ticket) return;
+        ticketSeries = String(ticket.ticketSeries || ticketSeries);
+        ticketSeriesElement.textContent = ticketSeries;
+        ticketNumber = String(ticket.ticketNumber || ticketNumber);
+        ticketNumberElement.textContent = ticketNumber;
+        const timestamp = Number(ticket.startedAt);
+        if (Number.isSafeInteger(timestamp) && timestamp > 0) {
+            startTime = new Date(timestamp);
+            localStorage.setItem('timerStartTime', String(timestamp));
+            dateElement.textContent = getCurrentDateTimeString(startTime);
         }
+        localStorage.setItem('ticketNumber', ticketNumber);
+        const routeNumber = String(ticket.routeNumber || '');
+        routeNumberElement.innerHTML = formatRouteNumber(routeNumber);
+        localStorage.setItem('routeNumber', routeNumber);
+        const vehicleNumber = String(ticket.vehicleNumber || '');
+        vehicleNumberElement.textContent = vehicleNumber;
+        localStorage.setItem('vehicleNumber', vehicleNumber);
+        const vehicleType = String(ticket.vehicleType || '');
+        vehicleTypeElement.textContent = vehicleType;
+        localStorage.setItem('vehicleType', vehicleType);
+        const price = String(ticket.price || '');
+        priceElement.textContent = price;
+        localStorage.setItem('ticketPrice', price);
+        updateTimer();
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(updateTimer, 1000);
+        generateQR();
+    }
+
+    async function restoreTicketStateFromServer() {
+        try {
+            const ticket = await requestTicketState('sync');
+            if (ticket) applySavedTicketState(ticket);
+            else await requestTicketState('save');
+        } catch (error) {
+            console.warn('[Roadnote ticket state]', error.message);
+        }
+    }
+
+    async function persistTicketState() {
+        try { await requestTicketState('save'); }
+        catch (error) { console.warn('[Roadnote ticket state save]', error.message); }
     }
 
     let scanProcessing = false;
@@ -1840,6 +1908,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             clearInterval(timerInterval);
         }
         timerInterval = setInterval(updateTimer, 1000);
+        void persistTicketState();
     }
 
     function applyTransportData(data) {
@@ -2535,6 +2604,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
 
         loadFromLocalStorage();
         loadTimer();
+        void restoreTicketStateFromServer();
 
         startScanButton.addEventListener('click', scanWithVkBridge);
         continueCurrentScanButton.addEventListener('click', closeStartOverlay);
@@ -3175,12 +3245,16 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       requestAnimationFrame(() => { streakDaysNode.scrollLeft = streakDaysNode.scrollWidth; });
     }
     if (rewardNode) rewardNode.textContent = state.freeScanClaimedToday ? 'Бесплатный скан уже получен сегодня' : '3000 очков = 1 бесплатный скан';
+    if (state.bestScore !== undefined) recordNode.textContent = String(Math.max(0, Number(state.bestScore) || 0));
   }
   async function refreshGameState(showLoginToast) {
     if (!launchParams) return;
     try {
-      const state = await gameRequest('/api/game/state', {});
+      let legacyBestScore = 0;
+      try { legacyBestScore = Math.max(0, Number(localStorage.getItem('roadnoteRunnerBestV1')) || 0); } catch (_) {}
+      const state = await gameRequest('/api/game/state', { legacyBestScore });
       renderGameState(state);
+      best = Math.max(best, Number(state.bestScore) || 0);
       if (state.awarded > 0 && showLoginToast) showGameToast('Начислены игровые попытки', '+' + state.awarded + ' попыток за сегодняшний заход', 'bolt');
     } catch (error) { console.warn('[Roadnote game state]', error.message); }
   }
@@ -3602,6 +3676,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       try {
         const result = await gameRequest('/api/game/finish', {sessionId:sessionToFinish, score:finalScore});
         renderGameState(result);
+        best = Math.max(best, Number(result.bestScore) || 0);
+        try { localStorage.setItem(storageKey, String(best)); } catch (_) {}
         if (result.freeScanAwarded) {
           endingText = 'Счёт: '+finalScore+'. Ты получил бесплатный скан.';
           showGameToast('Бесплатный скан начислен', 'Награда за 3000 очков', 'award');
