@@ -3040,85 +3040,49 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       }
       ctx.restore();
 
-      // Simple blue cartoon airplane inspired by the user's reference image.
-      // Keep the silhouette bold and readable at the small decorative scale.
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.scale(direction * scale, scale);
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      // Tail fin.
-      ctx.fillStyle = '#176dcc';
-      ctx.beginPath();
-      ctx.moveTo(-18, -1);
-      ctx.lineTo(-14, -7);
-      ctx.quadraticCurveTo(-12, -9, -10, -5);
-      ctx.lineTo(-8, -1);
-      ctx.closePath();
-      ctx.fill();
-
-      // High wing and two understated supports.
-      ctx.fillStyle = '#65baff';
-      ctx.beginPath();
-      ctx.moveTo(-10, -3);
-      ctx.lineTo(-5, -8);
-      ctx.quadraticCurveTo(1, -10, 10, -7);
-      ctx.lineTo(15, -4);
-      ctx.lineTo(7, -2);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = '#176dcc';
-      ctx.lineWidth = 0.85;
-      ctx.beginPath();
-      ctx.moveTo(-7, -3);
-      ctx.lineTo(-3, -7);
-      ctx.moveTo(4, -3);
-      ctx.lineTo(5, -7);
-      ctx.stroke();
-
-      // Rounded blue fuselage with a slightly lifted nose.
-      ctx.fillStyle = '#2787f5';
-      ctx.beginPath();
-      ctx.moveTo(-21, 0);
-      ctx.quadraticCurveTo(-20, -4, -13, -4);
-      ctx.lineTo(12, -3);
-      ctx.quadraticCurveTo(20, -2, 24, 0);
-      ctx.quadraticCurveTo(19, 2.5, 12, 2.5);
-      ctx.lineTo(-13, 3);
-      ctx.quadraticCurveTo(-20, 2.5, -21, 0);
-      ctx.closePath();
-      ctx.fill();
-
-      // Cockpit window and a small highlight.
-      ctx.fillStyle = '#174b83';
-      ctx.beginPath();
-      ctx.moveTo(7, -3);
-      ctx.lineTo(13, -2.5);
-      ctx.quadraticCurveTo(16, -2, 17, -0.3);
-      ctx.lineTo(7, -0.3);
-      ctx.closePath();
-      ctx.fill();
-      ctx.globalAlpha = 0.38;
-      ctx.fillStyle = '#dff3ff';
-      ctx.beginPath();
-      ctx.moveTo(-13, -2.4);
-      ctx.lineTo(-4, -2.4);
-      ctx.lineTo(-8, -1.4);
-      ctx.lineTo(-15, -1.4);
-      ctx.closePath();
-      ctx.fill();
-      ctx.globalAlpha = 1;
-
-      // Compact propeller with a gentle spinning flicker.
-      ctx.globalAlpha = 0.55 + Math.abs(Math.sin(elapsed * 18)) * 0.35;
-      ctx.strokeStyle = '#174b83';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(25, -4);
-      ctx.lineTo(25, 4);
-      ctx.stroke();
-      ctx.restore();
+      // Use the user's supplied SVG illustration, cropped to the plane itself.
+      // Cache the SVG image so it is not recreated on every animation frame.
+      const planeImage = drawRoadnotePlane.planeImage || (drawRoadnotePlane.planeImage = new Image());
+      if (!drawRoadnotePlane.planeImageReady) {
+        const planeSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="130 100 590 300" width="590" height="300">
+          <style>
+            .plane-body{fill:#00a0e9}.plane-body-dark{fill:#0077b6}.plane-body-light{fill:#33b5f0}.plane-glass{fill:#1e293b}.plane-wing{fill:#0081cc}.plane-outline{stroke:#1e293b;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}.plane-strut{stroke:#1e293b;stroke-width:3.5;stroke-linecap:round;fill:none}.plane-tire{fill:#1e293b}
+          </style>
+          <g transform="translate(40 20)">
+            <path class="plane-body-dark plane-outline" d="M600 240L635 125Q655 115 670 130Q685 150 675 200L665 240Z"/>
+            <path class="plane-body plane-outline" d="M590 240L625 130Q645 120 660 135Q670 150 660 240Z"/>
+            <path class="plane-body-dark plane-outline" d="M520 240L670 240L660 270L520 285Z"/>
+            <path class="plane-body plane-outline" d="M190 230C210 190 270 165 340 165L530 200C580 210 640 235 665 255C650 280 580 290 520 290L280 295C210 295 180 275 160 255C150 245 165 235 190 230Z"/>
+            <path class="plane-body-light" d="M210 225C240 195 290 172 340 170L510 203C420 185 320 180 230 215Z"/>
+            <path class="plane-glass plane-outline" d="M220 215L275 175L345 175L330 225L280 230Z"/>
+            <polygon points="235,210 268,185 270,205 242,220" fill="#fff" opacity=".4"/>
+            <polygon points="285,180 310,180 302,212 288,214" fill="#fff" opacity=".4"/>
+            <path class="plane-body-dark plane-outline" d="M160 235C150 240 150 255 160 260L180 260L180 235Z"/>
+            <path class="plane-body-dark plane-outline" d="M580 245L665 240L660 252L575 253Z"/>
+            <path class="plane-wing plane-outline" d="M200 220L490 215C500 218 495 226 480 226L210 228C195 228 190 222 200 220Z"/>
+            <line x1="280" y1="225" x2="310" y2="285" class="plane-strut"/><circle cx="310" cy="285" r="4" fill="#1e293b"/>
+            <line x1="280" y1="285" x2="295" y2="340" stroke="#1e293b" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="295" cy="360" r="18" class="plane-tire plane-outline"/>
+            <path class="plane-body plane-outline" d="M260 345C260 330 290 325 320 338C335 345 340 360 330 370C315 373 275 373 260 360Z"/>
+            <circle cx="622" cy="292" r="6" class="plane-tire plane-outline"/>
+            <g transform="translate(148 245)">
+              <path class="plane-tire" d="M-4 -80C-10 -30 -4 -8 0 0C4 -8 10 -30 4 -80Z"/>
+              <path class="plane-tire" d="M-4 80C-10 30 -4 8 0 0C4 8 10 30 4 80Z"/>
+              <circle r="9" class="plane-tire plane-outline"/><circle r="3" fill="#cbd5e1"/>
+            </g>
+          </g>
+        </svg>`;
+        planeImage.onload = () => { drawRoadnotePlane.planeImageReady = true; };
+        planeImage.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(planeSvg);
+      }
+      if (drawRoadnotePlane.planeImageReady && planeImage.naturalWidth) {
+        ctx.save();
+        ctx.translate(x, y);
+        // The reference SVG faces left; flip it to face the direction of travel.
+        ctx.scale(-direction, 1);
+        ctx.drawImage(planeImage, -35, -18, 70, 36);
+        ctx.restore();
+      }
     }
 
   function drawRoad() {
