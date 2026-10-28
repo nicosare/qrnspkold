@@ -1248,8 +1248,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             <details><summary><span class="faq-number">09</span><span>Как получить дополнительные игровые попытки?</span></summary><div class="faq-answer"><p>За каждый успешный скан начисляются ещё 3 игровые попытки. Попытки также выдаются за ежедневные заходы в Roadnote. Их остаток виден прямо в игре, а накопленные попытки сохраняются.</p></div></details>
             <details><summary><span class="faq-number">10</span><span>Как получить бесплатный скан за игру?</span></summary><div class="faq-answer"><p>Набери 3000 очков за один раунд — и получишь один бесплатный скан. Награда начисляется не чаще одного раза в день. Твой рекорд и общий прогресс не сбрасываются. Когда бесплатный скан будет начислен, Roadnote покажет уведомление.</p></div></details>
             <details><summary><span class="faq-number">11</span><span>Можно ли оплатить проезд через Roadnote?</span></summary><div class="faq-answer"><p>Нет. Roadnote не продаёт билеты, не принимает оплату за проезд и не является платёжным средством. Приложение предназначено для считывания и отображения информации из транспортных QR-кодов.</p></div></details>
-            <details><summary><span class="faq-number">09</span><span>Насколько точны данные?</span></summary><div class="faq-answer"><p>Roadnote показывает данные, полученные от внешнего сервиса, и не гарантирует их постоянную доступность, полноту или точность. Используй приложение на свой страх и риск и самостоятельно проверяй важную информацию. Roadnote не заменяет официальный билет или подтверждение оплаты.</p></div></details>
-            <details><summary><span class="faq-number">10</span><span>Что важно знать о безопасности и ответственности?</span></summary><div class="faq-answer"><p>Не используй отображённую информацию как единственное подтверждение оплаты. За фактическую оплату проезда отвечают официальные транспортные сервисы и перевозчик. Roadnote — информационный инструмент; использование приложения не создаёт платёжных обязательств и не гарантирует принятие QR-кода перевозчиком.</p></div></details>
+            <details><summary><span class="faq-number">12</span><span>Насколько точны данные?</span></summary><div class="faq-answer"><p>Roadnote показывает данные, полученные от внешнего сервиса, и не гарантирует их постоянную доступность, полноту или точность. Используй приложение на свой страх и риск и самостоятельно проверяй важную информацию. Roadnote не заменяет официальный билет или подтверждение оплаты.</p></div></details>
+            <details><summary><span class="faq-number">13</span><span>Что важно знать о безопасности и ответственности?</span></summary><div class="faq-answer"><p>Не используй отображённую информацию как единственное подтверждение оплаты. За фактическую оплату проезда отвечают официальные транспортные сервисы и перевозчик. Roadnote — информационный инструмент; использование приложения не создаёт платёжных обязательств и не гарантирует принятие QR-кода перевозчиком.</p></div></details>
         </div>
         <p class="faq-footer">Roadnote — информационный инструмент, а не сервис оплаты проезда.</p>
     </div>
@@ -2998,7 +2998,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       node.classList.toggle('is-active', i === Math.min(Math.max(gameStreak - 1, 0), 6));
     });
     if (streakFootNode) {
-      const reward = [1,1,2,2,3,3,5][Math.min(Math.max(gameStreak - 1,0),6)] || 1;
+      const reward = [1,1,2,2,3,3,5][Math.min(Math.max(gameStreak,0),6)] || 1;
       streakFootNode.textContent = state.loginRewardToday
         ? 'Сегодня уже начислено. Следующий бонус: +' + reward + ' попыток при следующем ежедневном заходе 🎁'
         : 'Заходи каждый день — попытки копятся и не сгорают 🎁';
