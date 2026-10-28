@@ -13,7 +13,27 @@
             (params.has('sign') || params.has('vk_user_id'));
         if (!isRoadnoteVkLaunch) {
             document.open();
-            document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>Откройте Roadnote через VK Mini App.</body></html>');
+            document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>
+/* Arcade layout: fit seven day cards, align vertical gaps, and keep preview controls inside the stage. */
+#scan-status:empty{display:none!important;min-height:0!important;margin:0!important;padding:0!important}
+#game-streak-card{margin:0!important;padding:0!important}
+#game-streak-days{display:flex!important;flex-flow:row nowrap!important;align-items:stretch!important;width:100%!important;min-width:0!important;gap:4px!important;margin:0!important;padding:0 0 2px!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scroll-snap-type:x proximity}
+#game-streak-days::-webkit-scrollbar{display:none!important}
+#game-streak-days .game-streak-day{box-sizing:border-box!important;flex:0 0 calc((100% - 24px)/7)!important;width:calc((100% - 24px)/7)!important;min-width:0!important;max-width:calc((100% - 24px)/7)!important;min-height:62px!important;padding:7px 1px!important;gap:4px!important;overflow:hidden!important;scroll-snap-align:start}
+#game-streak-days .game-streak-day>span{font-size:13px!important;line-height:1!important}
+#game-streak-days .game-streak-day .game-streak-reward{gap:1px!important;font-size:9px!important;line-height:1!important;white-space:nowrap!important}
+#game-streak-days .game-streak-day .game-streak-reward svg{width:12px!important;height:12px!important;flex:0 0 12px!important}
+.roadnote-game-overlay{gap:3px!important;padding:6px 10px!important}
+.roadnote-game-overlay>strong{font-size:16px!important;line-height:1.1!important}
+.roadnote-game-overlay>span{font-size:10px!important;line-height:1.2!important}
+.roadnote-game-reward-preview{box-sizing:border-box!important;flex:0 0 auto!important;width:100%!important;max-width:285px!important;min-width:0!important;margin:0!important;padding:5px 9px!important;border-radius:10px!important;background:rgba(255,255,255,.94)!important;box-shadow:0 3px 10px rgba(35,76,126,.09)!important}
+.roadnote-game-reward-label{margin:0 0 2px!important;font-size:7px!important;line-height:1.05!important;letter-spacing:1.2px!important}
+.roadnote-game-overlay .roadnote-game-reward-title{display:block!important;margin:0!important;font-size:12px!important;line-height:1.12!important}
+.roadnote-game-overlay .roadnote-game-reward-caption{display:block!important;margin-top:2px!important;font-size:9px!important;line-height:1.1!important}
+.roadnote-game-overlay .roadnote-game-start{flex:0 0 auto!important;min-height:32px!important;margin:0!important;padding:6px 18px!important;font-size:13px!important;line-height:1.1!important}
+</style>
+
+</head><body>Откройте Roadnote через VK Mini App.</body></html>');
             document.close();
         }
     })();
