@@ -1177,7 +1177,7 @@ app.post('/api/tariffs/request', async (req, res) => {
           "WHERE id = ? AND vk_id = ? AND status IN ('awaiting_payment','awaiting_review')"
         ).run(nowIso, nowIso, replacedRequest.id, userId);
         if (replaced.changes !== 1) throw new Error('Активная заявка уже изменилась. Обнови страницу и попробуй ещё раз.');
-        if (replacedRequest.promo_application_id) db.prepare("UPDATE promo_code_applications SET tariff_request_id = NULL WHERE id = ? AND status = 'selected'").run(replacedRequest.promo_application_id);
+        if (replacedRequest.promo_application_id) db.prepare("UPDATE promo_code_applications SET status = CASE WHEN EXISTS (SELECT 1 FROM promo_codes WHERE id = promo_code_id AND is_active = 1) THEN status ELSE 'cancelled' END, tariff_request_id = NULL WHERE id = ? AND status = 'selected'").run(replacedRequest.promo_application_id);
       }
 
       const created = db.prepare(
@@ -1749,7 +1749,7 @@ app.post('/api/admin/promocodes', requireAdmin, (req, res) => {
   const discountPercent = Number(req.body?.discountPercent);
   const offerIds = Array.isArray(req.body?.offerIds) ? [...new Set(req.body.offerIds.map(String))] : [];
   if (!/^[A-Z0-9_-]{3,32}$/.test(code)) return res.status(400).json({ error: 'Код: 3–32 символа, латинские буквы, цифры, дефис или подчёркивание.' });
-  if (!Number.isInteger(discountPercent) || discountPercent < 1 || discountPercent > 100) return res.status(400).json({ error: 'Скидка должна быть от 1 до 100%.' });
+  if (!Number.isInteger(discountPercent) || discountPercent < 1 || discountPercent > 99) return res.status(400).json({ error: 'Скидка должна быть от 1 до 99%.' });
   if (!offerIds.length || offerIds.some(id => !Object.prototype.hasOwnProperty.call(tariffOffers, id))) return res.status(400).json({ error: 'Выбери хотя бы один тариф.' });
   const parseDate = (value, label) => {
     if (value == null || value === '') return null;
