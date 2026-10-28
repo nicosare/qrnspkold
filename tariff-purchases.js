@@ -59,7 +59,7 @@
       const currentPrice = card.querySelector('.start-offer-current-price');
       const discount = card.querySelector('.start-offer-discount');
       const unitPrice = card.querySelector('.start-offer-unit-price');
-      if (oldPrice) oldPrice.hidden = (state.hasPurchased && !promoApplies) || (!state.hasPurchased && !promoApplies) || regular === price;
+      if (oldPrice) oldPrice.hidden = promoApplies ? regular === price : (state.hasPurchased || regular === basePrice);
       if (currentPrice) currentPrice.textContent = rubles(price);
       if (discount) {
         if (!discount.dataset.defaultText) discount.dataset.defaultText = discount.textContent;
