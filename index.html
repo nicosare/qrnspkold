@@ -1167,21 +1167,100 @@
         @keyframes roadnoteToastOut{to{opacity:0;transform:translateY(-6px) scale(.98)}}
         @media(prefers-reduced-motion:reduce){.roadnote-game-toast,.roadnote-game-toast.is-leaving{animation:none!important}}
 
-        /* Arcade streak: compact spacing, scrollable history and tariff-based rewards. */
-        .game-streak-card{margin-top:8px!important;padding:0!important;border:0!important;background:transparent!important}
-        .game-streak-days{display:flex!important;gap:7px!important;overflow-x:auto!important;overflow-y:hidden!important;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-top:0!important;padding:0 0 2px!important;scroll-snap-type:x proximity}
-        .game-streak-days::-webkit-scrollbar{display:none}
-        .game-streak-day{box-sizing:border-box;flex:0 0 52px;min-width:52px;min-height:62px;padding:8px 3px!important;gap:6px!important;border:1px solid #e3e8ef!important;border-radius:12px!important;background:#fff!important;scroll-snap-align:start}
-        .game-streak-day span{color:#424142!important;font-size:15px!important;font-weight:850!important}
-        .game-streak-day .game-streak-reward{display:inline-flex;align-items:center;gap:2px;color:#727983!important;font-size:10px!important;font-weight:800!important;white-space:nowrap}
-        .game-streak-day.is-done{border-color:#2787f5!important;background:#2787f5!important;box-shadow:0 3px 8px #2787f526}
-        .game-streak-day.is-done span,.game-streak-day.is-done .game-streak-reward{color:#fff!important}
-        .game-streak-day.is-active{border-color:#f59a23!important;background:#f59a23!important;box-shadow:0 3px 8px #f59a2326}
-        .game-streak-day.is-active span,.game-streak-day.is-active .game-streak-reward{color:#fff!important}
-        .roadnote-game-record{z-index:5!important}
-        .roadnote-game-overlay{z-index:3!important;background:rgba(238,246,255,.24)!important;backdrop-filter:none!important}
-        .roadnote-game-overlay strong,.roadnote-game-overlay span{position:relative;z-index:1;text-shadow:0 1px 8px rgba(255,255,255,.85)}
-        .roadnote-game-overlay .roadnote-game-start{position:relative;z-index:1}
+        /* Start screen design system: consistent spacing and card rhythm. */
+        .start-overlay {
+            --start-space-2: 8px;
+            --start-space-3: 12px;
+            --start-space-4: 16px;
+            padding: calc(18px + env(safe-area-inset-top)) 16px calc(22px + env(safe-area-inset-bottom));
+        }
+        .start-screen { gap: var(--start-space-3); }
+        .start-brand, .start-intro { margin: 0; }
+        .start-intro h2 { margin-bottom: var(--start-space-2); }
+        .start-intro p { font-size: 15px; line-height: 1.4; }
+        .start-balance-card { margin: 0; padding: 18px 20px; border-radius: 20px; }
+        .start-offers-section, .start-referral, .start-promo {
+            margin: 0; padding: var(--start-space-4); border-radius: 18px;
+        }
+        .start-offers-section-heading { margin-bottom: var(--start-space-2); }
+        .start-offers-lead { margin: 0 0 14px; }
+        .start-offer-group + .start-offer-group { margin-top: var(--start-space-4); }
+        .start-offer-group-title { margin-bottom: var(--start-space-2); }
+        .start-offer-grid { gap: var(--start-space-2); }
+        .start-offer { border-radius: 13px; }
+        .start-referral-title, .start-promo-title { line-height: 1.3; }
+        .start-referral-description { margin-top: 4px; }
+        .start-referral-link { margin-top: 10px; }
+        .start-referral-actions { gap: 7px; margin-top: var(--start-space-2); }
+        .start-promo-form { gap: 7px; }
+        .start-actions { gap: var(--start-space-2); margin: 0; }
+        .start-admin-actions { margin: 0; }
+        .start-admin-actions:has(> .start-button[hidden]) { display: none !important; }
+        .start-button { min-height: 48px; border-radius: 12px; }
+        .start-actions.start-scan-actions { gap: var(--start-space-2); }
+        #scan-status:empty { display: none !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; }
+
+        /* Seven streak cards always share the available width: no fixed-width scroller. */
+        #game-streak-card {
+            width: 100% !important; margin: 0 !important; padding: 0 !important;
+            border: 0 !important; background: transparent !important; box-shadow: none !important;
+        }
+        #game-streak-days {
+            display: grid !important;
+            grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+            gap: clamp(4px, 1.4vw, 6px) !important;
+            width: 100% !important; min-width: 0 !important;
+            margin: 0 !important; padding: 0 !important;
+            overflow: visible !important;
+        }
+        #game-streak-days .game-streak-day {
+            display: flex !important; flex: none !important;
+            width: auto !important; min-width: 0 !important; max-width: none !important;
+            min-height: 62px !important; padding: 7px 1px !important; gap: 5px !important;
+            overflow: hidden !important; border-radius: 11px !important;
+            text-align: center !important; scroll-snap-align: none !important;
+        }
+        #game-streak-days .game-streak-day > span {
+            max-width: 100%; font-size: 14px !important; line-height: 1 !important;
+            font-weight: 850 !important; white-space: nowrap;
+        }
+        #game-streak-days .game-streak-day .game-streak-reward {
+            display: inline-flex !important; align-items: center; justify-content: center;
+            max-width: 100%; gap: 1px !important; font-size: 8px !important;
+            line-height: 1 !important; white-space: nowrap !important;
+        }
+        #game-streak-days .game-streak-day .game-streak-reward svg {
+            width: 10px !important; height: 10px !important; flex: 0 0 10px !important;
+        }
+
+        /* Compact game preview so the reward card and launch button stay inside the stage. */
+        .roadnote-game { margin: 0; padding: 12px; border-radius: 18px; }
+        .roadnote-game-head { margin-bottom: 8px; }
+        .roadnote-game-overlay { gap: 4px !important; padding: 6px 8px !important; justify-content: center !important; }
+        .roadnote-game-overlay > strong { font-size: 16px !important; line-height: 1.1 !important; }
+        .roadnote-game-overlay > span { font-size: 10px !important; line-height: 1.15 !important; }
+        .roadnote-game-overlay .roadnote-game-reward-preview {
+            box-sizing: border-box !important; flex: 0 1 auto !important;
+            width: min(100%, 285px) !important; max-width: 285px !important; min-width: 0 !important;
+            margin: 0 !important; padding: 5px 9px !important; border-radius: 10px !important;
+        }
+        .roadnote-game-overlay .roadnote-game-reward-label {
+            margin: 0 0 2px !important; font-size: 7px !important;
+            line-height: 1.05 !important; letter-spacing: 1.1px !important;
+        }
+        .roadnote-game-overlay .roadnote-game-reward-title {
+            display: block !important; margin: 0 !important;
+            font-size: 12px !important; line-height: 1.12 !important;
+        }
+        .roadnote-game-overlay .roadnote-game-reward-caption {
+            display: block !important; margin-top: 2px !important;
+            font-size: 9px !important; line-height: 1.1 !important;
+        }
+        .roadnote-game-overlay .roadnote-game-start {
+            position: relative; z-index: 1; flex: 0 0 auto !important;
+            min-height: 32px !important; margin: 0 !important; padding: 6px 18px !important;
+            font-size: 13px !important; line-height: 1.1 !important;
+        }
 
 
 
