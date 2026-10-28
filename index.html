@@ -443,7 +443,7 @@
             align-items: stretch;
             overflow-y: auto;
             overscroll-behavior: contain;
-            padding: calc(22px + env(safe-area-inset-top)) 18px calc(22px + env(safe-area-inset-bottom));
+            padding: calc(22px + env(safe-area-inset-top)) 18px calc(44px + env(safe-area-inset-bottom));
             background: #f2f3f4;
             color: #30343a;
         }
@@ -453,9 +453,9 @@
         .start-screen {
             width: 100%;
             max-width: 460px;
-            min-height: 100%;
+            min-height: 0;
             box-sizing: border-box;
-            padding-bottom: 30px;
+            padding-bottom: 0;
             display: flex;
             flex-direction: column;
             gap: 11px;
@@ -861,7 +861,7 @@
         .start-actions.start-scan-actions #scan-status { flex: 0 0 100%; width: 100%; }
 
         .start-actions { display: flex; flex-direction: row; gap: 10px; margin-top: 0; padding-bottom: 0; }
-        .start-admin-actions { display:flex; width:100%; margin-top:0; padding-bottom:8px; }
+        .start-admin-actions { display:flex; width:100%; margin-top:0; padding-bottom:0; }
         .start-admin-actions > .start-button { width:100%; }
         .start-actions > .start-button { flex:1 1 0; width:0; min-width:0; font-size:14px; padding-left:8px; padding-right:8px; }
         .start-button {
