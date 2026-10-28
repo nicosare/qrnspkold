@@ -126,7 +126,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
   <div class="promo-intro">Создавай промокоды для выбранных тарифов. Скидка закрепляется за покупкой только после успешной оплаты.</div>
   <form id="promo-create-form" class="promo-create">
    <label class="promo-field"><span>Промокод</span><input id="promo-code" name="code" type="text" minlength="3" maxlength="32" pattern="[A-Za-z0-9_-]{3,32}" placeholder="Например, ROADNOTE20" autocomplete="off" required></label>
-   <label class="promo-field"><span>Скидка, %</span><input id="promo-discount" name="discountPercent" type="number" min="1" max="100" step="1" value="10" required></label>
+   <label class="promo-field"><span>Скидка, %</span><input id="promo-discount" name="discountPercent" type="number" min="1" max="99" step="1" value="10" required></label>
    <div class="promo-field"><span>Действует с (необязательно)</span><input id="promo-starts" name="startsAt" type="datetime-local"></div>
    <div class="promo-field"><span>Действует до (необязательно)</span><input id="promo-expires" name="expiresAt" type="datetime-local"></div>
    <div class="promo-field promo-offers-field"><span>Тарифы, на которые действует код</span><div id="promo-offers" class="promo-offers"><div class="status">Загружаем тарифы…</div></div></div>
