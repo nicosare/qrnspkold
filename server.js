@@ -154,6 +154,39 @@ const tariffRequestColumns = db.pragma('table_info(tariff_requests)');
 if (!tariffRequestColumns.some(column => column.name === 'payment_label')) db.exec('ALTER TABLE tariff_requests ADD COLUMN payment_label TEXT DEFAULT NULL');
 if (!tariffRequestColumns.some(column => column.name === 'payment_operation_id')) db.exec('ALTER TABLE tariff_requests ADD COLUMN payment_operation_id TEXT DEFAULT NULL');
 if (!tariffRequestColumns.some(column => column.name === 'payment_confirmed_at')) db.exec('ALTER TABLE tariff_requests ADD COLUMN payment_confirmed_at TEXT DEFAULT NULL');
+if (!tariffRequestColumns.some(column => column.name === 'promo_application_id')) db.exec('ALTER TABLE tariff_requests ADD COLUMN promo_application_id INTEGER DEFAULT NULL');
+if (!tariffRequestColumns.some(column => column.name === 'promo_code_id')) db.exec('ALTER TABLE tariff_requests ADD COLUMN promo_code_id INTEGER DEFAULT NULL');
+if (!tariffRequestColumns.some(column => column.name === 'promo_code')) db.exec('ALTER TABLE tariff_requests ADD COLUMN promo_code TEXT DEFAULT NULL');
+if (!tariffRequestColumns.some(column => column.name === 'promo_discount_percent')) db.exec('ALTER TABLE tariff_requests ADD COLUMN promo_discount_percent INTEGER DEFAULT NULL');
+if (!tariffRequestColumns.some(column => column.name === 'promo_discount_rub')) db.exec('ALTER TABLE tariff_requests ADD COLUMN promo_discount_rub INTEGER DEFAULT NULL');
+db.exec(`
+  CREATE TABLE IF NOT EXISTS promo_codes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL UNIQUE,
+    discount_percent INTEGER NOT NULL CHECK(discount_percent BETWEEN 1 AND 100),
+    offer_ids_json TEXT NOT NULL,
+    starts_at TEXT DEFAULT NULL,
+    expires_at TEXT DEFAULT NULL,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    created_by TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_promo_codes_active ON promo_codes(is_active, expires_at);
+  CREATE TABLE IF NOT EXISTS promo_code_applications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vk_id TEXT NOT NULL,
+    promo_code_id INTEGER NOT NULL,
+    promo_code TEXT NOT NULL,
+    discount_percent INTEGER NOT NULL,
+    offer_ids_json TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('selected','used','cancelled')),
+    selected_at TEXT NOT NULL,
+    used_at TEXT DEFAULT NULL,
+    tariff_request_id INTEGER DEFAULT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_promo_app_user_status ON promo_code_applications(vk_id, status, id DESC);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_promo_app_one_selected_per_user ON promo_code_applications(vk_id) WHERE status = 'selected';
+`);
 db.exec(`
   CREATE TABLE IF NOT EXISTS yoomoney_operations (
     operation_id TEXT PRIMARY KEY, request_id INTEGER DEFAULT NULL, label TEXT NOT NULL DEFAULT '',
@@ -505,6 +538,22 @@ function formatRubles(value) {
   return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(Number(value) || 0) + ' ₽';
 }
 
+function getActivePromoSelection(userId) {
+  const row = db.prepare("SELECT id, promo_code_id, promo_code, discount_percent, offer_ids_json, selected_at, tariff_request_id FROM promo_code_applications WHERE vk_id = ? AND status = 'selected' ORDER BY id DESC LIMIT 1").get(String(userId));
+  if (!row) return null;
+  let offerIds = [];
+  try { offerIds = JSON.parse(row.offer_ids_json); } catch (_) {}
+  return {
+    applicationId: Number(row.id),
+    promoCodeId: Number(row.promo_code_id),
+    code: String(row.promo_code),
+    discountPercent: Number(row.discount_percent),
+    offerIds: Array.isArray(offerIds) ? offerIds.filter(id => Object.prototype.hasOwnProperty.call(tariffOffers, id)) : [],
+    selectedAt: row.selected_at,
+    tariffRequestId: row.tariff_request_id == null ? null : Number(row.tariff_request_id)
+  };
+}
+
 function getTariffState(userId) {
   const id = String(userId);
   const completed = db.prepare("SELECT EXISTS(SELECT 1 FROM tariff_requests WHERE vk_id = ? AND status = 'approved') AS value").get(id);
@@ -532,6 +581,7 @@ function getTariffState(userId) {
   });
   return {
     hasPurchased: Number(completed?.value || 0) === 1,
+    activePromoCode: getActivePromoSelection(id),
     activeTariffRequest: active ? mapRequest(active) : null,
     activeTariffRequests: activeRequests.map(mapRequest),
     tariffRequestHistory: history.map(mapRequest)
@@ -1009,6 +1059,64 @@ app.post('/api/tariffs/state', (req, res) => {
   }
 });
 
+app.post('/api/promocodes/apply', (req, res) => {
+  let userId;
+  try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
+  catch { return res.status(401).json({ error: 'Не удалось подтвердить аккаунт VK. Перезапусти Mini App.' }); }
+  const code = String(req.body?.code || '').trim().toUpperCase();
+  if (!/^[A-Z0-9_-]{3,32}$/.test(code)) return res.status(400).json({ error: 'Проверь код: допустимы латинские буквы, цифры, дефис и подчёркивание.' });
+  const promo = db.prepare('SELECT * FROM promo_codes WHERE code = ? AND is_active = 1').get(code);
+  const now = Date.now();
+  if (!promo) return res.status(404).json({ error: 'Такой промокод не найден или уже отключён.' });
+  if (promo.starts_at && Date.parse(promo.starts_at) > now) return res.status(400).json({ error: 'Срок действия этого промокода ещё не начался.' });
+  if (promo.expires_at && Date.parse(promo.expires_at) < now) return res.status(400).json({ error: 'Срок действия этого промокода истёк.' });
+  let offerIds;
+  try { offerIds = JSON.parse(promo.offer_ids_json); } catch (_) { offerIds = []; }
+  offerIds = Array.isArray(offerIds) ? offerIds.filter(id => Object.prototype.hasOwnProperty.call(tariffOffers, id)) : [];
+  if (!offerIds.length) return res.status(409).json({ error: 'Промокод не привязан ни к одному доступному тарифу.' });
+  const nowIso = new Date().toISOString();
+  try {
+    db.transaction(() => {
+      const activeRequest = db.prepare("SELECT id, status, promo_application_id FROM tariff_requests WHERE vk_id = ? AND status IN ('awaiting_payment','awaiting_review') ORDER BY id DESC LIMIT 1").get(userId);
+      if (activeRequest && activeRequest.status === 'awaiting_review') {
+        const error = new Error('Сначала заверши текущую заявку на тариф или отмени её.'); error.statusCode = 409; throw error;
+      }
+      if (activeRequest && activeRequest.status === 'awaiting_payment') {
+        db.prepare("UPDATE tariff_requests SET status = 'replaced', updated_at = ?, completed_at = ? WHERE id = ? AND status = 'awaiting_payment'").run(nowIso, nowIso, activeRequest.id);
+        if (activeRequest.promo_application_id) db.prepare("UPDATE promo_code_applications SET tariff_request_id = NULL WHERE id = ? AND status = 'selected'").run(activeRequest.promo_application_id);
+      }
+      db.prepare("UPDATE promo_code_applications SET status = 'cancelled', tariff_request_id = NULL WHERE vk_id = ? AND status = 'selected'").run(userId);
+      db.prepare("INSERT INTO promo_code_applications (vk_id, promo_code_id, promo_code, discount_percent, offer_ids_json, status, selected_at) VALUES (?, ?, ?, ?, ?, 'selected', ?)")
+        .run(userId, Number(promo.id), promo.code, Number(promo.discount_percent), JSON.stringify(offerIds), nowIso);
+    })();
+  } catch (error) {
+    return res.status(error.statusCode || 409).json({ error: error.message || 'Не удалось применить промокод.', ...getTariffState(userId) });
+  }
+  const state = getTariffState(userId);
+  sendLiveTariffState(userId, 'Промокод ' + code + ' выбран. Скидка будет зафиксирована при успешной оплате подходящего тарифа.');
+  return res.json({ ok: true, ...state, notice: 'Промокод ' + code + ' применён. Скидка будет зафиксирована после успешной оплаты.' });
+});
+
+app.post('/api/promocodes/remove', (req, res) => {
+  let userId;
+  try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
+  catch { return res.status(401).json({ error: 'Не удалось подтвердить аккаунт VK. Перезапусти Mini App.' }); }
+  const nowIso = new Date().toISOString();
+  const active = db.prepare("SELECT id, tariff_request_id FROM promo_code_applications WHERE vk_id = ? AND status = 'selected' ORDER BY id DESC LIMIT 1").get(userId);
+  if (!active) return res.json({ ok: true, ...getTariffState(userId), notice: 'Активного промокода нет.' });
+  if (active.tariff_request_id) {
+    const request = db.prepare("SELECT id, status FROM tariff_requests WHERE id = ? AND vk_id = ?").get(active.tariff_request_id, userId);
+    if (request && request.status === 'awaiting_review') return res.status(409).json({ error: 'Промокод уже связан с заявкой на проверке. Сначала отмени заявку.' });
+    if (request && request.status === 'awaiting_payment') {
+      db.prepare("UPDATE tariff_requests SET status = 'replaced', updated_at = ?, completed_at = ? WHERE id = ? AND status = 'awaiting_payment'").run(nowIso, nowIso, request.id);
+    }
+  }
+  db.prepare("UPDATE promo_code_applications SET status = 'cancelled', tariff_request_id = NULL WHERE id = ? AND status = 'selected'").run(active.id);
+  const state = getTariffState(userId);
+  sendLiveTariffState(userId, 'Промокод отменён.');
+  return res.json({ ok: true, ...state, notice: 'Промокод отменён.' });
+});
+
 async function uploadTariffScreenshotToVk(userId, imageBuffer, mimeType) {
   if (!communityToken) throw new Error('VK_GROUP_TOKEN не настроен на сервере.');
   const uploadServer = await vkApi('photos.getMessagesUploadServer', { peer_id: String(userId) });
@@ -1046,14 +1154,20 @@ app.post('/api/tariffs/request', async (req, res) => {
 
   const stateBefore = getTariffState(userId);
   const discounted = !stateBefore.hasPurchased;
-  const priceRub = discounted ? offer.promoPrice : offer.regularPrice;
+  const basePriceRub = discounted ? offer.promoPrice : offer.regularPrice;
+  const selectedPromo = stateBefore.activePromoCode && stateBefore.activePromoCode.offerIds.includes(offerId)
+    ? stateBefore.activePromoCode : null;
+  const priceRub = selectedPromo
+    ? Math.max(1, Math.round(basePriceRub * (100 - selectedPromo.discountPercent) / 100))
+    : basePriceRub;
+  const promoDiscountRub = selectedPromo ? Math.max(0, basePriceRub - priceRub) : 0;
   const nowIso = new Date().toISOString();
   let requestId;
   let replacedRequest = null;
   try {
     const replaceAndCreate = db.transaction(() => {
       replacedRequest = db.prepare(
-        "SELECT id, status, screenshot_attachment, admin_message_id, bot_message_id FROM tariff_requests WHERE vk_id = ? AND status = 'awaiting_payment' ORDER BY id DESC LIMIT 1"
+        "SELECT id, status, screenshot_attachment, admin_message_id, bot_message_id, promo_application_id FROM tariff_requests WHERE vk_id = ? AND status = 'awaiting_payment' ORDER BY id DESC LIMIT 1"
       ).get(userId) || null;
 
       // Only the unpaid request is replaceable; screenshot-submitted requests remain untouched.
@@ -1063,17 +1177,21 @@ app.post('/api/tariffs/request', async (req, res) => {
           "WHERE id = ? AND vk_id = ? AND status IN ('awaiting_payment','awaiting_review')"
         ).run(nowIso, nowIso, replacedRequest.id, userId);
         if (replaced.changes !== 1) throw new Error('Активная заявка уже изменилась. Обнови страницу и попробуй ещё раз.');
+        if (replacedRequest.promo_application_id) db.prepare("UPDATE promo_code_applications SET tariff_request_id = NULL WHERE id = ? AND status = 'selected'").run(replacedRequest.promo_application_id);
       }
 
       const created = db.prepare(
-        "INSERT INTO tariff_requests (vk_id, offer_id, offer_name, offer_kind, quantity, price_rub, regular_price_rub, is_discounted, status, created_at, updated_at) " +
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'awaiting_payment', ?, ?)"
+        "INSERT INTO tariff_requests (vk_id, offer_id, offer_name, offer_kind, quantity, price_rub, regular_price_rub, is_discounted, promo_application_id, promo_code_id, promo_code, promo_discount_percent, promo_discount_rub, status, created_at, updated_at) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'awaiting_payment', ?, ?)"
       ).run(
         userId, offer.id, offer.name, offer.kind, offer.quantity, priceRub, offer.regularPrice,
-        discounted ? 1 : 0, nowIso, nowIso
+        discounted ? 1 : 0, selectedPromo ? selectedPromo.applicationId : null,
+        selectedPromo ? selectedPromo.promoCodeId : null, selectedPromo ? selectedPromo.code : null,
+        selectedPromo ? selectedPromo.discountPercent : null, selectedPromo ? promoDiscountRub : null, nowIso, nowIso
       );
       requestId = Number(created.lastInsertRowid);
       db.prepare('UPDATE tariff_requests SET payment_label = ? WHERE id = ?').run('roadnote-request-' + requestId, requestId);
+      if (selectedPromo) db.prepare("UPDATE promo_code_applications SET tariff_request_id = ? WHERE id = ? AND vk_id = ? AND status = 'selected'").run(requestId, selectedPromo.applicationId, userId);
     })();
   } catch (error) {
     if (error?.lockedByReview) {
@@ -1323,6 +1441,10 @@ app.post('/api/yoomoney/notification', (req, res) => {
           "UPDATE tariff_requests SET status = 'approved', payment_operation_id = ?, payment_confirmed_at = ?, updated_at = ?, completed_at = ? WHERE id = ? AND status = 'awaiting_payment'"
         ).run(operationId, nowIso, nowIso, nowIso, requestId);
         if (marked.changes !== 1) throw new Error('Purchase state changed during YooMoney processing');
+        if (request.promo_application_id) {
+          db.prepare("UPDATE promo_code_applications SET status = 'used', used_at = ?, tariff_request_id = ? WHERE id = ? AND vk_id = ? AND status = 'selected'")
+            .run(nowIso, requestId, Number(request.promo_application_id), String(request.vk_id));
+        }
         if (request.offer_kind === 'pack') {
           const grant = grantPack.run(Number(request.quantity), String(request.vk_id));
           if (grant.changes !== 1) throw new Error('Purchase user not found');
@@ -1363,6 +1485,7 @@ app.post('/api/yoomoney/notification', (req, res) => {
       'Пользователь: ' + buyerName + ' (VK ID ' + outcome.userId + ')',
       'Профиль: https://vk.com/id' + outcome.userId,
       'Тариф: ' + (purchasedOffer?.offer_name || 'неизвестен'),
+      ...(requestId ? (() => { const paidRequest = db.prepare('SELECT promo_code, promo_discount_percent, promo_discount_rub FROM tariff_requests WHERE id = ?').get(requestId); return paidRequest?.promo_code ? ['Промокод: ' + paidRequest.promo_code, 'Скидка промокода: ' + Number(paidRequest.promo_discount_percent || 0) + '% (' + formatRubles(paidRequest.promo_discount_rub || 0) + ')'] : []; })() : []),
       'Стоимость: ' + formatRubles(withdrawAmount),
       'Получено после комиссии: ' + formatRubles(amount),
       'Операция ЮMoney: ' + operationId
@@ -1598,6 +1721,71 @@ app.get('/api/events', (req, res) => {
     clearInterval(heartbeat);
     if (liveStreams.get(userId) === res) liveStreams.delete(userId);
   });
+});
+
+app.get('/api/admin/promocodes', requireAdmin, (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const now = Date.now();
+  const promos = db.prepare(
+    "SELECT p.*, (SELECT COUNT(*) FROM promo_code_applications a WHERE a.promo_code_id = p.id AND a.status = 'used') AS redemptions, " +
+    "(SELECT COUNT(*) FROM promo_code_applications a WHERE a.promo_code_id = p.id AND a.status = 'selected') AS selected_count " +
+    "FROM promo_codes p WHERE p.is_active = 1 ORDER BY p.created_at DESC, p.id DESC"
+  ).all().map(promo => {
+    let offerIds = [];
+    try { offerIds = JSON.parse(promo.offer_ids_json); } catch (_) {}
+    return {
+      id: Number(promo.id), code: promo.code, discountPercent: Number(promo.discount_percent),
+      offerIds: Array.isArray(offerIds) ? offerIds : [], startsAt: promo.starts_at || null,
+      expiresAt: promo.expires_at || null, createdAt: promo.created_at,
+      redemptions: Number(promo.redemptions || 0), selectedCount: Number(promo.selected_count || 0),
+      status: (promo.starts_at && Date.parse(promo.starts_at) > now) ? 'scheduled' : (promo.expires_at && Date.parse(promo.expires_at) < now ? 'expired' : 'active')
+    };
+  });
+  return res.json({ promos, offers: Object.values(tariffOffers).map(offer => ({ id: offer.id, name: offer.name, kind: offer.kind })) });
+});
+
+app.post('/api/admin/promocodes', requireAdmin, (req, res) => {
+  const code = String(req.body?.code || '').trim().toUpperCase();
+  const discountPercent = Number(req.body?.discountPercent);
+  const offerIds = Array.isArray(req.body?.offerIds) ? [...new Set(req.body.offerIds.map(String))] : [];
+  if (!/^[A-Z0-9_-]{3,32}$/.test(code)) return res.status(400).json({ error: 'Код: 3–32 символа, латинские буквы, цифры, дефис или подчёркивание.' });
+  if (!Number.isInteger(discountPercent) || discountPercent < 1 || discountPercent > 100) return res.status(400).json({ error: 'Скидка должна быть от 1 до 100%.' });
+  if (!offerIds.length || offerIds.some(id => !Object.prototype.hasOwnProperty.call(tariffOffers, id))) return res.status(400).json({ error: 'Выбери хотя бы один тариф.' });
+  const parseDate = (value, label) => {
+    if (value == null || value === '') return null;
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) throw new Error('Некорректная дата: ' + label + '.');
+    return date.toISOString();
+  };
+  let startsAt, expiresAt;
+  try { startsAt = parseDate(req.body?.startsAt, 'начала'); expiresAt = parseDate(req.body?.expiresAt, 'окончания'); }
+  catch (error) { return res.status(400).json({ error: error.message }); }
+  if (startsAt && expiresAt && Date.parse(startsAt) >= Date.parse(expiresAt)) return res.status(400).json({ error: 'Окончание срока должно быть позже начала.' });
+  const nowIso = new Date().toISOString();
+  try {
+    const result = db.prepare('INSERT INTO promo_codes (code, discount_percent, offer_ids_json, starts_at, expires_at, is_active, created_at, created_by) VALUES (?, ?, ?, ?, ?, 1, ?, ?)')
+      .run(code, discountPercent, JSON.stringify(offerIds), startsAt, expiresAt, nowIso, req.vkUserId);
+    return res.status(201).json({ ok: true, id: Number(result.lastInsertRowid) });
+  } catch (error) {
+    if (String(error?.code || '').includes('CONSTRAINT') || /UNIQUE/i.test(String(error?.message || ''))) return res.status(409).json({ error: 'Промокод с таким названием уже существует.' });
+    console.error('[admin promo create]', error?.message || error);
+    return res.status(500).json({ error: 'Не удалось создать промокод.' });
+  }
+});
+
+app.delete('/api/admin/promocodes/:id', requireAdmin, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id < 1) return res.status(400).json({ error: 'Некорректный ID промокода.' });
+  const promo = db.prepare('SELECT id FROM promo_codes WHERE id = ? AND is_active = 1').get(id);
+  if (!promo) return res.status(404).json({ error: 'Промокод уже удалён или не найден.' });
+  const nowIso = new Date().toISOString();
+  db.transaction(() => {
+    db.prepare('UPDATE promo_codes SET is_active = 0 WHERE id = ?').run(id);
+    db.prepare("UPDATE promo_code_applications SET status = 'cancelled', tariff_request_id = NULL WHERE promo_code_id = ? AND status = 'selected' AND tariff_request_id IS NULL").run(id);
+    // Any already-created payment keeps its snapshotted price and code; only new uses are disabled.
+    db.prepare("UPDATE promo_code_applications SET status = 'cancelled', tariff_request_id = NULL WHERE promo_code_id = ? AND status = 'selected' AND tariff_request_id IN (SELECT id FROM tariff_requests WHERE status = 'replaced')").run(id);
+  })();
+  return res.json({ ok: true });
 });
 
 app.get('/api/admin/users', requireAdmin, (req, res) => {
