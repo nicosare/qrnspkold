@@ -1111,7 +1111,7 @@ app.post('/api/game/finish', (req, res) => {
   const now = Date.now();
   const elapsedSeconds = Math.max(0, (now - Number(session.started_at)) / 1000);
   // Score is time-based in this runner. Reject scores impossible for the recorded run duration.
-  if (elapsedSeconds < 1 || score > Math.floor(elapsedSeconds * 12) + 15) {
+  if (score > Math.floor(elapsedSeconds * 12) + 15) {
     return res.status(400).json({ error: 'Результат не прошёл проверку.' });
   }
   const today = yekaterinburgDayKey(new Date(now));
