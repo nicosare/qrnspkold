@@ -2946,59 +2946,6 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     const t=within<900?0:((within-900)/100)*((within-900)/100)*(3-2*((within-900)/100));
     return mixColor(a[key],b[key],t);
   }
-  function drawRoad() {
-    ctx.clearRect(0,0,W,H);
-    ctx.fillStyle = paletteColor('sky'); ctx.fillRect(0,0,W,H);
-    ctx.fillStyle = paletteColor('sun'); ctx.beginPath(); ctx.arc(520,35,19,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle = paletteColor('cloud');
-    for (let i=0;i<4;i++) { const x = ((i*180 - (elapsed*speed*.12)%720)+W+720)%720-40; const y = 24 + ((i*37)%105); roundRect(x,y,58,5,3,true); }
-
-    // Tiny pastel aircraft cross the sky in both directions; contrails fade into the background.
-    function drawPlane(offset, direction, flightSpeed, altitude) {
-      const span = W + 180;
-      const progress = (elapsed * flightSpeed + offset) % span;
-      const x = direction > 0 ? progress - 90 : W + 90 - progress;
-      const y = altitude + Math.sin(elapsed * 0.45 + offset) * 3;
-      const trailLength = 46;
-      ctx.save();
-      for (let i = 0; i < 9; i++) {
-        const t = i / 9;
-        ctx.globalAlpha = 0.22 * (1 - t);
-        ctx.strokeStyle = paletteColor('cloud');
-        ctx.lineWidth = 1.5 - t * 0.6;
-        ctx.beginPath();
-        const startX = x - direction * (8 + t * trailLength);
-        const endX = x - direction * (13 + t * trailLength);
-        ctx.moveTo(startX, y + 1);
-        ctx.lineTo(endX, y + 1);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 0.72;
-      ctx.fillStyle = paletteColor('dash');
-      ctx.translate(x, y);
-      ctx.scale(direction, 1);
-      ctx.beginPath();
-      ctx.moveTo(11, 0);
-      ctx.lineTo(3, -2);
-      ctx.lineTo(-2, -8);
-      ctx.lineTo(-4, -8);
-      ctx.lineTo(-2, -2);
-      ctx.lineTo(-10, -3);
-      ctx.lineTo(-12, -1);
-      ctx.lineTo(-3, 1);
-      ctx.lineTo(-1, 4);
-      ctx.lineTo(1, 4);
-      ctx.lineTo(1, 1);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    }
-    drawPlane(35, 1, 29, 42);
-    drawPlane(285, -1, 23, 82);
-    drawPlane(605, 1, 18, 112);
-
-    // A distinct, oversized in-game flyby: a bright crop-duster towing a living fabric banner.
-    // Its flight lane stays near the top edge, far outside the player's jump envelope.
     function drawRoadnotePlane() {
       const cycleLength = 46;
       const cycle = elapsed % cycleLength;
@@ -3110,7 +3057,58 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       ctx.moveTo(16, -3.5); ctx.lineTo(16, 3.8); ctx.stroke();
       ctx.restore();
     }
-    drawRoadnotePlane();
+
+
+  function drawRoad() {
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = paletteColor('sky'); ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = paletteColor('sun'); ctx.beginPath(); ctx.arc(520,35,19,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = paletteColor('cloud');
+    for (let i=0;i<4;i++) { const x = ((i*180 - (elapsed*speed*.12)%720)+W+720)%720-40; const y = 24 + ((i*37)%105); roundRect(x,y,58,5,3,true); }
+
+    // Tiny pastel aircraft cross the sky in both directions; contrails fade into the background.
+    function drawPlane(offset, direction, flightSpeed, altitude) {
+      const span = W + 180;
+      const progress = (elapsed * flightSpeed + offset) % span;
+      const x = direction > 0 ? progress - 90 : W + 90 - progress;
+      const y = altitude + Math.sin(elapsed * 0.45 + offset) * 3;
+      const trailLength = 46;
+      ctx.save();
+      for (let i = 0; i < 9; i++) {
+        const t = i / 9;
+        ctx.globalAlpha = 0.22 * (1 - t);
+        ctx.strokeStyle = paletteColor('cloud');
+        ctx.lineWidth = 1.5 - t * 0.6;
+        ctx.beginPath();
+        const startX = x - direction * (8 + t * trailLength);
+        const endX = x - direction * (13 + t * trailLength);
+        ctx.moveTo(startX, y + 1);
+        ctx.lineTo(endX, y + 1);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 0.72;
+      ctx.fillStyle = paletteColor('dash');
+      ctx.translate(x, y);
+      ctx.scale(direction, 1);
+      ctx.beginPath();
+      ctx.moveTo(11, 0);
+      ctx.lineTo(3, -2);
+      ctx.lineTo(-2, -8);
+      ctx.lineTo(-4, -8);
+      ctx.lineTo(-2, -2);
+      ctx.lineTo(-10, -3);
+      ctx.lineTo(-12, -1);
+      ctx.lineTo(-3, 1);
+      ctx.lineTo(-1, 4);
+      ctx.lineTo(1, 4);
+      ctx.lineTo(1, 1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+    drawPlane(35, 1, 29, 42);
+    drawPlane(285, -1, 23, 82);
+    drawPlane(605, 1, 18, 112);
 
     // Keep the horizon clean: only the sky, clouds and road remain in the background.
     ctx.fillStyle = paletteColor('ground'); ctx.fillRect(0,ground,W,3);
@@ -3186,6 +3184,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   function draw() {
     drawRoad();
     obstacles.forEach(drawObstacle);
+    drawRoadnotePlane();
     drawPlayer();
     ctx.fillStyle='#24415f';ctx.font='800 17px Circe, sans-serif';ctx.textAlign='right';ctx.fillText(String(Math.floor(score)).padStart(4,'0'),W-16,27);
   }
