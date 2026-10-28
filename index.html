@@ -2953,30 +2953,31 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       if (cycle > flightDuration) return;
       const direction = Math.floor(elapsed / cycleLength) % 2 === 0 ? 1 : -1;
       const progress = cycle / flightDuration;
-      const scale = 2.05;
-      const planeW = 42 * scale;
-      const bannerLength = 158 * scale;
-      const bannerHeight = 13 * scale;
+      const scale = 1.9;
+      const planeW = 48 * scale;
+      const bannerLength = 104;
+      const bannerHeight = 20;
       const x = direction > 0 ? -planeW - bannerLength + progress * (W + planeW * 2 + bannerLength) : W + planeW + bannerLength - progress * (W + planeW * 2 + bannerLength);
-      const y = 27 + Math.sin(cycle * 0.5) * 2;
-      const wave = elapsed * 4.2;
-      const attachX = x - direction * (17 * scale);
-      const attachY = y + 3 * scale;
+      const y = 29 + Math.sin(cycle * 0.5) * 1.5;
+      const wave = elapsed * 4.1;
+      const attachX = x - direction * (24 * scale);
+      const attachY = y + 1 * scale;
       const points = [];
-      for (let i = 0; i <= 24; i++) {
-        const t = i / 24;
+      for (let i = 0; i <= 32; i++) {
+        const t = i / 32;
         const px = attachX - direction * (t * bannerLength);
-        const flutter = Math.sin(wave - t * 8.5) * (1.5 + t * 5.5) + Math.sin(wave * 0.72 - t * 15) * (0.7 + t * 2.2);
+        const flutter = Math.sin(wave - t * 7.2) * (0.8 + t * 3.1) + Math.sin(wave * 0.73 - t * 13) * (0.35 + t * 1.1);
         points.push({ x: px, y: attachY + flutter });
       }
+
       ctx.save();
-      // Tow cable, gold-edged red-orange fabric, and a moving highlight make it read as a foreground object.
+      // Short blue fabric banner: its length is only slightly wider than the lettering.
       ctx.lineCap = 'round';
-      ctx.globalAlpha = 0.95;
-      ctx.strokeStyle = '#70452f';
-      ctx.lineWidth = 1.5 * scale;
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#344b68';
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(x - direction * 13 * scale, y + 2 * scale);
+      ctx.moveTo(x - direction * 18 * scale, y + 2 * scale);
       ctx.lineTo(points[0].x, points[0].y);
       ctx.stroke();
 
@@ -2984,80 +2985,135 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y - bannerHeight / 2) : ctx.moveTo(p.x, p.y - bannerHeight / 2));
       for (let i = points.length - 1; i >= 0; i--) ctx.lineTo(points[i].x, points[i].y + bannerHeight / 2);
       ctx.closePath();
-      ctx.fillStyle = '#f06a3c';
+      ctx.fillStyle = '#2787f5';
       ctx.fill();
-      ctx.globalAlpha = 0.95;
-      ctx.strokeStyle = '#ffd36a';
-      ctx.lineWidth = 1.6 * scale;
-      ctx.beginPath();
-      points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y - bannerHeight / 2) : ctx.moveTo(p.x, p.y - bannerHeight / 2));
+      ctx.strokeStyle = '#176dcc';
+      ctx.lineWidth = 1.4;
       ctx.stroke();
-      // Fabric seam and moving folds accentuate the wave without making the word wobble unreadably.
-      ctx.globalAlpha = 0.45;
-      ctx.strokeStyle = '#a83d2d';
-      ctx.lineWidth = 1.1 * scale;
-      ctx.beginPath();
-      points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y + Math.sin(wave - i * 0.48) * 2.1 * scale) : ctx.moveTo(p.x, p.y));
-      ctx.stroke();
-      const textX = attachX - direction * bannerLength * 0.51;
-      const textY = attachY + Math.sin(wave - 4.2) * 2.1;
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = '#fff7dc';
-      ctx.font = '900 ' + (8.2 * scale) + 'px Circe, sans-serif';
+
+      // Subtle alternating folds are drawn into the cloth itself.
+      for (let i = 4; i < points.length - 2; i += 5) {
+        const p = points[i];
+        ctx.globalAlpha = 0.18;
+        ctx.strokeStyle = i % 2 ? '#eaf5ff' : '#103f91';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y - bannerHeight * 0.43);
+        ctx.lineTo(p.x - direction * 1.8, p.y + bannerHeight * 0.43);
+        ctx.stroke();
+      }
+
+      // Each glyph follows the local curve and tilt of the fabric instead of floating above it.
+      const word = 'roadnote';
+      ctx.font = '800 14px Circe, sans-serif';
+      const widths = Array.from(word, ch => ctx.measureText(ch).width);
+      const totalTextWidth = widths.reduce((sum, width) => sum + width, 0);
+      const textStart = (bannerLength - totalTextWidth) / 2;
+      let cursor = textStart;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(91, 44, 30, 0.32)';
-      ctx.shadowBlur = 2 * scale;
-      ctx.fillText('roadnote', textX, textY);
+      for (let i = 0; i < word.length; i++) {
+        const centerAlong = cursor + widths[i] / 2;
+        const t = centerAlong / bannerLength;
+        const pointIndex = t * (points.length - 1);
+        const lo = Math.floor(pointIndex);
+        const hi = Math.min(points.length - 1, lo + 1);
+        const mix = pointIndex - lo;
+        const p = {
+          x: points[lo].x + (points[hi].x - points[lo].x) * mix,
+          y: points[lo].y + (points[hi].y - points[lo].y) * mix
+        };
+        const before = points[Math.max(0, lo - 1)];
+        const after = points[Math.min(points.length - 1, hi + 1)];
+        // The path runs right-to-left when the plane flies right, so compensate for that
+        // to keep the word readable in both directions.
+        const tangent = Math.atan2(after.y - before.y, after.x - before.x) + (direction > 0 ? Math.PI : 0);
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(tangent);
+        ctx.globalAlpha = 0.97;
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = 'rgba(10, 45, 105, 0.38)';
+        ctx.shadowBlur = 1.4;
+        ctx.fillText(word[i], 0, 0);
+        ctx.restore();
+        cursor += widths[i];
+      }
       ctx.restore();
 
-      // Large, saturated yellow-and-teal crop-duster with visible cockpit, struts and spinning propeller.
+      // A compact, recognizable single-engine crop-duster silhouette with high-wing struts.
       ctx.save();
       ctx.translate(x, y);
       ctx.scale(direction * scale, scale);
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
-      // Lower wing and wing shadow
-      ctx.fillStyle = '#b84d31';
+
+      // Tailplane and vertical fin.
+      ctx.fillStyle = '#176dcc';
       ctx.beginPath();
-      ctx.moveTo(-8, 0); ctx.lineTo(3, 0); ctx.lineTo(10, 5); ctx.lineTo(5, 6); ctx.lineTo(-8, 2); ctx.closePath(); ctx.fill();
-      // Main fuselage
-      ctx.fillStyle = '#f4b72f';
+      ctx.moveTo(-15, 1); ctx.lineTo(-23, -2); ctx.lineTo(-21, 2); ctx.lineTo(-16, 4); ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#2787f5';
       ctx.beginPath();
-      ctx.moveTo(15, 0); ctx.lineTo(9, 2.4); ctx.lineTo(-9, 2.4); ctx.lineTo(-15, 5); ctx.lineTo(-16, 2); ctx.lineTo(-9, -1.7); ctx.lineTo(10, -1.7); ctx.closePath(); ctx.fill();
-      // Teal nose and tail accent
-      ctx.fillStyle = '#167f83';
+      ctx.moveTo(-18, 0); ctx.lineTo(-21, -7); ctx.lineTo(-16, -4); ctx.lineTo(-12, 0); ctx.closePath();
+      ctx.fill();
+
+      // Fuselage with rounded nose and tapered tail.
+      ctx.fillStyle = '#f5f7fb';
       ctx.beginPath();
-      ctx.moveTo(15, 0); ctx.lineTo(10, 2.2); ctx.lineTo(6, 2.2); ctx.lineTo(8, -1.5); ctx.lineTo(12, -1.5); ctx.closePath(); ctx.fill();
+      ctx.moveTo(23, -1); ctx.quadraticCurveTo(25, 0, 23, 2);
+      ctx.lineTo(-15, 3); ctx.lineTo(-23, 1); ctx.lineTo(-17, -1.7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#52677f';
+      ctx.lineWidth = 0.65;
+      ctx.stroke();
+
+      // Lower wing, then the larger upper wing: the stacked silhouette reads as a biplane/crop-duster.
+      ctx.fillStyle = '#176dcc';
       ctx.beginPath();
-      ctx.moveTo(-10, 1); ctx.lineTo(-15, -3); ctx.lineTo(-13, 1); ctx.lineTo(-17, 3.5); ctx.lineTo(-10, 3.5); ctx.closePath(); ctx.fill();
-      // Big upper wing with bright leading edge
-      ctx.fillStyle = '#ffd45b';
+      ctx.moveTo(-9, 0); ctx.lineTo(9, 0); ctx.lineTo(15, 8); ctx.lineTo(7, 9); ctx.lineTo(-13, 3); ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#2787f5';
       ctx.beginPath();
-      ctx.moveTo(-9, -4.8); ctx.lineTo(5, -5.4); ctx.lineTo(11, -2.9); ctx.lineTo(5, -1.6); ctx.lineTo(-11, -1.8); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = '#fff0ad';
-      ctx.lineWidth = 0.75;
-      ctx.beginPath(); ctx.moveTo(-8, -4.5); ctx.lineTo(6, -4.9); ctx.stroke();
-      // Wing struts
-      ctx.strokeStyle = '#167f83';
+      ctx.moveTo(-13, -5); ctx.lineTo(8, -6); ctx.lineTo(17, -2.6); ctx.lineTo(9, -0.7); ctx.lineTo(-16, -1.4); ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#b9d6f5';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(-11, -4.7); ctx.lineTo(8, -5.4); ctx.stroke();
+
+      // Wing struts.
+      ctx.strokeStyle = '#52677f';
       ctx.lineWidth = 0.9;
-      ctx.beginPath(); ctx.moveTo(-4, -1.7); ctx.lineTo(-1, -4.2); ctx.moveTo(4, -1.7); ctx.lineTo(5, -4.5); ctx.stroke();
-      // Cockpit
-      ctx.fillStyle = '#d9f6ef';
-      ctx.beginPath(); ctx.ellipse(2.5, -1.9, 2.6, 1.55, -0.12, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#167f83'; ctx.lineWidth = 0.55; ctx.stroke();
-      // Wheels
-      ctx.fillStyle = '#344b52';
-      ctx.beginPath(); ctx.arc(-4, 4.2, 1.25, 0, Math.PI * 2); ctx.arc(4, 4.2, 1.25, 0, Math.PI * 2); ctx.fill();
-      // Spinning propeller
-      ctx.globalAlpha = 0.7 + Math.abs(Math.sin(elapsed * 22)) * 0.3;
-      ctx.strokeStyle = '#fff7dc';
-      ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.moveTo(16, -3.5); ctx.lineTo(16, 3.8); ctx.stroke();
+      ctx.moveTo(-5, -1.5); ctx.lineTo(-2, -4.7);
+      ctx.moveTo(5, -1.1); ctx.lineTo(7, -5);
+      ctx.stroke();
+
+      // Cockpit canopy and window highlight.
+      ctx.fillStyle = '#9edfff';
+      ctx.beginPath(); ctx.ellipse(5, -2.2, 4.1, 2.1, -0.12, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#176dcc'; ctx.lineWidth = 0.7; ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.lineWidth = 0.6;
+      ctx.beginPath(); ctx.moveTo(4, -3.6); ctx.lineTo(7, -3.4); ctx.stroke();
+
+      // Landing gear and dark wheels.
+      ctx.strokeStyle = '#52677f';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath(); ctx.moveTo(-4, 2.5); ctx.lineTo(-5, 6); ctx.moveTo(8, 2.5); ctx.lineTo(9, 6); ctx.stroke();
+      ctx.fillStyle = '#26394f';
+      ctx.beginPath(); ctx.arc(-5, 6.3, 1.8, 0, Math.PI * 2); ctx.arc(9, 6.3, 1.8, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#dce8f4';
+      ctx.beginPath(); ctx.arc(-5, 6.3, 0.65, 0, Math.PI * 2); ctx.arc(9, 6.3, 0.65, 0, Math.PI * 2); ctx.fill();
+
+      // Nose-mounted propeller.
+      ctx.globalAlpha = 0.55 + Math.abs(Math.sin(elapsed * 22)) * 0.4;
+      ctx.strokeStyle = '#52677f';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(25, -5); ctx.lineTo(25, 5); ctx.stroke();
       ctx.restore();
     }
-
 
   function drawRoad() {
     ctx.clearRect(0,0,W,H);
