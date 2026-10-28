@@ -3035,7 +3035,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         ctx.fillStyle = '#ffffff';
         ctx.shadowColor = 'rgba(10, 45, 105, 0.38)';
         ctx.shadowBlur = 1.4;
-        ctx.fillText(word[i], 0, 0);
+        ctx.fillText(direction > 0 ? word[word.length - 1 - i] : word[i], 0, 0);
         ctx.restore();
         cursor += widths[i];
       }
