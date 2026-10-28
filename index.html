@@ -3058,7 +3058,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     spawnIn-=dt;
     if(spawnIn<=0){
       const roll=Math.random();
-      if(roll<.23) obstacles.push({x:W+15,kind:2,y:ground-(45+Math.random()*18),w:38,h:22,speedFactor:.82+Math.random()*.3});
+      if(roll<.23) obstacles.push({x:W+15,kind:2,y:ground-(54+Math.random()*8),w:38,h:22,speedFactor:.82+Math.random()*.3});
       else if(roll<.62) obstacles.push({x:W+15,kind:0,w:22,h:26,speedFactor:.94+Math.random()*.12});
       else obstacles.push({x:W+15,kind:1,w:29,h:31,speedFactor:.94+Math.random()*.12});
       spawnIn=Math.max(.48,1.25+Math.random()*.65-(speed-230)/850);
