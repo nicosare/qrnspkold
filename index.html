@@ -2981,7 +2981,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       ? gamePathname.slice(0, gamePathname.lastIndexOf('/') + 1)
       : gamePathname + '/');
   async function gameRequest(path, payload) {
-    const endpoint = gameApiBase + path.replace(/^\\//, '');
+    const endpoint = gameApiBase + path.replace(/^\//, '');
     const response = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({launchParams, ...(payload || {})}), cache:'no-store', credentials:'omit' });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || 'Не удалось обновить игровую награду.');
