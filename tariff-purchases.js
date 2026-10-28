@@ -204,6 +204,7 @@
     const isPaid = purchase.status === 'approved';
     const label = purchase.paymentLabel || ('roadnote-request-' + purchase.id);
     let content = '<div class="tariff-modal-card"><div class="tariff-modal-offer">' + esc(purchase.name || 'Выбранный тариф') + '</div>' +
+      (purchase.promoCode ? '<div class="tariff-modal-note" style="margin-top:6px;color:#16804a;font-weight:700;">Промокод ' + esc(purchase.promoCode) + ' · скидка ' + esc(purchase.promoDiscountPercent || 0) + '%</div>' : '') +
       '<div class="tariff-modal-price">' + esc(rubles(purchase.priceRub)) + '</div><div class="tariff-modal-note">';
     if (isPaid) {
       content += '<p><strong>Покупка подтверждена.</strong></p><p>Тариф уже начислен. Баланс обновлён автоматически.</p>';
