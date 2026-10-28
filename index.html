@@ -2952,6 +2952,28 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     ctx.fillStyle = paletteColor('sun'); ctx.beginPath(); ctx.arc(520,35,19,0,Math.PI*2); ctx.fill();
     ctx.fillStyle = paletteColor('cloud');
     for (let i=0;i<4;i++) { const x = ((i*180 - (elapsed*speed*.12)%720)+W+720)%720-40; roundRect(x,50+(i%2)*17,58,5,3,true); }
+
+    // Soft, layered roadside scenery: distant town silhouettes and nearer trees.
+    const skylineOffset = (elapsed * speed * .075) % 420;
+    ctx.fillStyle = mixColor(paletteColor('ground'), paletteColor('sky'), .42);
+    for (let i=0;i<8;i++) {
+      const x = i*64 - skylineOffset;
+      const bw = 25 + (i%3)*8, bh = 27 + ((i*7)%4)*9;
+      ctx.fillRect(x, ground-bh-3, bw, bh);
+      ctx.fillStyle = paletteColor('sky');
+      for (let wy=ground-bh+7; wy<ground-8; wy+=10) {
+        for (let wx=x+5; wx<x+bw-4; wx+=9) ctx.fillRect(wx,wy,3,4);
+      }
+      ctx.fillStyle = mixColor(paletteColor('ground'), paletteColor('sky'), .42);
+    }
+    const treeOffset = (elapsed * speed * .16) % 250;
+    for (let i=0;i<5;i++) {
+      const x = i*250 - treeOffset + 30;
+      const h = 25 + (i%3)*6;
+      ctx.fillStyle = '#8aa995';
+      ctx.fillRect(x-2, ground-h*.42, 4, h*.42);
+      ctx.beginPath(); ctx.moveTo(x,ground-h); ctx.lineTo(x-13,ground-h*.43); ctx.lineTo(x-7,ground-h*.43); ctx.lineTo(x-15,ground-h*.12); ctx.lineTo(x+15,ground-h*.12); ctx.lineTo(x+7,ground-h*.43); ctx.lineTo(x+13,ground-h*.43); ctx.closePath(); ctx.fill();
+    }
     ctx.fillStyle = paletteColor('ground'); ctx.fillRect(0,ground,W,3);
     ctx.fillStyle = paletteColor('dash');
     for(let i=0;i<18;i++){const x=((i*48-(elapsed*speed)%864)+864)%864;ctx.fillRect(x,ground+13,24,3);}
@@ -2974,7 +2996,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     ctx.save();
     if(o.kind===2) {
       const wing=Math.sin(elapsed*17+o.x*.035)*5;
-      ctx.translate(o.x,o.y);
+      ctx.translate(o.x+38,o.y);
+      ctx.scale(-1,1); // Face the opposite direction while keeping collision bounds unchanged.
       ctx.fillStyle='#71879b';
       ctx.beginPath();ctx.ellipse(17,11,13,6,0,0,Math.PI*2);ctx.fill();
       ctx.beginPath();ctx.moveTo(13,10);ctx.quadraticCurveTo(8,2+wing,2,4);ctx.quadraticCurveTo(5,13,13,13);ctx.fill();
@@ -2986,13 +3009,21 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     } else {
       ctx.translate(o.x,ground);
       if(o.kind===0){
-        ctx.fillStyle='#ffbd59';roundRect(0,-26,22,26,5,true);
-        ctx.fillStyle='#ed8d35';roundRect(3,-23,5,20,2,true);roundRect(14,-23,5,20,2,true);
-        ctx.fillStyle='#fff0d7';ctx.fillRect(2,-17,18,3);
+        // Roadwork cone in Roadnote blue/orange, with a reflective band and wide foot.
+        ctx.fillStyle='#d97722';roundRect(-2,-5,26,5,2,true);
+        ctx.fillStyle='#f49a35';
+        ctx.beginPath();ctx.moveTo(3,-5);ctx.lineTo(8,-26);ctx.lineTo(14,-26);ctx.lineTo(20,-5);ctx.closePath();ctx.fill();
+        ctx.fillStyle='#fff0d7';
+        ctx.beginPath();ctx.moveTo(6,-14);ctx.lineTo(17,-14);ctx.lineTo(18,-10);ctx.lineTo(5,-10);ctx.closePath();ctx.fill();
+        ctx.fillStyle='#b96220';roundRect(8,-25,5,2,1,true);
       } else {
-        ctx.fillStyle='#6a8ba9';roundRect(0,-31,29,31,6,true);
-        ctx.fillStyle='#dff1ff';roundRect(5,-25,19,9,3,true);
-        ctx.fillStyle='#3d5d7b';ctx.fillRect(5,-8,19,3);
+        // Compact blue road barrier with reflective panels and sturdy feet.
+        ctx.fillStyle='#355d85';roundRect(1,-29,27,25,4,true);
+        ctx.fillStyle='#2787f5';roundRect(0,-31,29,23,4,true);
+        ctx.fillStyle='#dff1ff';
+        ctx.beginPath();ctx.moveTo(5,-27);ctx.lineTo(10,-27);ctx.lineTo(16,-12);ctx.lineTo(11,-12);ctx.closePath();ctx.fill();
+        ctx.beginPath();ctx.moveTo(17,-27);ctx.lineTo(22,-27);ctx.lineTo(27,-15);ctx.lineTo(22,-15);ctx.closePath();ctx.fill();
+        ctx.fillStyle='#176dcc';roundRect(2,-8,7,5,2,true);roundRect(20,-8,7,5,2,true);
       }
     }
     ctx.restore();
@@ -3027,12 +3058,12 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     spawnIn-=dt;
     if(spawnIn<=0){
       const roll=Math.random();
-      if(roll<.23) obstacles.push({x:W+15,kind:2,y:ground-(62+Math.random()*12),w:38,h:22});
-      else if(roll<.62) obstacles.push({x:W+15,kind:0,w:22,h:26});
-      else obstacles.push({x:W+15,kind:1,w:29,h:31});
+      if(roll<.23) obstacles.push({x:W+15,kind:2,y:ground-(45+Math.random()*18),w:38,h:22,speedFactor:.82+Math.random()*.3});
+      else if(roll<.62) obstacles.push({x:W+15,kind:0,w:22,h:26,speedFactor:.94+Math.random()*.12});
+      else obstacles.push({x:W+15,kind:1,w:29,h:31,speedFactor:.94+Math.random()*.12});
       spawnIn=Math.max(.48,1.25+Math.random()*.65-(speed-230)/850);
     }
-    obstacles.forEach(o=>o.x-=speed*dt);obstacles=obstacles.filter(o=>o.x>-45);
+    obstacles.forEach(o=>o.x-=speed*(o.speedFactor||1)*dt);obstacles=obstacles.filter(o=>o.x>-45);
     for(const o of obstacles){
       const ow=o.w||(o.kind===0?22:29), oh=o.h||(o.kind===0?26:31);
       const ox=o.x, oy=o.kind===2?o.y:ground-oh;
