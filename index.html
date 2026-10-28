@@ -3076,7 +3076,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
           {color:'#b17a78',wingColor:'#d4a19b',beakColor:'#e8c17e'}
         ];
         const bird = birdVariants[Math.floor(Math.random()*birdVariants.length)];
-        obstacles.push({x:W+15,kind:2,y:ground-(45+Math.random()*90),w:38,h:22,speedFactor:.55+Math.random()*.9,color:bird.color,wingColor:bird.wingColor,beakColor:bird.beakColor});
+        obstacles.push({x:W+15,kind:2,y:ground-(65+Math.random()*70),w:38,h:22,speedFactor:.55+Math.random()*.9,color:bird.color,wingColor:bird.wingColor,beakColor:bird.beakColor});
       } else if(roll<.46) obstacles.push({x:W+15,kind:0,w:22,h:26,speedFactor:.94+Math.random()*.12});
       else if(roll<.68) obstacles.push({x:W+15,kind:1,w:29,h:31,speedFactor:.94+Math.random()*.12});
       else if(roll<.84) obstacles.push({x:W+15,kind:3,w:31,h:50,speedFactor:.94+Math.random()*.12});
