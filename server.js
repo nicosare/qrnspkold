@@ -1838,12 +1838,20 @@ app.post('/api/session', (req, res) => {
     const subscriptionActive = Boolean(subscriptionUntil && Date.parse(subscriptionUntil) > Date.now());
     const unlimited = Number(balanceRow?.unlimited || 0) === 1;
     const scanCount = Number(db.prepare('SELECT COUNT(*) AS count FROM scan_history WHERE vk_id = ?').get(userId)?.count || 0);
+    const lastScan = db.prepare(`
+      SELECT scanned_at, transport_type, route_number, vehicle_number, price
+      FROM scan_history
+      WHERE vk_id = ?
+      ORDER BY scanned_at DESC, id DESC
+      LIMIT 1
+    `).get(userId) || null;
     return res.json({
       ok: true,
       ...getTariffState(userId),
       isAdmin: userId === adminVkId,
       scanBalance,
       scanCount,
+      lastScan,
       subscriptionUntil,
       subscriptionActive,
       unlimited,
