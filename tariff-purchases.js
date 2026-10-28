@@ -20,6 +20,21 @@
   let lockedScrollY = 0;
   let touchStartY = 0;
   let touchStartX = 0;
+  const statusTimers = new WeakMap();
+
+  function setTransientStatus(element, message, isError) {
+    if (!element) return;
+    const previous = statusTimers.get(element);
+    if (previous) clearTimeout(previous);
+    element.textContent = message || '';
+    element.classList.toggle('is-error', Boolean(isError));
+    if (!message) { statusTimers.delete(element); return; }
+    statusTimers.set(element, setTimeout(function () {
+      element.textContent = '';
+      element.classList.remove('is-error');
+      statusTimers.delete(element);
+    }, 5000));
+  }
 
   function apiUrl(path) {
     const pathname = window.location.pathname;
@@ -51,9 +66,9 @@
     cards.forEach(function (card) {
       const regular = Number(card.dataset.regularPrice);
       const firstPurchasePrice = Number(card.dataset.promoPrice);
-      const basePrice = state.hasPurchased ? regular : firstPurchasePrice;
       const activePromo = state.activePromoCode;
       const promoApplies = Boolean(activePromo && Array.isArray(activePromo.offerIds) && activePromo.offerIds.includes(card.dataset.offerId));
+      const basePrice = promoApplies || state.hasPurchased ? regular : firstPurchasePrice;
       const price = promoApplies ? Math.max(1, Math.round(basePrice * (100 - Number(activePromo.discountPercent)) / 100)) : basePrice;
       const oldPrice = card.querySelector('.start-offer-old-price');
       const currentPrice = card.querySelector('.start-offer-current-price');
@@ -95,10 +110,7 @@
       : 'Скидка действует только на первую покупку.';
     updatePrices();
     renderPromoState();
-    if (tariffStatus && next && next.notice) {
-      tariffStatus.textContent = next.notice;
-      tariffStatus.classList.remove('is-error');
-    }
+    if (tariffStatus && next && next.notice) setTransientStatus(tariffStatus, next.notice, false);
     if (activePurchase && next && /Оплата подтверждена/.test(String(next.notice || ''))) {
       activePurchase.status = 'approved';
       renderModal();
@@ -107,9 +119,7 @@
     // Mood message is chosen once by initializePage(); tariff state updates must not reroll it.
   }
   function setPromoStatus(message, isError) {
-    if (!promoStatus) return;
-    promoStatus.textContent = message || '';
-    promoStatus.classList.toggle('is-error', Boolean(isError));
+    setTransientStatus(promoStatus, message, isError);
   }
   function renderPromoState() {
     if (!promoCurrent) return;
@@ -171,7 +181,7 @@
     if (!launchParams || document.visibilityState === 'hidden') return;
     try { renderState(await apiPost('api/tariffs/state')); }
     catch (error) {
-      if (tariffStatus) { tariffStatus.textContent = error.message; tariffStatus.classList.add('is-error'); }
+      setTransientStatus(tariffStatus, error.message, true);
     }
   }
   function setModalStatus(message, isError) {
@@ -235,7 +245,7 @@
   async function createPurchase(card) {
     if (busy) return;
     if (!launchParams) {
-      if (tariffStatus) { tariffStatus.textContent = 'Не найдены параметры VK. Закрой и заново открой Mini App.'; tariffStatus.classList.add('is-error'); }
+      setTransientStatus(tariffStatus, 'Не найдены параметры VK. Закрой и заново открой Mini App.', true);
       return;
     }
     const offerId = card.dataset.offerId;
@@ -251,7 +261,7 @@
         data.activeTariffRequest || state.activeTariffRequests.find(function (item) { return item.offerId === offerId; });
       if (purchase) openModal(purchase);
     } catch (error) {
-      if (tariffStatus) { tariffStatus.textContent = error.message; tariffStatus.classList.add('is-error'); }
+      setTransientStatus(tariffStatus, error.message, true);
       if (error.data) renderState(error.data);
     } finally {
       busy = false; updatePrices();
@@ -301,7 +311,7 @@
   window.setRoadnoteTariffState = function (next) {
     if (!next || typeof next !== 'object') return;
     renderState(next);
-    if (next.notice && tariffStatus) { tariffStatus.textContent = next.notice; tariffStatus.classList.remove('is-error'); }
+    if (next.notice && tariffStatus) setTransientStatus(tariffStatus, next.notice, false);
   };
   window.addEventListener('roadnote:tariff-state', function (event) { window.setRoadnoteTariffState(event.detail); });
   window.addEventListener('focus', refreshState);
