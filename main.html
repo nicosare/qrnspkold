@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roadnote — Транспортные данные</title>
+    <title>QRide — Транспортные данные</title>
     <!-- Load dependencies normally; application startup must not wait for VKWebAppInit. -->
     <script src="https://cdn.jsdelivr.net/npm/easyqrcodejs@4.5.0/dist/easy.qrcode.min.js"></script>
     <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
@@ -760,10 +760,10 @@
 
 <section class="admin-panel-overlay" id="admin-panel-overlay" role="dialog" aria-modal="true" aria-labelledby="admin-panel-title" hidden>
     <header class="admin-panel-header">
-        <button class="admin-panel-back" id="admin-panel-back" type="button" aria-label="Вернуться в Roadnote">‹</button>
-        <div class="admin-panel-title" id="admin-panel-title">Пользователи Roadnote</div>
+        <button class="admin-panel-back" id="admin-panel-back" type="button" aria-label="Вернуться в QRide">‹</button>
+        <div class="admin-panel-title" id="admin-panel-title">Пользователи QRide</div>
     </header>
-    <iframe class="admin-panel-frame" id="admin-panel-frame" title="Панель пользователей Roadnote"></iframe>
+    <iframe class="admin-panel-frame" id="admin-panel-frame" title="Панель пользователей QRide"></iframe>
 </section>
 
 <section class="start-overlay" id="start-overlay" role="dialog" aria-modal="true" aria-labelledby="start-title">
@@ -779,7 +779,7 @@
                 </svg>
             </div>
             <div>
-                <div class="start-brand-name">Roadnote</div>
+                <div class="start-brand-name">QRide</div>
                 <div class="start-brand-caption">Транспортные данные в одном месте</div>
             </div>
         </div>
@@ -798,7 +798,7 @@
         <section class="start-offers-section" aria-labelledby="start-offers-title">
             <div class="start-offers-section-heading">
                 <div>
-                    <div class="start-section-kicker">ROADNOTE PLUS</div>
+                    <div class="start-section-kicker">QRIDE PLUS</div>
                     <h3 id="start-offers-title">Предложения</h3>
                 </div>
                 <span class="start-coming-soon">Скоро</span>
@@ -1121,7 +1121,7 @@
     function getVkAuthorizationHeader() {
         const launchParams = window.location.search.slice(1);
         if (!launchParams) {
-            throw new Error('Не найдены параметры VK. Откройте Roadnote через VK Mini App.');
+            throw new Error('Не найдены параметры VK. Откройте QRide через VK Mini App.');
         }
         const encoded = btoa(unescape(encodeURIComponent(launchParams)))
             .replace(/\+/g, '-')
@@ -1454,7 +1454,7 @@
                 scanSessionReady = true;
                 updateScanBalance(payload.scanBalance ?? 0);
             }
-            throw new Error(payload.error || `Сервер Roadnote вернул HTTP ${response.status}`);
+            throw new Error(payload.error || `Сервер QRide вернул HTTP ${response.status}`);
         }
 
         const source = payload?.data || {};
@@ -1495,7 +1495,7 @@
         } catch (error) {
             console.error('Не удалось загрузить данные QR:', error);
             const details = String(error?.message || error || 'Неизвестная ошибка');
-            const message = `Не удалось загрузить данные QR с сервера Roadnote. ${details}`;
+            const message = `Не удалось загрузить данные QR с сервера QRide. ${details}`;
             setScannerStatus(message);
             alert(message);
             return false;
@@ -1525,7 +1525,7 @@
         if (startOverlayElement.hidden) return;
         startOverlayElement.hidden = true;
         pageBody.classList.remove('start-overlay-open');
-        window.history.pushState({ roadnoteScreen: 'ticket' }, '', window.location.href);
+        window.history.pushState({ qrideScreen: 'ticket' }, '', window.location.href);
     }
 
     function showStartOverlay() {
@@ -1535,7 +1535,7 @@
     }
 
     window.addEventListener('popstate', function (event) {
-        if (event.state && event.state.roadnoteScreen === 'start') {
+        if (event.state && event.state.qrideScreen === 'start') {
             showStartOverlay();
         }
     });
@@ -1546,10 +1546,10 @@
         refreshScanButton();
         setScannerStatus('Открываем сканер в приложении VK…');
         try {
-            if (typeof window.roadnoteScanQr !== 'function') {
+            if (typeof window.qrideScanQr !== 'function') {
                 throw new Error('VK QR-сканер не загрузился. Проверьте интернет и перезапустите Mini App.');
             }
-            const code = await window.roadnoteScanQr();
+            const code = await window.qrideScanQr();
             const success = await handleScannedText(code);
             if (success) {
                 closeStartOverlay();
@@ -1589,7 +1589,7 @@
             ].map(([text, icon, color]) => ({ text, icon, color, category: 'warm', weight: 30 })),
             // 20% — лёгкий юмор
             ...[
-                ['Ты открыл Roadnote. Уже одно дело сделано.', 'check-circle', 'sage'],
+                ['Ты открыл QRide. Уже одно дело сделано.', 'check-circle', 'sage'],
                 ['Пусть сегодня всё работает с первого раза. Да, мы тоже на это надеемся.', 'settings', 'blue'],
                 ['Сначала кофе. Потом великие дела. Или просто дела — тоже считается.', 'coffee', 'brown'],
                 ['Энергии побольше, поводов её тратить — поменьше.', 'battery-charging', 'mint'],
@@ -1670,7 +1670,7 @@
                 ['Хорошей дороги! И пусть она ведёт туда, куда тебе действительно хочется.', 'map-pin', 'sage'],
                 ['Пусть поездка пройдёт быстрее, чем ты успеешь проверить время.', 'train-front', 'lilac']
             ].map(([text, icon, color]) => ({ text, icon, color, category: 'transport', weight: 7 })),
-            // 8% — короткие реплики Roadnote
+            // 8% — короткие реплики QRide
             ...[
                 ['Ну что, поехали?', 'arrow-right-circle', 'blue'],
                 ['О, снова ты.', 'smile', 'pink'],
@@ -1680,7 +1680,7 @@
                 ['Хорошего тебе дня. Без всяких условий.', 'sun', 'peach'],
                 ['Ладно, не отвлекаю. Удачи!', 'hand-heart', 'pink'],
                 ['Заглядывай, если что.', 'message-circle', 'blue']
-            ].map(([text, icon, color]) => ({ text, icon, color, category: 'roadnote', weight: 8 })),
+            ].map(([text, icon, color]) => ({ text, icon, color, category: 'qride', weight: 8 })),
             // 5% — стартовая скидка; дополнительно проверяется доступность промо
             ...[
                 ['Начать пользоваться платными возможностями сейчас выгоднее.', 'badge-percent', 'peach'],
@@ -1765,22 +1765,22 @@
             sage: '#9CB9A5', yellow: '#C9B779', blue: '#9DB9D5',
             lilac: '#B7A8CE', mint: '#91BDB1', brown: '#B9A18F'
         };
-        function getRoadnoteSeason(date) {
+        function getQRideSeason(date) {
             const month = date.getMonth();
             if (month >= 2 && month <= 4) return 'spring';
             if (month >= 5 && month <= 7) return 'summer';
             if (month >= 8 && month <= 10) return 'autumn';
             return 'winter';
         }
-        function getRoadnotePeriod(hour) {
+        function getQRidePeriod(hour) {
             if (hour >= 5 && hour < 11) return 'morning';
             if (hour >= 11 && hour < 17) return 'day';
             return 'evening';
         }
-        function isRoadnotePromoAvailable() {
+        function isQRidePromoAvailable() {
             // Do not show commercial messages until the authenticated tariff state confirms
             // that the first purchase has not happened.
-            if (window.roadnoteHasPurchased !== false) return false;
+            if (window.qrideHasPurchased !== false) return false;
             const offers = Array.from(document.querySelectorAll('.start-offer[data-regular-price][data-promo-price]'));
             if (!offers.length) return false;
             return offers.some(offer => {
@@ -1791,11 +1791,11 @@
                 return regular > promo && current === promo;
             });
         }
-        function chooseRoadnoteMoodMessage() {
+        function chooseQRideMoodMessage() {
             const now = new Date();
-            const period = getRoadnotePeriod(now.getHours());
-            const season = getRoadnoteSeason(now);
-            const promoAvailable = isRoadnotePromoAvailable();
+            const period = getQRidePeriod(now.getHours());
+            const season = getQRideSeason(now);
+            const promoAvailable = isQRidePromoAvailable();
             const available = moodMessages.filter(item => {
                 if (item.category === 'time' && item.period !== period) return false;
                 if (item.category === 'weekday' && item.weekday !== now.getDay()) return false;
@@ -1804,10 +1804,10 @@
                 return true;
             });
             let recent = [];
-            try { recent = JSON.parse(sessionStorage.getItem('roadnoteMoodRecent') || '[]'); } catch (_) {}
+            try { recent = JSON.parse(sessionStorage.getItem('qrideMoodRecent') || '[]'); } catch (_) {}
             let pool = available.filter(item => !recent.includes(item.text));
             if (!pool.length) pool = available;
-            const weights = { warm: 30, humor: 20, time: 12, weekday: 10, season: 8, transport: 7, roadnote: 8, promo: 5 };
+            const weights = { warm: 30, humor: 20, time: 12, weekday: 10, season: 8, transport: 7, qride: 8, promo: 5 };
             const activeCategories = Array.from(new Set(pool.map(item => item.category)));
             const totalWeight = activeCategories.reduce((sum, category) => sum + weights[category], 0);
             let choice = Math.random() * totalWeight;
@@ -1819,20 +1819,20 @@
             const categoryPool = pool.filter(item => item.category === selectedCategory);
             const selected = categoryPool[Math.floor(Math.random() * categoryPool.length)];
             try {
-                sessionStorage.setItem('roadnoteMoodRecent', JSON.stringify([selected.text, ...recent.filter(text => text !== selected.text)].slice(0, 12)));
+                sessionStorage.setItem('qrideMoodRecent', JSON.stringify([selected.text, ...recent.filter(text => text !== selected.text)].slice(0, 12)));
             } catch (_) {}
             return selected;
         }
-        function renderRoadnoteMoodMessage() {
+        function renderQRideMoodMessage() {
             const moodMessage = document.getElementById('start-mood-message');
             if (!moodMessage) return;
-            const selected = chooseRoadnoteMoodMessage();
+            const selected = chooseQRideMoodMessage();
             const icon = moodIcons[selected.icon] || moodIcons.sparkles;
             moodMessage.innerHTML = '<span class="mood-message-icon" aria-hidden="true" style="color:' + (moodColors[selected.color] || moodColors.blue) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + icon + '</svg></span><span class="mood-message-text"></span>';
             moodMessage.querySelector('.mood-message-text').textContent = selected.text;
         }
-        window.refreshRoadnoteMoodMessage = renderRoadnoteMoodMessage;
-        renderRoadnoteMoodMessage();
+        window.refreshQRideMoodMessage = renderQRideMoodMessage;
+        renderQRideMoodMessage();
 
         loadFromLocalStorage();
         loadTimer();
@@ -1844,7 +1844,7 @@
         // The start overlay is shown on launch. Returning to the ticket puts
         // a start-state entry in history so the device Back action reopens it.
         pageBody.classList.add('start-overlay-open');
-        window.history.replaceState({ roadnoteScreen: 'start' }, '', window.location.href);
+        window.history.replaceState({ qrideScreen: 'start' }, '', window.location.href);
 
         // If a legacy handoff URL is received, process it here.
         const launchUrl = new URL(window.location.href);
@@ -1861,7 +1861,7 @@
     // This script is at the end of main.html, so the page markup already exists.
     // Do not wait for DOMContentLoaded: this document can be injected into the
     // already-running VK Mini App document, where that event may have fired.
-    (function bootRoadnoteMainPage() {
+    (function bootQRideMainPage() {
         if (typeof window.QRCode !== 'function' || !window.QRCode.CorrectLevel) {
             console.error('QRCode library did not load; ticket QR rendering is unavailable.');
             const status = document.getElementById('scan-status');
@@ -1883,7 +1883,7 @@
         const panel = document.getElementById('admin-panel-overlay');
         const frame = document.getElementById('admin-panel-frame');
         if (!panel || !frame) return;
-        frame.src = '/roadnote/admin/users' + window.location.search;
+        frame.src = '/qride/admin/users' + window.location.search;
         panel.hidden = false;
         document.body.classList.add('start-overlay-open');
       });
@@ -1909,13 +1909,13 @@
       if (panel) panel.hidden = true;
       if (frame) frame.src = 'about:blank';
       showStartOverlay();
-      window.history.pushState({ roadnoteScreen: 'start' }, '', window.location.href);
+      window.history.pushState({ qrideScreen: 'start' }, '', window.location.href);
     });
   }
 
-  async function registerRoadnoteVisit() {
+  async function registerQRideVisit() {
     if (!window.vkBridge || typeof window.vkBridge.send !== 'function') {
-      setScannerStatus('Откройте Roadnote внутри VK Mini App, чтобы проверить баланс сканов.');
+      setScannerStatus('Откройте QRide внутри VK Mini App, чтобы проверить баланс сканов.');
       refreshScanButton();
       return;
     }
@@ -1974,7 +1974,7 @@
       updateScanBalance(session.scanBalance, session.subscriptionUntil, session.unlimited, session.subscriptionActive);
 
       try {
-        sessionStorage.setItem('roadnoteAdminForNavigation', session.isAdmin === true ? '1' : '0');
+        sessionStorage.setItem('qrideAdminForNavigation', session.isAdmin === true ? '1' : '0');
       } catch (_) {}
       if (session.isAdmin === true) showAdminTools();
       if (!scanBalanceAssigned) setScannerStatus('');
@@ -1992,7 +1992,7 @@
             updateScanBalance(current.scanBalance, current.subscriptionUntil, current.unlimited, current.subscriptionActive);
             if (!scanBalanceAssigned) setScannerStatus('');
           } catch (eventError) {
-            console.warn('Roadnote entitlement event was invalid:', eventError);
+            console.warn('QRide entitlement event was invalid:', eventError);
           }
         });
         source.onerror = () => {
@@ -2017,7 +2017,7 @@
               if (!scanBalanceAssigned) setScannerStatus('');
               if (current.eventsToken) connectEntitlementEvents(current.eventsToken);
             } catch (refreshError) {
-              console.warn('Roadnote live entitlement reconnect failed:', refreshError);
+              console.warn('QRide live entitlement reconnect failed:', refreshError);
             } finally {
               entitlementReconnectInProgress = false;
             }
@@ -2026,7 +2026,7 @@
       };
       if (session.eventsToken) connectEntitlementEvents(session.eventsToken);
     } catch (error) {
-      console.warn('Roadnote session/balance check failed:', error);
+      console.warn('QRide session/balance check failed:', error);
       scanSessionReady = false;
       refreshScanButton();
       setScannerStatus('Не удалось проверить баланс сканов. Проверьте подключение и перезапустите Mini App.');
@@ -2034,7 +2034,7 @@
   }
   // This script is at the end of the document. Run directly so registration
   // also works when main.html is loaded into an existing Mini App document.
-  registerRoadnoteVisit();
+  registerQRideVisit();
 })();
 </script>
 

@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roadnote — Транспортные данные</title>
+    <title>QRide — Транспортные данные</title>
     <script>
     (function () {
         var params = new URLSearchParams(window.location.search);
-        var isRoadnoteVkLaunch =
+        var isQRideVkLaunch =
             params.get('vk_app_id') === '54843054' &&
             params.has('vk_platform') &&
             (params.has('sign') || params.has('vk_user_id'));
-        if (!isRoadnoteVkLaunch) {
+        if (!isQRideVkLaunch) {
             document.open();
             document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>
 /* Arcade layout: seven equal days and a clear, uncluttered game preview. */
@@ -27,20 +27,20 @@
 #game-streak-days .game-streak-day.is-active{border-color:#ff8a00!important;background:#ff8a00!important}
 #game-streak-days .game-streak-day.is-active>span,#game-streak-days .game-streak-day.is-active .game-streak-reward{color:#fff!important}
 #game-streak-days .game-streak-day:not(.is-active):not(.is-done){border-color:#e3e8ef!important;background:#fff!important}
-.roadnote-game-stage{isolation:isolate!important}
-.roadnote-game-canvas{height:180px!important}
-.roadnote-game-record{z-index:5!important;top:8px!important;right:8px!important}
-.roadnote-game-overlay{gap:5px!important;padding:30px 10px 25px!important;background:rgba(238,246,255,.48)!important}
-.roadnote-game-overlay>strong{font-size:17px!important;line-height:1.1!important}
-.roadnote-game-overlay>span{font-size:11px!important;line-height:1.2!important}
-.roadnote-game-reward-preview{position:absolute!important;z-index:4!important;right:8px!important;bottom:7px!important;box-sizing:border-box!important;width:auto!important;max-width:70%!important;min-width:0!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;text-align:right!important;pointer-events:none!important}
-.roadnote-game-reward-label{display:none!important}
-.roadnote-game-overlay .roadnote-game-reward-title{display:block!important;margin:0!important;color:#176dcc!important;font-size:10px!important;line-height:1.1!important;font-weight:900!important}
-.roadnote-game-overlay .roadnote-game-reward-caption{display:block!important;margin-top:2px!important;color:#526a84!important;font-size:8px!important;line-height:1.1!important}
-.roadnote-game-overlay .roadnote-game-start{position:relative!important;z-index:1!important;flex:0 0 auto!important;min-height:34px!important;margin:0!important;padding:7px 20px!important;font-size:13px!important;line-height:1.1!important}
+.qride-game-stage{isolation:isolate!important}
+.qride-game-canvas{height:180px!important}
+.qride-game-record{z-index:5!important;top:8px!important;right:8px!important}
+.qride-game-overlay{gap:5px!important;padding:30px 10px 25px!important;background:rgba(238,246,255,.48)!important}
+.qride-game-overlay>strong{font-size:17px!important;line-height:1.1!important}
+.qride-game-overlay>span{font-size:11px!important;line-height:1.2!important}
+.qride-game-reward-preview{position:absolute!important;z-index:4!important;right:8px!important;bottom:7px!important;box-sizing:border-box!important;width:auto!important;max-width:70%!important;min-width:0!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;text-align:right!important;pointer-events:none!important}
+.qride-game-reward-label{display:none!important}
+.qride-game-overlay .qride-game-reward-title{display:block!important;margin:0!important;color:#176dcc!important;font-size:10px!important;line-height:1.1!important;font-weight:900!important}
+.qride-game-overlay .qride-game-reward-caption{display:block!important;margin-top:2px!important;color:#526a84!important;font-size:8px!important;line-height:1.1!important}
+.qride-game-overlay .qride-game-start{position:relative!important;z-index:1!important;flex:0 0 auto!important;min-height:34px!important;margin:0!important;padding:7px 20px!important;font-size:13px!important;line-height:1.1!important}
 </style>
 
-</head><body>Откройте Roadnote через VK Mini App.</body></html>');
+</head><body>Откройте QRide через VK Mini App.</body></html>');
             document.close();
         }
     })();
@@ -1014,24 +1014,24 @@
         }
 
     
-        /* Polished, lightweight motion for the Roadnote start screen. */
-        @keyframes roadnoteStartReveal {
+        /* Polished, lightweight motion for the QRide start screen. */
+        @keyframes qrideStartReveal {
             from { opacity: 0; transform: translate3d(0, 16px, 0) scale(.985); filter: blur(3px); }
             to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
         }
-        @keyframes roadnoteBrandReveal {
+        @keyframes qrideBrandReveal {
             from { opacity: 0; transform: translate3d(0, -8px, 0); }
             to { opacity: 1; transform: translate3d(0, 0, 0); }
         }
-        @keyframes roadnoteBalanceGlow {
+        @keyframes qrideBalanceGlow {
             0%, 100% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
         }
         .start-overlay:not([hidden]) .start-screen > * {
-            animation: roadnoteStartReveal .62s cubic-bezier(.2,.75,.25,1) both;
+            animation: qrideStartReveal .62s cubic-bezier(.2,.75,.25,1) both;
         }
         .start-overlay:not([hidden]) .start-screen > .start-brand {
-            animation-name: roadnoteBrandReveal;
+            animation-name: qrideBrandReveal;
             animation-duration: .55s;
         }
         .start-overlay:not([hidden]) .start-screen > *:nth-child(1) { animation-delay: .02s; }
@@ -1044,7 +1044,7 @@
         .start-overlay:not([hidden]) .start-screen > *:nth-child(8) { animation-delay: .39s; }
         .start-balance-card {
             background-size: 180% 180%;
-            animation: roadnoteBalanceGlow 12s ease-in-out infinite;
+            animation: qrideBalanceGlow 12s ease-in-out infinite;
             transition: box-shadow .28s ease, transform .28s cubic-bezier(.2,.75,.25,1);
         }
         .start-balance-card {
@@ -1110,32 +1110,32 @@
         }
 
         
-        /* Roadnote mini-runner */
-        .roadnote-game { width:100%; margin:0; padding:13px; border:1px solid #dfe7f1; border-radius:20px; background:linear-gradient(155deg,#fff 0%,#f4f8fd 100%); box-shadow:0 8px 22px rgba(31,65,105,.045); text-align:left; }
-        .roadnote-game-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
-        .roadnote-game-kicker { color:#2787f5; font-family:inherit; font-size:9px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; }
-        .roadnote-game-energy { display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border:1px solid #dce8f8;border-radius:11px;background:#edf5ff;color:#2868ad;font-size:14px;font-weight:850;font-variant-numeric:tabular-nums; }
-        .roadnote-game-energy svg,.game-streak-reward svg { width:16px;height:16px;display:block;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round; }
-        .roadnote-game-record { position:absolute;z-index:2;right:9px;top:9px;padding:6px 9px;border:1px solid #dce8f8;border-radius:10px;background:rgba(255,255,255,.94);color:#2868ad;font-size:12px;font-weight:800; }
-        .roadnote-game.is-playing .roadnote-game-record { display:none; }
-        .roadnote-game-stage { position:relative; overflow:hidden; width:100%; border:1px solid #dce6f2; border-radius:15px; background:linear-gradient(180deg,#eaf5ff 0%,#f7fbff 78%,#e8f1fb 100%); touch-action:pan-y; }
-        .roadnote-game-canvas { display:block; width:100%; height:158px; touch-action:manipulation; }
-        .roadnote-game-hud {position:absolute;z-index:2;top:9px;left:9px;right:9px;display:flex;justify-content:space-between;align-items:center;gap:8px;pointer-events:none}
-        .roadnote-game-hud span {display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border:1px solid #d8e5f4;border-radius:10px;background:rgba(255,255,255,.94);color:#29415b;font-size:12px;font-weight:850;box-shadow:0 2px 7px #29415b0a}
-        .roadnote-game-hud svg {display:block;width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
-        .roadnote-game-hud.is-hidden {display:none}
-        .roadnote-game-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; padding:16px; background:rgba(238,246,255,.82); color:#26384d; text-align:center; }
-        .roadnote-game-overlay[hidden] { display:none!important; }
-        .roadnote-game-overlay strong { font-size:20px; line-height:1.2; font-weight:850; }
-        .roadnote-game-overlay span { color:#526a84; font-size:13px; line-height:1.4; }
-        .roadnote-game-overlay .roadnote-game-start { margin-top:5px;min-height:40px;padding:9px 22px;border:0;border-radius:12px;background:#2787f5;color:#fff;font:inherit;font-size:14px;font-weight:850;box-shadow:0 6px 15px #2787f533;touch-action:manipulation; }
+        /* QRide mini-runner */
+        .qride-game { width:100%; margin:0; padding:13px; border:1px solid #dfe7f1; border-radius:20px; background:linear-gradient(155deg,#fff 0%,#f4f8fd 100%); box-shadow:0 8px 22px rgba(31,65,105,.045); text-align:left; }
+        .qride-game-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+        .qride-game-kicker { color:#2787f5; font-family:inherit; font-size:9px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; }
+        .qride-game-energy { display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border:1px solid #dce8f8;border-radius:11px;background:#edf5ff;color:#2868ad;font-size:14px;font-weight:850;font-variant-numeric:tabular-nums; }
+        .qride-game-energy svg,.game-streak-reward svg { width:16px;height:16px;display:block;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round; }
+        .qride-game-record { position:absolute;z-index:2;right:9px;top:9px;padding:6px 9px;border:1px solid #dce8f8;border-radius:10px;background:rgba(255,255,255,.94);color:#2868ad;font-size:12px;font-weight:800; }
+        .qride-game.is-playing .qride-game-record { display:none; }
+        .qride-game-stage { position:relative; overflow:hidden; width:100%; border:1px solid #dce6f2; border-radius:15px; background:linear-gradient(180deg,#eaf5ff 0%,#f7fbff 78%,#e8f1fb 100%); touch-action:pan-y; }
+        .qride-game-canvas { display:block; width:100%; height:158px; touch-action:manipulation; }
+        .qride-game-hud {position:absolute;z-index:2;top:9px;left:9px;right:9px;display:flex;justify-content:space-between;align-items:center;gap:8px;pointer-events:none}
+        .qride-game-hud span {display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border:1px solid #d8e5f4;border-radius:10px;background:rgba(255,255,255,.94);color:#29415b;font-size:12px;font-weight:850;box-shadow:0 2px 7px #29415b0a}
+        .qride-game-hud svg {display:block;width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+        .qride-game-hud.is-hidden {display:none}
+        .qride-game-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; padding:16px; background:rgba(238,246,255,.82); color:#26384d; text-align:center; }
+        .qride-game-overlay[hidden] { display:none!important; }
+        .qride-game-overlay strong { font-size:20px; line-height:1.2; font-weight:850; }
+        .qride-game-overlay span { color:#526a84; font-size:13px; line-height:1.4; }
+        .qride-game-overlay .qride-game-start { margin-top:5px;min-height:40px;padding:9px 22px;border:0;border-radius:12px;background:#2787f5;color:#fff;font:inherit;font-size:14px;font-weight:850;box-shadow:0 6px 15px #2787f533;touch-action:manipulation; }
         /* Reusable reward/rules card for the game preview; never shown over active gameplay. */
-        .roadnote-game-reward-preview{position:relative;z-index:1;width:min(100%,310px);margin:4px 0 1px;padding:11px 14px;border:1px solid rgba(39,135,245,.24);border-radius:14px;background:rgba(255,255,255,.94);box-shadow:0 5px 18px rgba(35,76,126,.10);text-align:left}
-        .roadnote-game-reward-label{display:block;margin-bottom:4px;color:#2787f5;font-size:9px;font-weight:900;letter-spacing:1.5px}
-        .roadnote-game-reward-title{display:block;color:#24364a;font-size:15px;font-weight:900;line-height:1.25}
-        .roadnote-game-reward-caption{display:block;margin-top:4px;color:#65758a;font-size:11px;line-height:1.35}
-        .roadnote-game-hud #roadnote-game-reward{display:none!important}
-        .roadnote-game-overlay .roadnote-game-start:active {transform:scale(.97);background:#176dcc}
+        .qride-game-reward-preview{position:relative;z-index:1;width:min(100%,310px);margin:4px 0 1px;padding:11px 14px;border:1px solid rgba(39,135,245,.24);border-radius:14px;background:rgba(255,255,255,.94);box-shadow:0 5px 18px rgba(35,76,126,.10);text-align:left}
+        .qride-game-reward-label{display:block;margin-bottom:4px;color:#2787f5;font-size:9px;font-weight:900;letter-spacing:1.5px}
+        .qride-game-reward-title{display:block;color:#24364a;font-size:15px;font-weight:900;line-height:1.25}
+        .qride-game-reward-caption{display:block;margin-top:4px;color:#65758a;font-size:11px;line-height:1.35}
+        .qride-game-hud #qride-game-reward{display:none!important}
+        .qride-game-overlay .qride-game-start:active {transform:scale(.97);background:#176dcc}
         .game-streak-days{grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:0}
         .game-streak-day{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:66px;padding:8px 2px;border:1px solid #e3e8ef;border-radius:12px;background:#f2f3f4;text-align:center}
         .game-streak-day span{display:block;color:#424142;font-size:16px;font-weight:850;line-height:1}
@@ -1147,7 +1147,7 @@
         .game-streak-reward{display:inline-flex;align-items:center;gap:2px;color:#6b7c90;font-size:10px;font-weight:800;line-height:1}
         .game-streak-day.is-active .game-streak-reward{color:#b86a12}
         .game-streak-day.is-done .game-streak-reward{color:#176dcc}
-        @media (prefers-reduced-motion:reduce) { .roadnote-game * { animation:none!important; transition:none!important; } }
+        @media (prefers-reduced-motion:reduce) { .qride-game * { animation:none!important; transition:none!important; } }
 
         .game-streak-card{width:100%;margin:0;padding:16px;border:1px solid #e3e8ef;border-radius:18px;background:#fff;box-shadow:none;color:#424142;text-align:left}
         .game-streak-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
@@ -1159,19 +1159,19 @@
         .game-streak-day.is-done{border-color:#b9d9fa;background:#eaf4ff}
         .game-streak-day span{display:block;color:#727983;font-size:11px}.game-streak-day strong{display:block;margin-top:3px;color:#424142;font-size:13px}
         .game-streak-day.is-active strong,.game-streak-day.is-done strong{color:#176dcc}
-        .roadnote-game-stage{position:relative}
-        .roadnote-game-hud{position:absolute;z-index:2;top:7px;left:7px;right:7px;display:flex;justify-content:space-between;align-items:center;gap:7px;pointer-events:none}
-        .roadnote-game-hud span{padding:5px 8px;border:1px solid #d8e5f4;border-radius:9px;background:rgba(255,255,255,.91);color:#29415b;font-size:10px;font-weight:850;box-shadow:0 2px 7px #29415b0a}
-        .roadnote-game-hud.is-hidden{display:none}
-        .roadnote-game-hud .is-close{background:#fff3d6;border-color:#f1d58d;color:#8b5b00}
-        .roadnote-game-overlay{z-index:3}
-        .roadnote-game-toast-host{position:fixed;z-index:30000;top:calc(env(safe-area-inset-top,0px) + 14px);left:14px;right:14px;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
-        .roadnote-game-toast{display:flex;align-items:center;gap:10px;width:min(100%,440px);box-sizing:border-box;padding:12px 14px;border:1px solid #3a4657;border-radius:15px;background:#202936;color:#fff;box-shadow:0 12px 36px #0c1b2b30;animation:roadnoteToastIn .22s ease both}
-        .faq-inline-bolt{display:inline-block;width:15px;height:15px;vertical-align:-3px;fill:none;stroke:#2787f5;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.roadnote-game-toast-icon svg{display:block;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.roadnote-game-toast-icon{font-size:22px;line-height:1}.roadnote-game-toast strong{display:block;font-size:13px;line-height:1.3}.roadnote-game-toast small{display:block;margin-top:3px;color:#d5dce5;font-size:11px;line-height:1.35}
-        .roadnote-game-toast.is-leaving{animation:roadnoteToastOut .18s ease both}
-        @keyframes roadnoteToastIn{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-        @keyframes roadnoteToastOut{to{opacity:0;transform:translateY(-6px) scale(.98)}}
-        @media(prefers-reduced-motion:reduce){.roadnote-game-toast,.roadnote-game-toast.is-leaving{animation:none!important}}
+        .qride-game-stage{position:relative}
+        .qride-game-hud{position:absolute;z-index:2;top:7px;left:7px;right:7px;display:flex;justify-content:space-between;align-items:center;gap:7px;pointer-events:none}
+        .qride-game-hud span{padding:5px 8px;border:1px solid #d8e5f4;border-radius:9px;background:rgba(255,255,255,.91);color:#29415b;font-size:10px;font-weight:850;box-shadow:0 2px 7px #29415b0a}
+        .qride-game-hud.is-hidden{display:none}
+        .qride-game-hud .is-close{background:#fff3d6;border-color:#f1d58d;color:#8b5b00}
+        .qride-game-overlay{z-index:3}
+        .qride-game-toast-host{position:fixed;z-index:30000;top:calc(env(safe-area-inset-top,0px) + 14px);left:14px;right:14px;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+        .qride-game-toast{display:flex;align-items:center;gap:10px;width:min(100%,440px);box-sizing:border-box;padding:12px 14px;border:1px solid #3a4657;border-radius:15px;background:#202936;color:#fff;box-shadow:0 12px 36px #0c1b2b30;animation:qrideToastIn .22s ease both}
+        .faq-inline-bolt{display:inline-block;width:15px;height:15px;vertical-align:-3px;fill:none;stroke:#2787f5;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.qride-game-toast-icon svg{display:block;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.qride-game-toast-icon{font-size:22px;line-height:1}.qride-game-toast strong{display:block;font-size:13px;line-height:1.3}.qride-game-toast small{display:block;margin-top:3px;color:#d5dce5;font-size:11px;line-height:1.35}
+        .qride-game-toast.is-leaving{animation:qrideToastOut .18s ease both}
+        @keyframes qrideToastIn{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+        @keyframes qrideToastOut{to{opacity:0;transform:translateY(-6px) scale(.98)}}
+        @media(prefers-reduced-motion:reduce){.qride-game-toast,.qride-game-toast.is-leaving{animation:none!important}}
 
         /* Start screen design system: consistent spacing and card rhythm. */
         .start-overlay {
@@ -1254,31 +1254,31 @@
         }
 
         /* Keep the character and record visible; reward is a simple bottom-right note, not a card. */
-        .roadnote-game { margin: 0; padding: 12px; border-radius: 18px; }
-        .roadnote-game-head { margin-bottom: 8px; }
-        .roadnote-game-stage { isolation: isolate; }
-        .roadnote-game-canvas { height: 180px !important; }
-        .roadnote-game-record { z-index: 5 !important; top: 8px !important; right: 8px !important; }
-        .roadnote-game-overlay { gap: 5px !important; padding: 30px 10px 25px !important; justify-content: center !important; background: rgba(238,246,255,.48) !important; }
-        .roadnote-game-overlay > strong { font-size: 17px !important; line-height: 1.1 !important; }
-        .roadnote-game-overlay > span { font-size: 11px !important; line-height: 1.2 !important; }
-        .roadnote-game-overlay .roadnote-game-reward-preview {
+        .qride-game { margin: 0; padding: 12px; border-radius: 18px; }
+        .qride-game-head { margin-bottom: 8px; }
+        .qride-game-stage { isolation: isolate; }
+        .qride-game-canvas { height: 180px !important; }
+        .qride-game-record { z-index: 5 !important; top: 8px !important; right: 8px !important; }
+        .qride-game-overlay { gap: 5px !important; padding: 30px 10px 25px !important; justify-content: center !important; background: rgba(238,246,255,.48) !important; }
+        .qride-game-overlay > strong { font-size: 17px !important; line-height: 1.1 !important; }
+        .qride-game-overlay > span { font-size: 11px !important; line-height: 1.2 !important; }
+        .qride-game-overlay .qride-game-reward-preview {
             position: absolute !important; z-index: 4 !important; right: 8px !important; bottom: 7px !important;
             box-sizing: border-box !important; width: auto !important; max-width: 70% !important; min-width: 0 !important;
             margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important;
             background: transparent !important; box-shadow: none !important; text-align: right !important;
             pointer-events: none !important;
         }
-        .roadnote-game-overlay .roadnote-game-reward-label { display: none !important; }
-        .roadnote-game-overlay .roadnote-game-reward-title {
+        .qride-game-overlay .qride-game-reward-label { display: none !important; }
+        .qride-game-overlay .qride-game-reward-title {
             display: block !important; margin: 0 !important; color: #176dcc !important;
             font-size: 10px !important; line-height: 1.1 !important; font-weight: 900 !important;
         }
-        .roadnote-game-overlay .roadnote-game-reward-caption {
+        .qride-game-overlay .qride-game-reward-caption {
             display: block !important; margin-top: 2px !important; color: #526a84 !important;
             font-size: 8px !important; line-height: 1.1 !important;
         }
-        .roadnote-game-overlay .roadnote-game-start {
+        .qride-game-overlay .qride-game-start {
             position: relative !important; z-index: 1 !important; flex: 0 0 auto !important;
             min-height: 34px !important; margin: 0 !important; padding: 7px 20px !important;
             font-size: 13px !important; line-height: 1.1 !important;
@@ -1389,7 +1389,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     <div class="info-sheet faq-sheet">
         <header class="info-sheet-header">
             <div>
-                <span class="faq-kicker">ROADNOTE · СПРАВКА</span>
+                <span class="faq-kicker">QRIDE · СПРАВКА</span>
                 <h2 class="info-sheet-title" id="faq-title">Частые вопросы</h2>
                 <p class="info-sheet-subtitle">Ответы о сканировании, тарифах и правилах использования.</p>
             </div>
@@ -1397,30 +1397,30 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         </header>
         <div class="faq-list">
             <details open><summary><span class="faq-number">01</span><span>Как отсканировать QR-код?</span></summary><div class="faq-answer"><ol><li>Нажми «Сканировать новый QR-код».</li><li>Разреши доступ к камере и наведи её на QR-код целиком.</li><li>Дождись загрузки данных. Для сканирования нужен интернет.</li></ol></div></details>
-            <details><summary><span class="faq-number">02</span><span>Почему QR-код не считывается?</span></summary><div class="faq-answer"><p>Проверь резкость изображения, освещение и интернет. QR-код должен целиком попадать в кадр. Если ошибка повторяется, попробуй открыть сканер заново. Roadnote зависит от доступности внешнего сервиса, поэтому отдельные коды могут временно не обрабатываться.</p></div></details>
+            <details><summary><span class="faq-number">02</span><span>Почему QR-код не считывается?</span></summary><div class="faq-answer"><p>Проверь резкость изображения, освещение и интернет. QR-код должен целиком попадать в кадр. Если ошибка повторяется, попробуй открыть сканер заново. QRide зависит от доступности внешнего сервиса, поэтому отдельные коды могут временно не обрабатываться.</p></div></details>
             <details><summary><span class="faq-number">03</span><span>Как начисляются бесплатные сканы?</span></summary><div class="faq-answer"><p>При первом создании аккаунта начисляются 3 приветственных скана. Также доступен один бесплатный скан в день. Пакетные сканы расходуются прежде дневного бесплатного скана. Неиспользованные приветственные и пакетные сканы не сгорают по ежедневному лимиту.</p></div></details>
             <details><summary><span class="faq-number">04</span><span>Как работают пакеты сканирований?</span></summary><div class="faq-answer"><p>После подтверждённого начисления покупки в баланс добавляется указанное в пакете число сканов. Один успешный разбор QR-кода расходует один пакетный скан, если у тебя нет активного безлимита. Неудачная попытка получить данные не должна списывать скан.</p></div></details>
             <details><summary><span class="faq-number">05</span><span>Что даёт подписка?</span></summary><div class="faq-answer"><p>Подписка открывает безлимитное сканирование на выбранный срок — 1, 3 или 6 месяцев. Пока подписка активна, пакетные сканы не расходуются. Дата окончания отображается в карточке баланса. Если продлить активную подписку, новый срок добавляется к оставшемуся.</p></div></details>
-            <details><summary><span class="faq-number">06</span><span>Как работает реферальная система?</span></summary><div class="faq-answer"><p>Поделись своей ссылкой из блока «Пригласи друга». Если новый пользователь впервые откроет Roadnote по твоей ссылке, его аккаунт будет связан с тобой. После первого успешного сканирования друга тебе начислят 3 бонусных скана. Повторные сканирования этого пользователя новых бонусов не дают.</p></div></details>
+            <details><summary><span class="faq-number">06</span><span>Как работает реферальная система?</span></summary><div class="faq-answer"><p>Поделись своей ссылкой из блока «Пригласи друга». Если новый пользователь впервые откроет QRide по твоей ссылке, его аккаунт будет связан с тобой. После первого успешного сканирования друга тебе начислят 3 бонусных скана. Повторные сканирования этого пользователя новых бонусов не дают.</p></div></details>
             <details><summary><span class="faq-number">07</span><span>Как работает скидка на первую покупку?</span></summary><div class="faq-answer"><p>Скидка действует до первого подтверждённого подключения любого платного тарифа. После начисления цены всех тарифов переключаются на обычные. Если оплата не состоялась, первая покупка ещё не считается совершённой и скидка сохраняется.</p></div></details>
-            <details><summary><span class="faq-number">08</span><span>Как работает серия ежедневных заходов?</span></summary><div class="faq-answer"><p>Открывай Roadnote каждый день — запускать игру необязательно. За заход начисляются игровые попытки: в первый и второй день по одной, в третий и четвёртый по две, в пятый и шестой по три, а начиная с седьмого — по пять каждый день. Если пропустить целый день, серия начнётся заново. Уже полученные попытки не сгорают.</p></div></details>
-            <details><summary><span class="faq-number">09</span><span>Как получить дополнительные игровые попытки?</span></summary><div class="faq-answer"><p>За каждый успешный скан начисляются ещё 3 <svg class="faq-inline-bolt" viewBox="0 0 24 24" aria-label="игровые попытки"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> игровых попытки. Попытки также выдаются за ежедневные заходы в Roadnote. Их остаток виден прямо в игре, а накопленные попытки сохраняются.</p></div></details>
-            <details><summary><span class="faq-number">10</span><span>Как получить бесплатный скан за игру?</span></summary><div class="faq-answer"><p>Набери 3000 очков за один раунд — и получишь один бесплатный скан. Награда начисляется не чаще одного раза в день. Твой рекорд и общий прогресс не сбрасываются. Когда бесплатный скан будет начислен, Roadnote покажет уведомление.</p></div></details>
-            <details><summary><span class="faq-number">11</span><span>Можно ли оплатить проезд через Roadnote?</span></summary><div class="faq-answer"><p>Нет. Roadnote не продаёт билеты, не принимает оплату за проезд и не является платёжным средством. Приложение предназначено для считывания и отображения информации из транспортных QR-кодов.</p></div></details>
-            <details><summary><span class="faq-number">12</span><span>Насколько точны данные?</span></summary><div class="faq-answer"><p>Roadnote показывает данные, полученные от внешнего сервиса, и не гарантирует их постоянную доступность, полноту или точность. Используй приложение на свой страх и риск и самостоятельно проверяй важную информацию. Roadnote не заменяет официальный билет или подтверждение оплаты.</p></div></details>
-            <details><summary><span class="faq-number">13</span><span>Что важно знать о безопасности и ответственности?</span></summary><div class="faq-answer"><p>Не используй отображённую информацию как единственное подтверждение оплаты. За фактическую оплату проезда отвечают официальные транспортные сервисы и перевозчик. Roadnote — информационный инструмент; использование приложения не создаёт платёжных обязательств и не гарантирует принятие QR-кода перевозчиком.</p></div></details>
+            <details><summary><span class="faq-number">08</span><span>Как работает серия ежедневных заходов?</span></summary><div class="faq-answer"><p>Открывай QRide каждый день — запускать игру необязательно. За заход начисляются игровые попытки: в первый и второй день по одной, в третий и четвёртый по две, в пятый и шестой по три, а начиная с седьмого — по пять каждый день. Если пропустить целый день, серия начнётся заново. Уже полученные попытки не сгорают.</p></div></details>
+            <details><summary><span class="faq-number">09</span><span>Как получить дополнительные игровые попытки?</span></summary><div class="faq-answer"><p>За каждый успешный скан начисляются ещё 3 <svg class="faq-inline-bolt" viewBox="0 0 24 24" aria-label="игровые попытки"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> игровых попытки. Попытки также выдаются за ежедневные заходы в QRide. Их остаток виден прямо в игре, а накопленные попытки сохраняются.</p></div></details>
+            <details><summary><span class="faq-number">10</span><span>Как получить бесплатный скан за игру?</span></summary><div class="faq-answer"><p>Набери 3000 очков за один раунд — и получишь один бесплатный скан. Награда начисляется не чаще одного раза в день. Твой рекорд и общий прогресс не сбрасываются. Когда бесплатный скан будет начислен, QRide покажет уведомление.</p></div></details>
+            <details><summary><span class="faq-number">11</span><span>Можно ли оплатить проезд через QRide?</span></summary><div class="faq-answer"><p>Нет. QRide не продаёт билеты, не принимает оплату за проезд и не является платёжным средством. Приложение предназначено для считывания и отображения информации из транспортных QR-кодов.</p></div></details>
+            <details><summary><span class="faq-number">12</span><span>Насколько точны данные?</span></summary><div class="faq-answer"><p>QRide показывает данные, полученные от внешнего сервиса, и не гарантирует их постоянную доступность, полноту или точность. Используй приложение на свой страх и риск и самостоятельно проверяй важную информацию. QRide не заменяет официальный билет или подтверждение оплаты.</p></div></details>
+            <details><summary><span class="faq-number">13</span><span>Что важно знать о безопасности и ответственности?</span></summary><div class="faq-answer"><p>Не используй отображённую информацию как единственное подтверждение оплаты. За фактическую оплату проезда отвечают официальные транспортные сервисы и перевозчик. QRide — информационный инструмент; использование приложения не создаёт платёжных обязательств и не гарантирует принятие QR-кода перевозчиком.</p></div></details>
         </div>
-        <p class="faq-footer">Roadnote — информационный инструмент, а не сервис оплаты проезда.</p>
+        <p class="faq-footer">QRide — информационный инструмент, а не сервис оплаты проезда.</p>
     </div>
 </section>
 
 
 <section class="admin-panel-overlay" id="admin-panel-overlay" role="dialog" aria-modal="true" aria-labelledby="admin-panel-title" hidden>
     <header class="admin-panel-header">
-        <button class="admin-panel-back" id="admin-panel-back" type="button" aria-label="Вернуться в Roadnote">‹</button>
-        <div class="admin-panel-title" id="admin-panel-title">Пользователи Roadnote</div>
+        <button class="admin-panel-back" id="admin-panel-back" type="button" aria-label="Вернуться в QRide">‹</button>
+        <div class="admin-panel-title" id="admin-panel-title">Пользователи QRide</div>
     </header>
-    <iframe class="admin-panel-frame" id="admin-panel-frame" title="Панель пользователей Roadnote"></iframe>
+    <iframe class="admin-panel-frame" id="admin-panel-frame" title="Панель пользователей QRide"></iframe>
 </section>
 
 <section class="start-overlay" id="start-overlay" role="dialog" aria-modal="true" aria-labelledby="start-title">
@@ -1430,7 +1430,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                 <img src="assets/vk-app-icon.jpg" alt="" width="48" height="48">
             </div>
             <div>
-                <div class="start-brand-name">Roadnote</div>
+                <div class="start-brand-name">QRide</div>
                 <div class="start-brand-caption">Все данные поездки — одним сканированием</div>
             </div>
         </div>
@@ -1468,7 +1468,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
 
 
         <section class="start-offers-section" aria-labelledby="start-offers-title">
-            <div class="start-offers-section-heading"><div><div class="start-section-kicker">ROADNOTE PLUS</div><h3 id="start-offers-title">Тарифы</h3></div></div>
+            <div class="start-offers-section-heading"><div><div class="start-section-kicker">QRIDE PLUS</div><h3 id="start-offers-title">Тарифы</h3></div></div>
             <p class="start-offers-lead" id="start-offers-lead">Выбирай удобный формат: отдельные сканирования или безлимит.</p>
             <div id="start-offers-groups">
                 <div class="start-offer-group"><div class="start-offer-group-title"><span class="start-offer-group-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7.5 12 3l8 4.5-8 4.5-8-4.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m4 12 8 4.5 8-4.5M4 16.5 12 21l8-4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Пакеты сканирований</span></div><div class="start-offer-grid">
@@ -1487,7 +1487,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
 
         <section class="start-referral" aria-labelledby="start-referral-title">
             <div class="start-referral-title" id="start-referral-title">Пригласи друга</div>
-            <p class="start-referral-description">Поделись Roadnote. Когда друг впервые успешно отсканирует QR-код, тебе начислим 3 скана.</p>
+            <p class="start-referral-description">Поделись QRide. Когда друг впервые успешно отсканирует QR-код, тебе начислим 3 скана.</p>
             <input class="start-referral-link" id="start-referral-link" type="text" readonly aria-label="Твоя реферальная ссылка" value="Загружаем ссылку…">
             <div class="start-referral-actions">
                 <button class="start-referral-button start-referral-button-secondary start-referral-qr-icon" id="start-referral-qr-toggle" type="button" aria-label="Показать QR-код ссылки" title="QR-код" aria-expanded="false" disabled><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v2M17 20h4M20 18v3"/></svg></button>
@@ -1525,24 +1525,24 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             </button>
         </div>
 
-        <section class="roadnote-game" id="roadnote-game" aria-labelledby="roadnote-game-title">
-            <div class="roadnote-game-head">
-                <div class="roadnote-game-kicker" id="roadnote-game-title">Roadnote Arcade</div>
-                <div class="roadnote-game-energy" aria-label="Запас игровых попыток"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg><span id="roadnote-game-energy-count">—</span></div>
+        <section class="qride-game" id="qride-game" aria-labelledby="qride-game-title">
+            <div class="qride-game-head">
+                <div class="qride-game-kicker" id="qride-game-title">QRide Arcade</div>
+                <div class="qride-game-energy" aria-label="Запас игровых попыток"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg><span id="qride-game-energy-count">—</span></div>
             </div>
-            <div class="roadnote-game-stage">
-                <div class="roadnote-game-record">Рекорд: <span id="roadnote-game-record">0</span></div>
-                <canvas class="roadnote-game-canvas" id="roadnote-game-canvas" width="640" height="240" aria-label="Мини-игра: нажимай, чтобы перепрыгивать препятствия"></canvas>
-                <div class="roadnote-game-hud is-hidden" id="roadnote-game-hud" aria-live="polite"><span id="roadnote-game-score">Счёт: 0</span><span id="roadnote-game-reward">3000 очков = бесплатный скан</span></div>
-                <div class="roadnote-game-overlay" id="roadnote-game-overlay">
-                    <strong id="roadnote-game-overlay-title">Roadnote Runner</strong>
-                    <span id="roadnote-game-overlay-text">Перепрыгивай препятствия и набирай очки.</span>
-                    <div class="roadnote-game-reward-preview" data-game-rule="reward">
-                        <span class="roadnote-game-reward-label">НАГРАДА</span>
-                        <strong class="roadnote-game-reward-title">3000 очков → 1 бесплатный скан</strong>
-                        <span class="roadnote-game-reward-caption">За один раунд · не чаще одного раза в день</span>
+            <div class="qride-game-stage">
+                <div class="qride-game-record">Рекорд: <span id="qride-game-record">0</span></div>
+                <canvas class="qride-game-canvas" id="qride-game-canvas" width="640" height="240" aria-label="Мини-игра: нажимай, чтобы перепрыгивать препятствия"></canvas>
+                <div class="qride-game-hud is-hidden" id="qride-game-hud" aria-live="polite"><span id="qride-game-score">Счёт: 0</span><span id="qride-game-reward">3000 очков = бесплатный скан</span></div>
+                <div class="qride-game-overlay" id="qride-game-overlay">
+                    <strong id="qride-game-overlay-title">QRide Runner</strong>
+                    <span id="qride-game-overlay-text">Перепрыгивай препятствия и набирай очки.</span>
+                    <div class="qride-game-reward-preview" data-game-rule="reward">
+                        <span class="qride-game-reward-label">НАГРАДА</span>
+                        <strong class="qride-game-reward-title">3000 очков → 1 бесплатный скан</strong>
+                        <span class="qride-game-reward-caption">За один раунд · не чаще одного раза в день</span>
                     </div>
-                    <button class="roadnote-game-start" id="roadnote-game-start" type="button">Играть</button>
+                    <button class="qride-game-start" id="qride-game-start" type="button">Играть</button>
                 </div>
             </div>
         </section>
@@ -1841,7 +1841,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     function getVkAuthorizationHeader() {
         const launchParams = window.location.search.slice(1);
         if (!launchParams) {
-            throw new Error('Не найдены параметры VK. Откройте Roadnote через VK Mini App.');
+            throw new Error('Не найдены параметры VK. Откройте QRide через VK Mini App.');
         }
         const encoded = btoa(unescape(encodeURIComponent(launchParams)))
             .replace(/\+/g, '-')
@@ -2175,10 +2175,10 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                 scanSessionReady = true;
                 updateScanBalance(payload.scanBalance ?? 0);
             }
-            throw new Error(payload.error || `Сервер Roadnote вернул HTTP ${response.status}`);
+            throw new Error(payload.error || `Сервер QRide вернул HTTP ${response.status}`);
         }
 
-        window.dispatchEvent(new CustomEvent('roadnote:scan-success'));
+        window.dispatchEvent(new CustomEvent('qride:scan-success'));
         const source = payload?.data || {};
         return {
             vehicleType: normalizeTransportType(source.transportType || source.vehicleType || ''),
@@ -2244,7 +2244,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         if (startOverlayElement.hidden) return;
         startOverlayElement.hidden = true;
         pageBody.classList.remove('start-overlay-open');
-        window.history.pushState({ roadnoteScreen: 'ticket' }, '', window.location.href);
+        window.history.pushState({ qrideScreen: 'ticket' }, '', window.location.href);
     }
 
     function showStartOverlay() {
@@ -2254,7 +2254,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     }
 
     window.addEventListener('popstate', function (event) {
-        if (event.state && event.state.roadnoteScreen === 'start') {
+        if (event.state && event.state.qrideScreen === 'start') {
             showStartOverlay();
         }
     });
@@ -2264,14 +2264,14 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         scanProcessing = true;
         refreshScanButton();
         try {
-            if (typeof window.roadnoteScanQr !== 'function') {
+            if (typeof window.qrideScanQr !== 'function') {
                 console.warn('VK QR scanner is unavailable.');
                 return;
             }
             while (!startOverlayElement.hidden) {
                 let code;
                 try {
-                    code = await window.roadnoteScanQr();
+                    code = await window.qrideScanQr();
                 } catch (error) {
                     // Closing/cancelling the native scanner is not an error to show in the UI.
                     console.info('VK QR scanning ended:', error);
@@ -2317,7 +2317,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             ].map(([text, icon, color]) => ({ text, icon, color, category: 'warm', weight: 30 })),
             // 20% — лёгкий юмор
             ...[
-                ['Ты открыл Roadnote. Уже одно дело сделано.', 'check-circle', 'sage'],
+                ['Ты открыл QRide. Уже одно дело сделано.', 'check-circle', 'sage'],
                 ['Пусть сегодня всё работает с первого раза. Да, мы тоже на это надеемся.', 'settings', 'blue'],
                 ['Сначала кофе. Потом великие дела. Или просто дела — тоже считается.', 'coffee', 'brown'],
                 ['Энергии побольше, поводов её тратить — поменьше.', 'battery-charging', 'mint'],
@@ -2398,7 +2398,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                 ['Хорошей дороги! И пусть она ведёт туда, куда тебе действительно хочется.', 'map-pin', 'sage'],
                 ['Пусть поездка пройдёт быстрее, чем ты успеешь проверить время.', 'train-front', 'lilac']
             ].map(([text, icon, color]) => ({ text, icon, color, category: 'transport', weight: 7 })),
-            // 8% — короткие реплики Roadnote
+            // 8% — короткие реплики QRide
             ...[
                 ['Ну что, поехали?', 'arrow-right-circle', 'blue'],
                 ['О, снова ты.', 'smile', 'pink'],
@@ -2408,7 +2408,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                 ['Хорошего тебе дня. Без всяких условий.', 'sun', 'peach'],
                 ['Ладно, не отвлекаю. Удачи!', 'hand-heart', 'pink'],
                 ['Заглядывай, если что.', 'message-circle', 'blue']
-            ].map(([text, icon, color]) => ({ text, icon, color, category: 'roadnote', weight: 8 })),
+            ].map(([text, icon, color]) => ({ text, icon, color, category: 'qride', weight: 8 })),
             // 5% — стартовая скидка; дополнительно проверяется доступность промо
             ...[
                 ['Начать пользоваться платными возможностями сейчас выгоднее.', 'badge-percent', 'peach'],
@@ -2493,22 +2493,22 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             sage: '#9CB9A5', yellow: '#C9B779', blue: '#9DB9D5',
             lilac: '#B7A8CE', mint: '#91BDB1', brown: '#B9A18F'
         };
-        function getRoadnoteSeason(date) {
+        function getQRideSeason(date) {
             const month = date.getMonth();
             if (month >= 2 && month <= 4) return 'spring';
             if (month >= 5 && month <= 7) return 'summer';
             if (month >= 8 && month <= 10) return 'autumn';
             return 'winter';
         }
-        function getRoadnotePeriod(hour) {
+        function getQRidePeriod(hour) {
             if (hour >= 5 && hour < 11) return 'morning';
             if (hour >= 11 && hour < 17) return 'day';
             return 'evening';
         }
-        function isRoadnotePromoAvailable() {
+        function isQRidePromoAvailable() {
             // Do not show commercial messages until the authenticated tariff state confirms
             // that the first purchase has not happened.
-            if (window.roadnoteHasPurchased !== false) return false;
+            if (window.qrideHasPurchased !== false) return false;
             const offers = Array.from(document.querySelectorAll('.start-offer[data-regular-price][data-promo-price]'));
             if (!offers.length) return false;
             return offers.some(offer => {
@@ -2519,11 +2519,11 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                 return regular > promo && current === promo;
             });
         }
-        function chooseRoadnoteMoodMessage() {
+        function chooseQRideMoodMessage() {
             const now = new Date();
-            const period = getRoadnotePeriod(now.getHours());
-            const season = getRoadnoteSeason(now);
-            const promoAvailable = isRoadnotePromoAvailable();
+            const period = getQRidePeriod(now.getHours());
+            const season = getQRideSeason(now);
+            const promoAvailable = isQRidePromoAvailable();
             const available = moodMessages.filter(item => {
                 if (item.category === 'time' && item.period !== period) return false;
                 if (item.category === 'weekday' && item.weekday !== now.getDay()) return false;
@@ -2532,10 +2532,10 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                 return true;
             });
             let recent = [];
-            try { recent = JSON.parse(sessionStorage.getItem('roadnoteMoodRecent') || '[]'); } catch (_) {}
+            try { recent = JSON.parse(sessionStorage.getItem('qrideMoodRecent') || '[]'); } catch (_) {}
             let pool = available.filter(item => !recent.includes(item.text));
             if (!pool.length) pool = available;
-            const weights = { warm: 30, humor: 20, time: 12, weekday: 10, season: 8, transport: 7, roadnote: 8, promo: 5 };
+            const weights = { warm: 30, humor: 20, time: 12, weekday: 10, season: 8, transport: 7, qride: 8, promo: 5 };
             const activeCategories = Array.from(new Set(pool.map(item => item.category)));
             const totalWeight = activeCategories.reduce((sum, category) => sum + weights[category], 0);
             let choice = Math.random() * totalWeight;
@@ -2547,20 +2547,20 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             const categoryPool = pool.filter(item => item.category === selectedCategory);
             const selected = categoryPool[Math.floor(Math.random() * categoryPool.length)];
             try {
-                sessionStorage.setItem('roadnoteMoodRecent', JSON.stringify([selected.text, ...recent.filter(text => text !== selected.text)].slice(0, 12)));
+                sessionStorage.setItem('qrideMoodRecent', JSON.stringify([selected.text, ...recent.filter(text => text !== selected.text)].slice(0, 12)));
             } catch (_) {}
             return selected;
         }
-        function renderRoadnoteMoodMessage() {
+        function renderQRideMoodMessage() {
             const moodMessage = document.getElementById('start-mood-message');
             if (!moodMessage) return;
-            const selected = chooseRoadnoteMoodMessage();
+            const selected = chooseQRideMoodMessage();
             const icon = moodIcons[selected.icon] || moodIcons.sparkles;
             moodMessage.innerHTML = '<span class="mood-message-icon" aria-hidden="true" style="color:' + (moodColors[selected.color] || moodColors.blue) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + icon + '</svg></span><span class="mood-message-text"></span>';
             moodMessage.querySelector('.mood-message-text').textContent = selected.text;
         }
-        window.refreshRoadnoteMoodMessage = renderRoadnoteMoodMessage;
-        renderRoadnoteMoodMessage();
+        window.refreshQRideMoodMessage = renderQRideMoodMessage;
+        renderQRideMoodMessage();
 
         loadFromLocalStorage();
         loadTimer();
@@ -2573,7 +2573,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         // a start-state entry in history so the device Back action reopens it.
         pageBody.classList.add('start-overlay-open');
         pageBody.classList.add('app-ready');
-        window.history.replaceState({ roadnoteScreen: 'start' }, '', window.location.href);
+        window.history.replaceState({ qrideScreen: 'start' }, '', window.location.href);
 
         // If a legacy handoff URL is received, process it here.
         const launchUrl = new URL(window.location.href);
@@ -2590,7 +2590,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     // This script is at the end of main.html, so the page markup already exists.
     // Do not wait for DOMContentLoaded: this document can be injected into the
     // already-running VK Mini App document, where that event may have fired.
-    (function bootRoadnoteMainPage() {
+    (function bootQRideMainPage() {
         if (typeof window.QRCode !== 'function' || !window.QRCode.CorrectLevel) {
             console.error('QRCode library did not load; ticket QR rendering is unavailable.');
             const status = document.getElementById('scan-status');
@@ -2617,7 +2617,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         if (!panel || !frame) return;
         if (panelTitle) panelTitle.textContent = title;
         frame.title = title;
-        frame.src = '/roadnote/admin/' + route + window.location.search;
+        frame.src = '/qride/admin/' + route + window.location.search;
         panel.hidden = false;
         document.body.classList.add('start-overlay-open');
       });
@@ -2642,13 +2642,13 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       if (panel) panel.hidden = true;
       if (frame) frame.src = 'about:blank';
       showStartOverlay();
-      window.history.pushState({ roadnoteScreen: 'start' }, '', window.location.href);
+      window.history.pushState({ qrideScreen: 'start' }, '', window.location.href);
     });
   }
 
   function setReferralLink(link) {
     currentReferralLink = String(link || '');
-    window.roadnoteReferralLink = currentReferralLink;
+    window.qrideReferralLink = currentReferralLink;
     if (referralLinkInput) referralLinkInput.value = currentReferralLink || 'Не удалось получить ссылку';
     if (referralShareButton) referralShareButton.disabled = !currentReferralLink;
     if (referralCopyButton) referralCopyButton.disabled = !currentReferralLink;
@@ -2672,7 +2672,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             quietZone: 8
           });
         } catch (error) {
-          console.warn('[Roadnote referral QR]', error);
+          console.warn('[QRide referral QR]', error);
         }
       }
     }
@@ -2688,7 +2688,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   }
 
   // Expose the current URL for the independent referral-button controller.
-  window.setRoadnoteReferralLink = setReferralLink;
+  window.setQRideReferralLink = setReferralLink;
 
   async function copyReferralLink() {
     if (!currentReferralLink) {
@@ -2764,9 +2764,9 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     }
   }
 
-  async function registerRoadnoteVisit() {
+  async function registerQRideVisit() {
     if (!window.vkBridge || typeof window.vkBridge.send !== 'function') {
-      setScannerStatus('Откройте Roadnote внутри VK Mini App, чтобы проверить баланс сканов.');
+      setScannerStatus('Откройте QRide внутри VK Mini App, чтобы проверить баланс сканов.');
       refreshScanButton();
       return;
     }
@@ -2822,11 +2822,11 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       }
 
       const session = await response.json();
-      if (typeof window.setRoadnoteTariffState === 'function') window.setRoadnoteTariffState(session);
-      if (typeof window.setRoadnoteReferralLink === 'function') {
-        window.setRoadnoteReferralLink(session.referralLink);
+      if (typeof window.setQRideTariffState === 'function') window.setQRideTariffState(session);
+      if (typeof window.setQRideReferralLink === 'function') {
+        window.setQRideReferralLink(session.referralLink);
       } else {
-        console.error('Roadnote referral controls were not initialized.');
+        console.error('QRide referral controls were not initialized.');
       }
       scanSessionReady = true;
       updateScanBalance(session.scanBalance, session.subscriptionUntil, session.unlimited, session.subscriptionActive);
@@ -2834,7 +2834,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       restoreLatestTicketFromHistory(session.lastScan);
 
       try {
-        sessionStorage.setItem('roadnoteAdminForNavigation', session.isAdmin === true ? '1' : '0');
+        sessionStorage.setItem('qrideAdminForNavigation', session.isAdmin === true ? '1' : '0');
       } catch (_) {}
       if (session.isAdmin === true) showAdminTools();
       if (!scanBalanceAssigned) setScannerStatus('');
@@ -2848,9 +2848,9 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         source.addEventListener('tariff', (event) => {
           try {
             const current = JSON.parse(event.data);
-            if (typeof window.setRoadnoteTariffState === 'function') window.setRoadnoteTariffState(current);
+            if (typeof window.setQRideTariffState === 'function') window.setQRideTariffState(current);
           } catch (eventError) {
-            console.warn('Roadnote tariff event was invalid:', eventError);
+            console.warn('QRide tariff event was invalid:', eventError);
           }
         });
         source.addEventListener('entitlement', (event) => {
@@ -2860,7 +2860,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             updateScanBalance(current.scanBalance, current.subscriptionUntil, current.unlimited, current.subscriptionActive);
             if (!scanBalanceAssigned) setScannerStatus('');
           } catch (eventError) {
-            console.warn('Roadnote entitlement event was invalid:', eventError);
+            console.warn('QRide entitlement event was invalid:', eventError);
           }
         });
         source.onerror = () => {
@@ -2880,7 +2880,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
               });
               if (!refreshResponse.ok) return;
               const current = await refreshResponse.json();
-              if (typeof window.setRoadnoteTariffState === 'function') window.setRoadnoteTariffState(current);
+              if (typeof window.setQRideTariffState === 'function') window.setQRideTariffState(current);
               setReferralLink(current.referralLink);
               scanSessionReady = true;
               updateScanBalance(current.scanBalance, current.subscriptionUntil, current.unlimited, current.subscriptionActive);
@@ -2888,7 +2888,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
               if (!scanBalanceAssigned) setScannerStatus('');
               if (current.eventsToken) connectEntitlementEvents(current.eventsToken);
             } catch (refreshError) {
-              console.warn('Roadnote live entitlement reconnect failed:', refreshError);
+              console.warn('QRide live entitlement reconnect failed:', refreshError);
             } finally {
               entitlementReconnectInProgress = false;
             }
@@ -2897,7 +2897,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       };
       if (session.eventsToken) connectEntitlementEvents(session.eventsToken);
     } catch (error) {
-      console.warn('Roadnote session/balance check failed:', error);
+      console.warn('QRide session/balance check failed:', error);
       scanSessionReady = false;
       refreshScanButton();
       setScannerStatus('Не удалось проверить баланс сканов. Проверьте подключение и перезапустите Mini App.');
@@ -2905,7 +2905,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   }
   // This script is at the end of the document. Run directly so registration
   // also works when main.html is loaded into an existing Mini App document.
-  registerRoadnoteVisit();
+  registerQRideVisit();
 })();
 </script>
 
@@ -2923,7 +2923,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   const status = document.getElementById('start-referral-status');
 
   function currentLink() {
-    return String(window.roadnoteReferralLink || (linkInput && linkInput.value) || '').trim();
+    return String(window.qrideReferralLink || (linkInput && linkInput.value) || '').trim();
   }
   function report() {
     if (status) status.textContent = '';
@@ -2948,7 +2948,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         await window.vkBridge.send('VKWebAppShare', { link: link });
         report('');
       } catch (error) {
-        console.error('[Roadnote referral share]', error);
+        console.error('[QRide referral share]', error);
         report('VK не открыло меню отправки. Попробуй ещё раз.');
       } finally {
         shareButton.disabled = false;
@@ -2980,7 +2980,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         }
         throw new Error('No supported clipboard API');
       } catch (error) {
-        console.error('[Roadnote referral copy]', error);
+        console.error('[QRide referral copy]', error);
         if (linkInput) {
           linkInput.value = link;
           linkInput.focus();
@@ -3116,7 +3116,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
           if (!opened) window.location.href = url;
         }
       } catch (error) {
-        console.warn('[Roadnote support] Could not open VK support link:', error);
+        console.warn('[QRide support] Could not open VK support link:', error);
         window.location.href = url;
       }
     });
@@ -3128,34 +3128,34 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             <button class="tariff-modal-backdrop" type="button" data-tariff-modal-close aria-label="Закрыть"></button>
             <section class="tariff-modal-sheet">
                 <div class="tariff-modal-grabber" aria-hidden="true"></div>
-                <div class="tariff-modal-header"><div><div class="start-section-kicker">ROADNOTE PLUS</div><h3 id="tariff-modal-title">Оплата тарифа</h3></div><button class="tariff-modal-close" type="button" data-tariff-modal-close aria-label="Закрыть">×</button></div>
+                <div class="tariff-modal-header"><div><div class="start-section-kicker">QRIDE PLUS</div><h3 id="tariff-modal-title">Оплата тарифа</h3></div><button class="tariff-modal-close" type="button" data-tariff-modal-close aria-label="Закрыть">×</button></div>
                 <div id="tariff-modal-content"></div>
                 <p id="tariff-modal-status" class="tariff-modal-status" role="status" aria-live="polite"></p>
             </section>
         </div>
 
 <script src="tariff-purchases.js?v=20261028-mood-stable-1"></script>
-<div class="roadnote-game-toast-host" id="roadnote-game-toast-host" aria-live="polite" aria-atomic="true"></div>
+<div class="qride-game-toast-host" id="qride-game-toast-host" aria-live="polite" aria-atomic="true"></div>
 
 <script>
 (function () {
-  const canvas = document.getElementById('roadnote-game-canvas');
-  const overlay = document.getElementById('roadnote-game-overlay');
-  const overlayTitle = document.getElementById('roadnote-game-overlay-title');
-  const overlayText = document.getElementById('roadnote-game-overlay-text');
-  const recordNode = document.getElementById('roadnote-game-record');
-  const attemptsNode = document.getElementById('roadnote-game-attempts');
-  const rewardNode = document.getElementById('roadnote-game-reward');
+  const canvas = document.getElementById('qride-game-canvas');
+  const overlay = document.getElementById('qride-game-overlay');
+  const overlayTitle = document.getElementById('qride-game-overlay-title');
+  const overlayText = document.getElementById('qride-game-overlay-text');
+  const recordNode = document.getElementById('qride-game-record');
+  const attemptsNode = document.getElementById('qride-game-attempts');
+  const rewardNode = document.getElementById('qride-game-reward');
   const streakCountNode = document.getElementById('game-streak-count');
   const streakDaysNode = document.getElementById('game-streak-days');
-  const toastHost = document.getElementById('roadnote-game-toast-host');
+  const toastHost = document.getElementById('qride-game-toast-host');
   if (!canvas || !overlay || !overlayTitle || !overlayText || !recordNode) return;
   const launchParams = window.location.search.slice(1);
   let gameAttempts = 0, gameStreak = 0, gameSessionId = null, startingGame = false;
   function showGameToast(title, message, icon) {
     if (!toastHost) return;
-    const toast = document.createElement('div'); toast.className = 'roadnote-game-toast';
-    const iconNode = document.createElement('span'); iconNode.className = 'roadnote-game-toast-icon';
+    const toast = document.createElement('div'); toast.className = 'qride-game-toast';
+    const iconNode = document.createElement('span'); iconNode.className = 'qride-game-toast-icon';
     if (icon === 'bolt') { iconNode.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg>'; }
     else if (icon === 'award') { iconNode.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="m8.5 13-1 9 4.5-2.5 4.5 2.5-1-9"/></svg>'; }
     else iconNode.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg>';
@@ -3182,7 +3182,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     if (!state) return;
     gameAttempts = Math.max(0, Number(state.attempts || 0));
     gameStreak = Math.max(0, Number(state.streak || 0));
-    const energyNode = document.getElementById('roadnote-game-energy-count');
+    const energyNode = document.getElementById('qride-game-energy-count');
     if (energyNode) energyNode.textContent = String(gameAttempts);
     if (attemptsNode) attemptsNode.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> ' + gameAttempts;
     if (streakDaysNode) {
@@ -3211,23 +3211,23 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     if (!launchParams) return;
     try {
       let legacyBestScore = 0;
-      try { legacyBestScore = Math.max(0, Number(localStorage.getItem('roadnoteRunnerBestV1')) || 0); } catch (_) {}
+      try { legacyBestScore = Math.max(0, Number(localStorage.getItem('qrideRunnerBestV1')) || 0); } catch (_) {}
       const state = await gameRequest('/api/game/state', { legacyBestScore });
       renderGameState(state);
       best = Math.max(best, Number(state.bestScore) || 0);
       if (state.awarded > 0 && showLoginToast) showGameToast('Начислены игровые попытки', '+' + state.awarded + ' попыток за сегодняшний заход', 'bolt');
-    } catch (error) { console.warn('[Roadnote game state]', error.message); }
+    } catch (error) { console.warn('[QRide game state]', error.message); }
   }
   refreshGameState(true);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshGameState(false); });
-  window.addEventListener('roadnote:scan-success', async () => {
+  window.addEventListener('qride:scan-success', async () => {
     await refreshGameState(false);
     showGameToast('Начислены игровые попытки', '+3 за успешный скан', 'bolt');
   });
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   const W = canvas.width, H = canvas.height, ground = 198;
-  const storageKey = 'roadnoteRunnerBestV1';
+  const storageKey = 'qrideRunnerBestV1';
   let best = 0;
   try { best = Math.max(0, Number(localStorage.getItem(storageKey)) || 0); } catch (_) {}
   recordNode.textContent = String(best);
@@ -3256,7 +3256,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     const t=within<900?0:((within-900)/100)*((within-900)/100)*(3-2*((within-900)/100));
     return mixColor(a[key],b[key],t);
   }
-    function drawRoadnotePlane() {
+    function drawQRidePlane() {
       const cycleLength = 46;
       const cycle = elapsed % cycleLength;
       const flightDuration = 34;
@@ -3318,7 +3318,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         ctx.stroke();
       }
 
-      const word = 'roadnote';
+      const word = 'qride';
       ctx.font = '800 14px Circe, sans-serif';
       const widths = Array.from(word, ch => ctx.measureText(ch).width);
       const totalTextWidth = widths.reduce((sum, width) => sum + width, 0);
@@ -3352,8 +3352,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
 
       // Use the user's supplied SVG illustration, cropped to the plane itself.
       // Cache the SVG image so it is not recreated on every animation frame.
-      const planeImage = drawRoadnotePlane.planeImage || (drawRoadnotePlane.planeImage = new Image());
-      if (!drawRoadnotePlane.planeImageReady) {
+      const planeImage = drawQRidePlane.planeImage || (drawQRidePlane.planeImage = new Image());
+      if (!drawQRidePlane.planeImageReady) {
         const planeSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="130 100 590 300" width="590" height="300">
           <style>
              .plane-body{fill:#2787f5}.plane-body-dark{fill:#176dcc}.plane-body-light{fill:#69b5ff}.plane-glass{fill:#24364a}.plane-wing{fill:#176dcc}.plane-outline{stroke:#1e293b;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}.plane-strut{stroke:#1e293b;stroke-width:3.5;stroke-linecap:round;fill:none}.plane-tire{fill:#1e293b}
@@ -3377,10 +3377,10 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             <circle cx="622" cy="292" r="6" class="plane-tire plane-outline"/>
           </g>
         </svg>`;
-        planeImage.onload = () => { drawRoadnotePlane.planeImageReady = true; };
+        planeImage.onload = () => { drawQRidePlane.planeImageReady = true; };
         planeImage.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(planeSvg);
       }
-      if (drawRoadnotePlane.planeImageReady && planeImage.naturalWidth) {
+      if (drawQRidePlane.planeImageReady && planeImage.naturalWidth) {
         ctx.save();
         ctx.translate(x, y);
         // The reference SVG faces left; flip it to face the direction of travel.
@@ -3549,7 +3549,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     } else {
       ctx.translate(o.x,ground+4);
       if(o.kind===0){
-        // Roadwork cone in Roadnote blue/orange, with a reflective band and wide foot.
+        // Roadwork cone in QRide blue/orange, with a reflective band and wide foot.
         ctx.fillStyle='#d97722';roundRect(-2,-5,26,5,2,true);
         ctx.fillStyle='#f49a35';
         ctx.beginPath();ctx.moveTo(3,-5);ctx.lineTo(8,-26);ctx.lineTo(14,-26);ctx.lineTo(20,-5);ctx.closePath();ctx.fill();
@@ -3584,9 +3584,9 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   function draw() {
     drawRoad();
     obstacles.forEach(drawObstacle);
-    drawRoadnotePlane();
+    drawQRidePlane();
     drawPlayer();
-    const scoreNode = document.getElementById('roadnote-game-score'); if (scoreNode) scoreNode.textContent = 'Счёт: ' + String(Math.floor(score)).padStart(4,'0');
+    const scoreNode = document.getElementById('qride-game-score'); if (scoreNode) scoreNode.textContent = 'Счёт: ' + String(Math.floor(score)).padStart(4,'0');
   }
   function showOverlay(title,text) { overlayTitle.textContent=title;overlayText.textContent=text;overlay.hidden=false; }
   function taptic(style) {
@@ -3609,8 +3609,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       renderGameState(result);
       taptic('light');
       cancelAnimationFrame(raf); running=true;over=false;elapsed=0;score=0;speed=230;spawnIn=.9;obstacles=[];particles=[];
-      const hud = document.getElementById('roadnote-game-hud'); if (hud) hud.classList.remove('is-hidden');
-      const gameCard = document.getElementById('roadnote-game'); if (gameCard) gameCard.classList.add('is-playing');
+      const hud = document.getElementById('qride-game-hud'); if (hud) hud.classList.remove('is-hidden');
+      const gameCard = document.getElementById('qride-game'); if (gameCard) gameCard.classList.add('is-playing');
       player.y=ground-player.h;player.vy=0;player.onGround=true;last=0;overlay.hidden=true;raf=requestAnimationFrame(frame);
     } catch (error) {
       showGameToast('Пока не выезжаем', error.message, 'info');
@@ -3621,7 +3621,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     if(!running){ if (!startingGame && over) start(); return; }
     if(player.onGround){taptic('light');player.vy=-510;player.onGround=false;}
   }
-  const gameStartButton = document.getElementById('roadnote-game-start');
+  const gameStartButton = document.getElementById('qride-game-start');
   if (gameStartButton) gameStartButton.addEventListener('click', function (event) {
     event.preventDefault(); event.stopPropagation(); overlay.style.pointerEvents = 'none'; start();
   });
@@ -3648,11 +3648,11 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         endingText = 'Счёт: '+finalScore+'. Не удалось сохранить результат: '+error.message+'. Вернись на старт и проверь соединение.';
       }
     }
-    const hud = document.getElementById('roadnote-game-hud'); if (hud) hud.classList.add('is-hidden');
-    const gameCard = document.getElementById('roadnote-game'); if (gameCard) gameCard.classList.remove('is-playing');
+    const hud = document.getElementById('qride-game-hud'); if (hud) hud.classList.add('is-hidden');
+    const gameCard = document.getElementById('qride-game'); if (gameCard) gameCard.classList.remove('is-playing');
     overlay.style.pointerEvents = 'auto';
     showOverlay('Раунд завершён', endingText + ' Осталось попыток: ' + gameAttempts + '.');
-    const replayButton = document.getElementById('roadnote-game-start'); if (replayButton) replayButton.textContent = 'Играть ещё';
+    const replayButton = document.getElementById('qride-game-start'); if (replayButton) replayButton.textContent = 'Играть ещё';
     overlay.style.pointerEvents = 'auto';
     draw();
   }

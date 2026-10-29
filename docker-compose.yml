@@ -1,7 +1,7 @@
 services:
-  roadnote-app:
+  qride-app:
     build: .
-    container_name: roadnote-app
+    container_name: qride-app
     restart: unless-stopped
     init: true
     shm_size: "1gb"
@@ -10,7 +10,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: "3000"
-      DATABASE_PATH: /data/roadnote.sqlite
+      DATABASE_PATH: /data/qride.sqlite
     ports:
       - "127.0.0.1:3003:3000"
     volumes:

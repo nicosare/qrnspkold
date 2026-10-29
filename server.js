@@ -19,7 +19,7 @@ const communityToken = String(process.env.VK_GROUP_TOKEN || '');
 const callbackSecret = String(process.env.VK_CALLBACK_SECRET || '');
 const callbackConfirmation = String(process.env.VK_CALLBACK_CONFIRMATION || '');
 const vkApiVersion = '5.199';
-console.info('[Roadnote VK config]', JSON.stringify({ appId, communityId, communityIdSource: process.env.VK_GROUP_ID ? 'VK_GROUP_ID' : 'default', hasCommunityToken: Boolean(communityToken) }));
+console.info('[QRide VK config]', JSON.stringify({ appId, communityId, communityIdSource: process.env.VK_GROUP_ID ? 'VK_GROUP_ID' : 'default', hasCommunityToken: Boolean(communityToken) }));
 
 const tariffOffers = Object.freeze({
   scans_9: { id: 'scans_9', name: 'Пакет «Старт» — 9 сканов', kind: 'pack', quantity: 9, regularPrice: 99, promoPrice: 69 },
@@ -29,7 +29,7 @@ const tariffOffers = Object.freeze({
   subscription_3m: { id: 'subscription_3m', name: 'Безлимит на 3 месяца', kind: 'subscription', quantity: 3, regularPrice: 799, promoPrice: 599 },
   subscription_6m: { id: 'subscription_6m', name: 'Безлимит на 6 месяцев', kind: 'subscription', quantity: 6, regularPrice: 1299, promoPrice: 949 }
 });
-const databasePath = process.env.DATABASE_PATH || '/data/roadnote.sqlite';
+const databasePath = process.env.DATABASE_PATH || '/data/qride.sqlite';
 const paytagDirectTimeoutMs = Math.max(3000, Number(process.env.PAYTAG_DIRECT_TIMEOUT_MS || 12000));
 const paytagFetchesInFlight = new Map();
 const liveStreams = new Map();
@@ -613,7 +613,7 @@ function getTariffState(userId) {
     createdAt: request.created_at,
     completedAt: request.completed_at || null,
     hasScreenshot: Boolean(request.screenshot_attachment),
-    paymentLabel: request.payment_label || ('roadnote-request-' + request.id)
+    paymentLabel: request.payment_label || ('qride-request-' + request.id)
   });
   return {
     hasPurchased: Number(completed?.value || 0) === 1,
@@ -722,7 +722,7 @@ function buildAdminMenuKeyboard() {
   });
 }
 
-async function sendAdminMenu(message = 'Меню администратора Roadnote.') {
+async function sendAdminMenu(message = 'Меню администратора QRide.') {
   if (!adminVkId) return;
   await sendCommunityMessage(adminVkId, message, { keyboard: buildAdminMenuKeyboard() });
 }
@@ -756,7 +756,7 @@ async function setCommunityAvatarFromMessage(message) {
     const uploadInfo = await vkApi('photos.getOwnerPhotoUploadServer', { owner_id: '-' + communityId });
     if (!uploadInfo?.upload_url) throw new Error('VK не выдал адрес загрузки аватара.');
     const form = new FormData();
-    form.append('photo', new Blob([imageBuffer], { type: contentType }), 'roadnote-avatar.' + (contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg'));
+    form.append('photo', new Blob([imageBuffer], { type: contentType }), 'qride-avatar.' + (contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg'));
     const uploadResponse = await fetch(uploadInfo.upload_url, { method: 'POST', body: form });
     const uploadResult = await uploadResponse.json().catch(() => null);
     if (!uploadResponse.ok || !uploadResult?.server || !uploadResult?.hash || !uploadResult?.photo) {
@@ -875,7 +875,7 @@ async function handleIncomingCommunityMessage(message) {
     })();
     if (text === 'обновить иконку' || buttonPayload.action === 'update_community_avatar') {
       avatarUploadAwaiting.add(userId);
-      await sendAdminMenu('Пришли следующим сообщением фотографию — она станет аватаром сообщества и иконкой Roadnote в миниаппе.');
+      await sendAdminMenu('Пришли следующим сообщением фотографию — она станет аватаром сообщества и иконкой QRide в миниаппе.');
       return;
     }
     if (avatarUploadAwaiting.has(userId) && photoAttachment) {
@@ -884,7 +884,7 @@ async function handleIncomingCommunityMessage(message) {
         avatarUploadAwaiting.delete(userId);
         await sendAdminMenu('Готово! Аватар сообщества обновлён. Иконка на стартовой странице миниаппа будет загружать его автоматически.');
       } catch (error) {
-        console.error('[Roadnote community avatar update]', error?.message || error);
+        console.error('[QRide community avatar update]', error?.message || error);
         await sendAdminMenu('Не получилось обновить аватар: ' + String(error?.message || 'неизвестная ошибка').slice(0, 250) + '. Попробуй отправить фото ещё раз.');
       }
       return;
@@ -919,7 +919,7 @@ async function handleIncomingCommunityMessage(message) {
   if (!photoAttachment) {
     if (String(message?.text || '').trim()) {
       try {
-        await sendCommunityMessage(userId, 'Чтобы отправить заявку на проверку, пришли скриншот оплаты именно фотографией в этот диалог с Roadnote.');
+        await sendCommunityMessage(userId, 'Чтобы отправить заявку на проверку, пришли скриншот оплаты именно фотографией в этот диалог с QRide.');
       } catch (error) {
         console.warn('[tariff screenshot reminder]', error?.message || error);
       }
@@ -961,7 +961,7 @@ async function handleIncomingCommunityMessage(message) {
       "WHERE id = ? AND status = 'awaiting_review' AND screenshot_message_id = ?"
     ).run(new Date().toISOString(), Number(active.id), messageId);
     try {
-      await sendCommunityMessage(userId, 'Не удалось передать скриншот администратору. Заявка сохранена — проверь, что сообщения Roadnote разрешены, и отправь скриншот ещё раз.');
+      await sendCommunityMessage(userId, 'Не удалось передать скриншот администратору. Заявка сохранена — проверь, что сообщения QRide разрешены, и отправь скриншот ещё раз.');
     } catch (replyError) {
       console.warn('[tariff admin delivery failure reply]', replyError?.message || replyError);
     }
@@ -1045,7 +1045,7 @@ async function handleAdminMessageEvent(event) {
 
 
 
-// Roadnote Arcade: streak rewards, server-backed attempts and one daily free scan reward.
+// QRide Arcade: streak rewards, server-backed attempts and one daily free scan reward.
 const GAME_DAILY_REWARDS = [1, 1, 2, 2, 3, 3, 5];
 function gamePublicState(userId) {
   const row = db.prepare('SELECT game_attempts, game_streak, game_last_login_day, game_reward_day, game_total_score, game_best_score FROM users WHERE vk_id = ?').get(userId);
@@ -1063,7 +1063,7 @@ function gamePublicState(userId) {
 app.post('/api/game/state', (req, res) => {
   let userId;
   try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
-  catch { return res.status(401).json({ error: 'Открой Roadnote внутри VK и попробуй ещё раз.' }); }
+  catch { return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' }); }
   const now = new Date();
   const nowIso = now.toISOString();
   const today = yekaterinburgDayKey(now);
@@ -1091,7 +1091,7 @@ app.post('/api/game/state', (req, res) => {
 app.post('/api/game/start', (req, res) => {
   let userId;
   try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
-  catch { return res.status(401).json({ error: 'Открой Roadnote внутри VK и попробуй ещё раз.' }); }
+  catch { return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' }); }
   const now = Date.now();
   const sessionId = crypto.randomUUID();
   let started = false;
@@ -1107,7 +1107,7 @@ app.post('/api/game/start', (req, res) => {
 app.post('/api/game/finish', (req, res) => {
   let userId;
   try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
-  catch { return res.status(401).json({ error: 'Открой Roadnote внутри VK и попробуй ещё раз.' }); }
+  catch { return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' }); }
   const sessionId = String(req.body?.sessionId || '');
   const score = Number(req.body?.score);
   if (!/^[0-9a-f-]{36}$/i.test(sessionId) || !Number.isSafeInteger(score) || score < 0 || score > 100000) {
@@ -1157,7 +1157,7 @@ app.post('/api/tariffs/permission', async (req, res) => {
       appId: parsed.params.get('vk_app_id') || null
     }));
   } catch {
-    return res.status(401).json({ error: 'Открой Roadnote внутри VK и попробуй ещё раз.' });
+    return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' });
   }
   if (!communityToken) {
     return res.status(503).json({ error: 'Сообщения сообщества не настроены на сервере.' });
@@ -1171,7 +1171,7 @@ app.post('/api/tariffs/permission', async (req, res) => {
       ? (result.is_allowed ?? result.allowed ?? result.result)
       : result;
     const allowed = Number(value) === 1 || value === true;
-    console.info('[Roadnote permission API result]', JSON.stringify({
+    console.info('[QRide permission API result]', JSON.stringify({
       userId,
       groupId: communityId,
       resultType: typeof result,
@@ -1194,7 +1194,7 @@ app.post('/api/tariffs/state', (req, res) => {
     const { userId } = parseLaunchParams(req.body?.launchParams);
     return res.json({ ok: true, ...getTariffState(userId) });
   } catch {
-    return res.status(401).json({ error: 'Открой Roadnote внутри VK и попробуй ещё раз.' });
+    return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' });
   }
 });
 
@@ -1340,7 +1340,7 @@ app.post('/api/tariffs/request', async (req, res) => {
         selectedPromo ? selectedPromo.discountPercent : null, selectedPromo ? promoDiscountRub : null, nowIso, nowIso
       );
       requestId = Number(created.lastInsertRowid);
-      db.prepare('UPDATE tariff_requests SET payment_label = ? WHERE id = ?').run('roadnote-request-' + requestId, requestId);
+      db.prepare('UPDATE tariff_requests SET payment_label = ? WHERE id = ?').run('qride-request-' + requestId, requestId);
       if (selectedPromo) db.prepare("UPDATE promo_code_applications SET tariff_request_id = ? WHERE id = ? AND vk_id = ? AND status = 'selected'").run(requestId, selectedPromo.applicationId, userId);
     })();
   } catch (error) {
@@ -1514,8 +1514,8 @@ app.post('/api/vk/callback', (req, res) => {
       key: permissionEvent.key || null
     }));
     if (adminVkId && allowedUserId === adminVkId) {
-      Promise.resolve().then(() => sendAdminMenu('Меню администратора Roadnote готово.'))
-        .catch(error => console.error('[Roadnote admin menu]', error?.message || error));
+      Promise.resolve().then(() => sendAdminMenu('Меню администратора QRide готово.'))
+        .catch(error => console.error('[QRide admin menu]', error?.message || error));
     }
   } else if (event.type === 'message_deny') {
     const permissionEvent = event.object || {};
@@ -1568,7 +1568,7 @@ app.post('/api/yoomoney/notification', (req, res) => {
   const sender = String(body.sender || '');
   const unaccepted = String(body.unaccepted || '').toLowerCase() === 'true';
   if (!operationId || operationId.length > 128 || !Number.isFinite(amount) || amount <= 0) return res.status(400).send('invalid operation');
-  const labelMatch = /^roadnote-request-(\d+)$/.exec(label);
+  const labelMatch = /^qride-request-(\d+)$/.exec(label);
   const requestId = labelMatch ? Number(labelMatch[1]) : null;
   const nowIso = new Date().toISOString();
   let outcome;
@@ -1631,7 +1631,7 @@ app.post('/api/yoomoney/notification', (req, res) => {
     const buyerName = [buyer?.first_name, buyer?.last_name].filter(Boolean).join(' ').trim() || 'Пользователь VK';
     const purchasedOffer = requestId ? db.prepare('SELECT offer_name FROM tariff_requests WHERE id = ?').get(requestId) : null;
     const adminText = [
-      'Новая покупка Roadnote',
+      'Новая покупка QRide',
       'Пользователь: ' + buyerName + ' (VK ID ' + outcome.userId + ')',
       'Профиль: https://vk.com/id' + outcome.userId,
       'Тариф: ' + (purchasedOffer?.offer_name || 'неизвестен'),
@@ -1665,7 +1665,7 @@ app.get('/api/community/avatar', async (_req, res) => {
     res.setHeader('Cache-Control', 'public, max-age=900');
     return res.redirect(302, avatarUrl);
   } catch (error) {
-    console.warn('[Roadnote community avatar]', error?.message || error);
+    console.warn('[QRide community avatar]', error?.message || error);
     return res.status(502).send('Community avatar unavailable');
   }
 });
@@ -1686,7 +1686,7 @@ app.post('/api/paytag', async (req, res) => {
   } catch (error) {
     return res.status(401).json({
       code: 'VK_AUTH_REQUIRED',
-      error: 'Откройте Roadnote внутри VK, чтобы подтвердить пользователя.'
+      error: 'Откройте QRide внутри VK, чтобы подтвердить пользователя.'
     });
   }
 
@@ -2075,7 +2075,7 @@ app.get('/proxy', async (req, res) => {
   try {
     const upstream = await fetch(parsed.toString(), {
       method: 'GET',
-      headers: { 'User-Agent': 'qrnspk-proxy/1.0 (+roadnote)' }
+      headers: { 'User-Agent': 'qrnspk-proxy/1.0 (+qride)' }
     });
     const contentType = upstream.headers.get('content-type') || 'text/html; charset=utf-8';
     const body = await upstream.text();
@@ -2099,28 +2099,28 @@ app.use((req, res, next) => {
 });
 
 // Do not expose the Mini App UI when the URL is opened outside VK.
-function isRoadnoteVkLaunch(req) {
+function isQRideVkLaunch(req) {
   const params = req.query || {};
   return String(params.vk_app_id || '') === String(appId)
     && Boolean(params.vk_platform)
     && (Boolean(params.sign) || Boolean(params.vk_user_id));
 }
 
-function serveRoadnoteEntry(req, res) {
+function serveQRideEntry(req, res) {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
-  if (!isRoadnoteVkLaunch(req)) {
+  if (!isQRideVkLaunch(req)) {
     res.status(200).type('html').send('');
     return;
   }
   res.sendFile(path.join(__dirname, 'index.html'));
 }
 
-app.get('/', serveRoadnoteEntry);
-app.get('/index.html', serveRoadnoteEntry);
+app.get('/', serveQRideEntry);
+app.get('/index.html', serveQRideEntry);
 
 app.use(express.static(__dirname, { index: 'index.html' }));
 app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-app.listen(port, () => console.log(`Roadnote server listening on port ${port}`));
+app.listen(port, () => console.log(`QRide server listening on port ${port}`));

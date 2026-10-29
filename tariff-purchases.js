@@ -104,7 +104,7 @@
       activeTariffRequest: next && next.activeTariffRequest || null,
       tariffRequestHistory: next && Array.isArray(next.tariffRequestHistory) ? next.tariffRequestHistory : []
     };
-    window.roadnoteHasPurchased = state.hasPurchased;
+    window.qrideHasPurchased = state.hasPurchased;
     if (tariffNote) tariffNote.textContent = state.hasPurchased
       ? 'Все тарифы доступны по указанным ценам. Выбирай то, что подходит именно тебе.'
       : 'Скидка действует только на первую покупку.';
@@ -212,7 +212,7 @@
     if (!activePurchase || !modalContent) return;
     const purchase = activePurchase;
     const isPaid = purchase.status === 'approved';
-    const label = purchase.paymentLabel || ('roadnote-request-' + purchase.id);
+    const label = purchase.paymentLabel || ('qride-request-' + purchase.id);
     let content = '<div class="tariff-modal-card"><div class="tariff-modal-offer">' + esc(purchase.name || 'Выбранный тариф') + '</div>' +
       (purchase.promoCode ? '<div class="tariff-modal-note" style="margin-top:6px;color:#16804a;font-weight:700;">Промокод ' + esc(purchase.promoCode) + ' · скидка ' + esc(purchase.promoDiscountPercent || 0) + '%</div>' : '') +
       '<div class="tariff-modal-price">' + esc(rubles(purchase.priceRub)) + '</div><div class="tariff-modal-note">';
@@ -308,12 +308,12 @@
     }
     modal.addEventListener('click', function (event) { if (event.target === modal) closeModal(); });
   }
-  window.setRoadnoteTariffState = function (next) {
+  window.setQRideTariffState = function (next) {
     if (!next || typeof next !== 'object') return;
     renderState(next);
     if (next.notice && tariffStatus) setTransientStatus(tariffStatus, next.notice, false);
   };
-  window.addEventListener('roadnote:tariff-state', function (event) { window.setRoadnoteTariffState(event.detail); });
+  window.addEventListener('qride:tariff-state', function (event) { window.setQRideTariffState(event.detail); });
   window.addEventListener('focus', refreshState);
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') refreshState(); });
   document.addEventListener('keydown', function (event) { if (event.key === 'Escape' && modal && !modal.hidden) closeModal(); });

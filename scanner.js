@@ -5,7 +5,7 @@
     return typeof text === 'string' && text.trim() ? text.trim() : 'Сканирование отменено или недоступно.';
   }
 
-  window.roadnoteScanQr = function () {
+  window.qrideScanQr = function () {
     const bridge = window.vkBridge;
     if (!bridge || typeof bridge.send !== 'function' || typeof bridge.subscribe !== 'function') {
       return Promise.reject(new Error('VK Bridge не загружен. Закройте и заново откройте мини-приложение в VK.'));

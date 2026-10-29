@@ -22,7 +22,7 @@ COPY --from=build /app /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV DATABASE_PATH=/data/roadnote.sqlite
+ENV DATABASE_PATH=/data/qride.sqlite
 ENV PAYTAG_DIRECT_TIMEOUT_MS=12000
 
 RUN mkdir -p /data

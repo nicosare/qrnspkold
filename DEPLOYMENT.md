@@ -1,4 +1,4 @@
-# Roadnote server deployment
+# QRide server deployment
 
 ## Required configuration
 
@@ -8,7 +8,7 @@
 
 ## Deploy on the existing server
 
-Run from `/home/roadnote-deploy/roadnote-source`:
+Run from `/home/qride-deploy/qride-source`:
 
 ```bash
 cp -n .env.example .env
@@ -18,24 +18,24 @@ chmod 700 data
 docker compose up -d --build
 ```
 
-The compose configuration keeps SQLite in `./data/roadnote.sqlite` on the host, outside the container lifecycle, and binds the app only to `127.0.0.1:3003` for the existing nginx proxy.
+The compose configuration keeps SQLite in `./data/qride.sqlite` on the host, outside the container lifecycle, and binds the app only to `127.0.0.1:3003` for the existing nginx proxy.
 
-If the current container was created manually rather than by Compose, inspect it before the first `docker compose up`. Compose may report that the container name is already in use; in that case stop/remove only the old `roadnote-app` container after confirming its data is not needed from the container writable layer. Do not remove the existing `/home/roadnote-deploy/roadnote-source/data` directory after setup.
+If the current container was created manually rather than by Compose, inspect it before the first `docker compose up`. Compose may report that the container name is already in use; in that case stop/remove only the old `qride-app` container after confirming its data is not needed from the container writable layer. Do not remove the existing `/home/qride-deploy/qride-source/data` directory after setup.
 
 ## Verify
 
 ```docker
 docker compose ps
 curl -fsS http://127.0.0.1:3003/health
-curl -I https://tintink.ru/roadnote/
+curl -I https://tintink.ru/qride/
 ```
 
-Open `https://tintink.ru/roadnote/admin/users` from inside the VK Mini App so VK launch parameters are present. A normal browser visit is not authenticated.
+Open `https://tintink.ru/qride/admin/users` from inside the VK Mini App so VK launch parameters are present. A normal browser visit is not authenticated.
 
 
 ## Tariff applications and community bot
 
-Tariff requests are stored in the existing SQLite database at \`data/roadnote.sqlite\`; do not delete the \`data\` directory. The app fixes the price on each request. The promotional price is available until the first request that you approve; after an approved purchase, the UI shows ordinary prices for all offers. Rejected or replaced requests do not consume the first-purchase discount.
+Tariff requests are stored in the existing SQLite database at \`data/qride.sqlite\`; do not delete the \`data\` directory. The app fixes the price on each request. The promotional price is available until the first request that you approve; after an approved purchase, the UI shows ordinary prices for all offers. Rejected or replaced requests do not consume the first-purchase discount.
 
 Add these values to the existing server \`.env\` (do not commit or share the real token):
 
@@ -44,13 +44,13 @@ Add these values to the existing server \`.env\` (do not commit or share the rea
 - \`VK_CALLBACK_SECRET\` — a random secret that exactly matches the secret key configured for the Callback API server.
 - \`VK_CALLBACK_CONFIRMATION\` — the confirmation code shown by VK for that Callback API server.
 
-Then in the VK community settings, open **Management → API → Callback API**, create a server with URL \`https://tintink.ru/roadnote/api/vk/callback\`, enter the same secret key, save the confirmation code in \`.env\`, and enable the **incoming messages** and **message event** event types. Confirm the server in VK. Make sure the administrator account can receive messages from the Roadnote community as well.
+Then in the VK community settings, open **Management → API → Callback API**, create a server with URL \`https://tintink.ru/qride/api/vk/callback\`, enter the same secret key, save the confirmation code in \`.env\`, and enable the **incoming messages** and **message event** event types. Confirm the server in VK. Make sure the administrator account can receive messages from the QRide community as well.
 
-Rebuild only the Roadnote app after editing \`.env\`:
+Rebuild only the QRide app after editing \`.env\`:
 
 \`\`\`bash
-cd /home/roadnote-deploy/roadnote-source
-docker compose up -d --build roadnote-app
+cd /home/qride-deploy/qride-source
+docker compose up -d --build qride-app
 curl -fsS --max-time 10 http://127.0.0.1:3003/health
 \`\`\`
 

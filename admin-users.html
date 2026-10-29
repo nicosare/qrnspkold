@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#f2f3f4">
-<title>Roadnote — Пользователи</title>
+<title>QRide — Пользователи</title>
 <style>
 :root{color-scheme:light;--bg:#f2f3f4;--card:#fff;--text:#24262b;--muted:#777d87;--line:#e4e7eb;--accent:#2787f5;--soft:#eaf3ff}
 *{box-sizing:border-box}
@@ -96,7 +96,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 <body>
 <main>
 <header class="top">
- <div><h1>Админ-панель Roadnote</h1><div class="sub">Пользователи и управление промокодами</div></div>
+ <div><h1>Админ-панель QRide</h1><div class="sub">Пользователи и управление промокодами</div></div>
  <div class="count" id="count">Загрузка…</div>
 </header>
 <nav class="admin-nav" aria-label="Разделы админ-панели">
@@ -125,7 +125,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  <div id="promos-view" hidden>
   <div class="promo-intro">Создавай промокоды для выбранных тарифов. Скидка закрепляется за покупкой только после успешной оплаты.</div>
   <form id="promo-create-form" class="promo-create">
-   <label class="promo-field"><span>Промокод</span><input id="promo-code" name="code" type="text" minlength="3" maxlength="32" pattern="[A-Za-z0-9_-]{3,32}" placeholder="Например, ROADNOTE20" autocomplete="off" required></label>
+   <label class="promo-field"><span>Промокод</span><input id="promo-code" name="code" type="text" minlength="3" maxlength="32" pattern="[A-Za-z0-9_-]{3,32}" placeholder="Например, QRIDE20" autocomplete="off" required></label>
    <label class="promo-field"><span>Скидка, %</span><input id="promo-discount" name="discountPercent" type="number" min="1" max="99" step="1" value="10" required></label>
    <div class="promo-field"><span>Действует с (необязательно)</span><input id="promo-starts" name="startsAt" type="datetime-local"></div>
    <div class="promo-field"><span>Действует до (необязательно)</span><input id="promo-expires" name="expiresAt" type="datetime-local"></div>
@@ -255,7 +255,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
      body={action:'grant_months',months};
    }else if(button.dataset.action==='reset-account'){
      if(vkId!==String(adminUserId)){message.className='action-status error';message.textContent='Можно обнулить только собственный аккаунт администратора.';return}
-     const confirmed=window.confirm('Обнулить твой аккаунт Roadnote?\n\nБаланс сканов и подписка будут сброшены, история покупок и отметки о покупках удалены. История сканирований останется. Скидка на первую покупку снова станет доступна. Это действие нельзя отменить.');
+     const confirmed=window.confirm('Обнулить твой аккаунт QRide?\n\nБаланс сканов и подписка будут сброшены, история покупок и отметки о покупках удалены. История сканирований останется. Скидка на первую покупку снова станет доступна. Это действие нельзя отменить.');
      if(!confirmed)return;
      body={action:'reset_account'};
    }else{
@@ -380,7 +380,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    event.preventDefault();const view=link.dataset.adminView==='promos'?'promos':'users';
    document.querySelectorAll('[data-admin-view]').forEach(item=>item.classList.toggle('active',item===link));
    usersView.hidden=view!=='users';promosView.hidden=view!=='promos';
-   document.querySelector('h1').textContent=view==='promos'?'Промокоды Roadnote':'Пользователи Roadnote';
+   document.querySelector('h1').textContent=view==='promos'?'Промокоды QRide':'Пользователи QRide';
    document.querySelector('.top .sub').textContent=view==='promos'?'Создание, сроки и скидки промокодов':'Нажми на карточку, чтобы открыть профиль VK';
    count.textContent=view==='users'?(users.length?'Всего: '+users.length:'Загрузка…'):'Промокоды';
    if(view==='promos')loadPromos();
