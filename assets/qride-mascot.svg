@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
   <defs>
     <radialGradient id="bodyGradient" cx="50%" cy="35%" r="65%">
-      <stop offset="0%" stop-color="#1872F6"/>
-      <stop offset="70%" stop-color="#0051C6"/>
-      <stop offset="100%" stop-color="#003E9B"/>
+      <stop offset="0%" stop-color="#55A5FF"/>
+      <stop offset="70%" stop-color="#2787F5"/>
+      <stop offset="100%" stop-color="#176DCC"/>
     </radialGradient>
     <linearGradient id="bezelGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#1F7DFF"/>
-      <stop offset="100%" stop-color="#0043A8"/>
+      <stop offset="0%" stop-color="#55A5FF"/>
+      <stop offset="100%" stop-color="#2787F5"/>
     </linearGradient>
     <radialGradient id="screenGradient" cx="50%" cy="40%" r="60%">
       <stop offset="0%" stop-color="#FFFFFF"/>
@@ -15,7 +15,7 @@
       <stop offset="100%" stop-color="#E1ECFE"/>
     </radialGradient>
     <filter id="innerBezelShadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="6" stdDeviation="4" flood-color="#002C73" flood-opacity="0.35"/>
+      <feDropShadow dx="0" dy="6" stdDeviation="4" flood-color="#176DCC" flood-opacity="0.25"/>
     </filter>
   </defs>
   <rect width="512" height="512" rx="140" ry="140" fill="url(#bodyGradient)"/>
