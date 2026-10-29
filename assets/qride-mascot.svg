@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bodyGradient" cx="50%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#1872F6"/>
+      <stop offset="70%" stop-color="#0051C6"/>
+      <stop offset="100%" stop-color="#003E9B"/>
+    </radialGradient>
+    <linearGradient id="bezelGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1F7DFF"/>
+      <stop offset="100%" stop-color="#0043A8"/>
+    </linearGradient>
+    <radialGradient id="screenGradient" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="85%" stop-color="#F5F8FF"/>
+      <stop offset="100%" stop-color="#E1ECFE"/>
+    </radialGradient>
+    <filter id="innerBezelShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="4" flood-color="#002C73" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="140" ry="140" fill="url(#bodyGradient)"/>
+  <path fill="url(#bezelGradient)" filter="url(#innerBezelShadow)" d="M 95,115 C 170,75 342,75 417,115 C 475,145 485,210 485,256 C 485,302 475,367 417,397 C 342,437 170,437 95,397 C 37,367 27,302 27,256 C 27,210 37,145 95,115 Z"/>
+  <path fill="url(#screenGradient)" d="M 105,128 C 175,92 337,92 407,128 C 455,152 464,210 464,256 C 464,302 455,360 407,384 C 337,420 175,420 105,384 C 57,360 48,302 48,256 C 48,210 57,152 105,128 Z"/>
+  <ellipse cx="185" cy="256" rx="34" ry="46" fill="#020202"/>
+  <ellipse cx="327" cy="256" rx="34" ry="46" fill="#020202"/>
+</svg>
