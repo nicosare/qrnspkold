@@ -532,7 +532,7 @@
             min-width: 0;
             padding: 11px 14px 12px;
             border: 1px solid #dce8f8;
-            border-radius: 5px 17px 17px 17px;
+            border-radius: 17px;
             background: linear-gradient(145deg, #ffffff 0%, #f5f9ff 100%);
             box-shadow: 0 5px 15px rgba(35, 75, 130, .055);
         }
@@ -2666,10 +2666,10 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             if (!activeRoadnoteGreeting) {
                 const hour = new Date().getHours();
                 activeRoadnoteGreeting = hour >= 5 && hour < 11
-                    ? 'Доброе утро! Рад тебя видеть.'
+                    ? 'Доброе утро'
                     : hour >= 11 && hour < 17
-                        ? 'Добрый день! Рад тебя видеть.'
-                        : 'Добрый вечер! Рад тебя видеть.';
+                        ? 'Добрый день'
+                        : 'Добрый вечер';
             }
             const selected = activeRoadnoteMoodMessage;
             const icon = moodIcons[selected.icon] || moodIcons.sparkles;
@@ -2916,12 +2916,14 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     }
 
     const startTitle = document.getElementById('start-title');
-    if (startTitle) {
-      const hour = new Date().getHours();
-      const greeting = hour >= 5 && hour < 12 ? 'Доброе утро' : hour >= 12 && hour < 18 ? 'Добрый день' : 'Добрый вечер';
-      const firstName = String(profile.first_name || '').trim();
-      startTitle.textContent = greeting + (firstName ? ', ' + firstName : '');
-    }
+    if (startTitle) startTitle.textContent = 'QRide';
+
+    const hour = new Date().getHours();
+    const greeting = hour >= 5 && hour < 12 ? 'Доброе утро' : hour >= 12 && hour < 18 ? 'Добрый день' : 'Добрый вечер';
+    const firstName = String(profile.first_name || '').trim();
+    activeRoadnoteGreeting = greeting + (firstName ? ', ' + firstName : '');
+    const moodGreeting = document.querySelector('#start-mood-message .q-speech-greeting');
+    if (moodGreeting) moodGreeting.textContent = activeRoadnoteGreeting;
 
     try {
       const pathname = window.location.pathname;
