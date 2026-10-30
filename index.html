@@ -1427,7 +1427,32 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     <div class="start-screen">
         <div class="start-brand">
             <div class="start-brand-icon" aria-hidden="true">
-                <img src="assets/vk-app-icon.jpg" alt="" width="48" height="48">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+                    <defs>
+                        <radialGradient id="qrideBodyGradient" cx="50%" cy="35%" r="65%">
+                            <stop offset="0%" stop-color="#0066FF"/>
+                            <stop offset="70%" stop-color="#0052EE"/>
+                            <stop offset="100%" stop-color="#003EDB"/>
+                        </radialGradient>
+                        <linearGradient id="qrideBezelGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#1A75FF"/>
+                            <stop offset="100%" stop-color="#0043CD"/>
+                        </linearGradient>
+                        <radialGradient id="qrideScreenGradient" cx="50%" cy="40%" r="60%">
+                            <stop offset="0%" stop-color="#FFFFFF"/>
+                            <stop offset="85%" stop-color="#F5F8FF"/>
+                            <stop offset="100%" stop-color="#E1ECFE"/>
+                        </radialGradient>
+                        <filter id="qrideInnerBezelShadow" x="-10%" y="-10%" width="120%" height="120%">
+                            <feDropShadow dx="0" dy="6" stdDeviation="4" flood-color="#002580" flood-opacity="0.35"/>
+                        </filter>
+                    </defs>
+                    <rect width="512" height="512" rx="140" ry="140" fill="url(#qrideBodyGradient)"/>
+                    <path fill="url(#qrideBezelGradient)" filter="url(#qrideInnerBezelShadow)" d="M95 115 C170 75 342 75 417 115 C475 145 485 210 485 256 C485 302 475 367 417 397 C342 437 170 437 95 397 C37 367 27 302 27 256 C27 210 37 145 95 115Z"/>
+                    <path fill="url(#qrideScreenGradient)" d="M105 128 C175 92 337 92 407 128 C455 152 464 210 464 256 C464 302 455 360 407 384 C337 420 175 420 105 384 C57 360 48 302 48 256 C48 210 57 152 105 128Z"/>
+                    <ellipse cx="185" cy="256" rx="34" ry="46" fill="#020202"/>
+                    <ellipse cx="327" cy="256" rx="34" ry="46" fill="#020202"/>
+                </svg>
             </div>
             <div>
                 <div class="start-brand-name">QRide</div>
