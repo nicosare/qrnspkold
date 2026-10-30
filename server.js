@@ -1728,54 +1728,55 @@ app.post('/api/paytag', async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   try {
     const data = await task;
-    // Re-read entitlements after the upstream request: another tab or request
-    // may have consumed a scan while this QR was being resolved.
-    const currentBeforeCharge = getUserScanBalance.get(userId);
-    const currentSubscriptionActive = Boolean(
-      currentBeforeCharge?.subscription_until &&
-      Date.parse(currentBeforeCharge.subscription_until) > Date.now()
-    );
-    const currentUnlimited = Number(currentBeforeCharge?.unlimited || 0) === 1 || currentSubscriptionActive;
+    // Commit entitlement consumption, scan history and game energy together.
+    // If any database write fails, SQLite rolls back the entire successful-scan operation.
+    let scanOutcome = null;
+    db.transaction(() => {
+      const currentBeforeCharge = getUserScanBalance.get(userId);
+      const currentSubscriptionActive = Boolean(
+        currentBeforeCharge?.subscription_until &&
+        Date.parse(currentBeforeCharge.subscription_until) > Date.now()
+      );
+      const currentUnlimited = Number(currentBeforeCharge?.unlimited || 0) === 1 || currentSubscriptionActive;
+      let charged = false;
 
-    // Paid/package scans are consumed first. The daily scan is separate and
-    // only consumed when the paid balance is empty. Charge only after valid data.
-    if (!currentUnlimited) {
-      const currentPaidBalance = Number(currentBeforeCharge?.scan_balance || 0);
-      if (currentPaidBalance > 0) {
+      if (!currentUnlimited) {
+        const currentPaidBalance = Number(currentBeforeCharge?.scan_balance || 0);
+        if (currentPaidBalance <= 0) {
+          scanOutcome = {
+            ok: false,
+            code: 'SCAN_BALANCE_EMPTY',
+            scanBalance: getDisplayedScanBalance(currentBeforeCharge),
+            error: 'Бесплатный скан на сегодня уже использован. Пополните баланс или возвращайтесь завтра.'
+          };
+          return;
+        }
+
         const spent = spendUserScan.run(userId);
         if (spent.changes !== 1) {
-          return res.status(402).json({
+          scanOutcome = {
             ok: false,
             code: 'SCAN_BALANCE_EMPTY',
             scanBalance: getDisplayedScanBalance(getUserScanBalance.get(userId)),
             error: 'Баланс сканов изменился. Повторите попытку.'
-          });
+          };
+          return;
         }
-      } else {
-        return res.status(402).json({
-          ok: false,
-          code: 'SCAN_BALANCE_EMPTY',
-          scanBalance: getDisplayedScanBalance(getUserScanBalance.get(userId)),
-          error: 'Бесплатный скан на сегодня уже использован. Пополните баланс или возвращайтесь завтра.'
-        });
+        charged = true;
       }
-      ensureDailyScan(userId);
-      sendLiveEntitlement(userId);
-    }
-    const currentEntitlement = getUserEntitlements.get(userId);
-    const scanBalance = getDisplayedScanBalance(currentEntitlement);
 
-    const scannedAt = new Date().toISOString();
-    db.prepare('UPDATE users SET last_scan_at = ?, last_transport_number = ?, game_attempts = COALESCE(game_attempts, 0) + 3 WHERE vk_id = ?')
-      .run(scannedAt, String(data.vehicleNumber || '').trim() || null, userId);
-    let referralRewarded = false;
-    db.transaction(() => {
+      const scannedAt = new Date().toISOString();
+      db.prepare('UPDATE users SET last_scan_at = ?, last_transport_number = ?, game_attempts = COALESCE(game_attempts, 0) + 3 WHERE vk_id = ?')
+        .run(scannedAt, String(data.vehicleNumber || '').trim() || null, userId);
+
       recordScan.run(
         userId, scannedAt, paytagid, String(data.transportType || ''),
         String(data.routeNumber || ''), String(data.vehicleNumber || ''),
         Number.isFinite(data.price) ? data.price : null
       );
 
+      let referralRewarded = false;
+      let referralInviterId = null;
       const referral = getReferralForInvitee.get(userId);
       if (referral && !referral.rewarded_at && getUserExists.get(referral.inviter_vk_id)) {
         const granted = grantReferralScans.run(referral.inviter_vk_id);
@@ -1784,21 +1785,56 @@ app.post('/api/paytag', async (req, res) => {
           if (marked.changes === 1) {
             recordScanCredit.run(referral.inviter_vk_id, scannedAt, 3, 'referral', 'Бонус за приглашённого пользователя ' + userId);
             referralRewarded = true;
+            referralInviterId = referral.inviter_vk_id;
           }
         }
       }
+
+      const currentEntitlement = getUserEntitlements.get(userId);
+      const gameAttempts = Number(
+        db.prepare('SELECT game_attempts FROM users WHERE vk_id = ?').get(userId)?.game_attempts || 0
+      );
+      scanOutcome = {
+        ok: true,
+        charged,
+        scannedAt,
+        scanBalance: getDisplayedScanBalance(currentEntitlement),
+        subscriptionUntil: currentEntitlement?.subscription_until || null,
+        subscriptionActive: Boolean(
+          currentEntitlement?.subscription_until &&
+          Date.parse(currentEntitlement.subscription_until) > Date.now()
+        ),
+        unlimited: Number(currentEntitlement?.unlimited || 0) === 1,
+        gameAttempts,
+        referralRewarded,
+        referralInviterId
+      };
     })();
-    if (referralRewarded) sendLiveEntitlement(getReferralForInvitee.get(userId)?.inviter_vk_id);
+
+    if (!scanOutcome?.ok) {
+      return res.status(402).json({
+        ok: false,
+        code: scanOutcome?.code || 'SCAN_BALANCE_EMPTY',
+        scanBalance: scanOutcome?.scanBalance ?? getDisplayedScanBalance(getUserScanBalance.get(userId)),
+        error: scanOutcome?.error || 'Не удалось подтвердить списание скана. Попробуйте ещё раз.'
+      });
+    }
+
+    if (scanOutcome.charged) sendLiveEntitlement(userId);
+    if (scanOutcome.referralRewarded && scanOutcome.referralInviterId) {
+      sendLiveEntitlement(scanOutcome.referralInviterId);
+    }
 
     return res.json({
       ok: true,
       data,
-      scannedAt: scannedAt,
+      scannedAt: scanOutcome.scannedAt,
       source: 'direct-api',
-      scanBalance,
-      subscriptionUntil: balanceRow?.subscription_until || null,
-      unlimited: Number(balanceRow?.unlimited || 0) === 1,
-      subscriptionActive
+      scanBalance: scanOutcome.scanBalance,
+      subscriptionUntil: scanOutcome.subscriptionUntil,
+      subscriptionActive: scanOutcome.subscriptionActive,
+      unlimited: scanOutcome.unlimited,
+      gameAttempts: scanOutcome.gameAttempts
     });
   } catch (error) {
     console.error('[api/paytag] ' + paytagid + ': ' + (error?.message || error));
