@@ -2164,16 +2164,29 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                 ? pathname.slice(0, pathname.lastIndexOf('/') + 1)
                 : pathname + '/');
         const endpoint = new URL(appBase + 'api/paytag', window.location.origin);
-        const response = await fetch(endpoint.toString(), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': getVkAuthorizationHeader()
-            },
-            body: JSON.stringify({ paytagid }),
-            cache: 'no-store',
-            credentials: 'omit'
-        });
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), 20000);
+        let response;
+        try {
+            response = await fetch(endpoint.toString(), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': getVkAuthorizationHeader()
+                },
+                body: JSON.stringify({ paytagid }),
+                cache: 'no-store',
+                credentials: 'omit',
+                signal: controller.signal
+            });
+        } catch (error) {
+            if (error?.name === 'AbortError') {
+                throw new Error('Сервер QRide не ответил за 20 секунд. Попробуйте отсканировать QR ещё раз.');
+            }
+            throw error;
+        } finally {
+            window.clearTimeout(timeoutId);
+        }
 
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -2276,6 +2289,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         if (scanProcessing) return;
         scanProcessing = true;
         refreshScanButton();
+        setScannerStatus('');
         try {
             if (typeof window.qrideScanQr !== 'function') {
                 setScannerStatus('Сканер VK недоступен. Закройте и заново откройте QRide.');
