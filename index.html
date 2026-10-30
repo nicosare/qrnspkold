@@ -2374,6 +2374,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     function showStartOverlay() {
         startOverlayElement.hidden = false;
         pageBody.classList.add('start-overlay-open');
+        if (typeof window.refreshRoadnoteMoodMessage === 'function') window.refreshRoadnoteMoodMessage();
         refreshScanButton();
     }
 
@@ -2728,48 +2729,49 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             return suggestions;
         }
 
-        let tariffMoodContextHandled = false;
-        function handleRoadnoteTariffMoodReady() {
-            if (tariffMoodContextHandled) return;
-            tariffMoodContextHandled = true;
+        let roadnoteTariffMoodReady = false;
+        window.addEventListener('qride:tariff-state-ready', function () {
+            roadnoteTariffMoodReady = true;
+        });
 
-            // Commercial messages appear rarely; ordinary Q messages remain the default.
-            if (Math.random() >= 0.12) return;
-            const candidates = buildRoadnoteTariffMoodMessages();
-            if (!candidates.length) return;
-
-            let recent = [];
-            try { recent = JSON.parse(sessionStorage.getItem('roadnoteMoodRecent') || '[]'); } catch (_) {}
-            const pool = candidates.filter(item => !recent.includes(item.text));
-            const selected = (pool.length ? pool : candidates)[Math.floor(Math.random() * (pool.length || candidates.length))];
-            activeRoadnoteMoodMessage = selected;
-
-            try {
-                sessionStorage.setItem('roadnoteMoodRecent', JSON.stringify([selected.text, ...recent.filter(text => text !== selected.text)].slice(0, 12)));
-            } catch (_) {}
-            renderRoadnoteMoodMessage();
-        }
-
-        window.addEventListener('qride:tariff-state-ready', handleRoadnoteTariffMoodReady);
-
-        let activeRoadnoteMoodMessage = null;
-        let activeRoadnoteGreeting = '';
+        let moodTypingTimer = null;
         function renderRoadnoteMoodMessage() {
             const moodMessage = document.getElementById('start-mood-message');
             if (!moodMessage) return;
-            // Keep the greeting and mood stable for the lifetime of this Mini App launch.
-            if (!activeRoadnoteMoodMessage) activeRoadnoteMoodMessage = chooseRoadnoteMoodMessage();
-            if (window.qridePersonalGreeting) {
-                activeRoadnoteGreeting = window.qridePersonalGreeting;
-            } else if (!activeRoadnoteGreeting) {
-                const hour = new Date().getHours();
-                activeRoadnoteGreeting = hour >= 5 && hour < 11
-                    ? 'Доброе утро'
-                    : hour >= 11 && hour < 17
-                        ? 'Добрый день'
-                        : 'Добрый вечер';
+
+            // Select a fresh message on every entry to the start screen.
+            const selected = chooseRoadnoteMoodMessage();
+            if (roadnoteTariffMoodReady && Math.random() < 0.12) {
+                const candidates = buildRoadnoteTariffMoodMessages();
+                let recent = [];
+                try { recent = JSON.parse(sessionStorage.getItem('roadnoteMoodRecent') || '[]'); } catch (_) {}
+                const pool = candidates.filter(item => !recent.includes(item.text));
+                if (pool.length) {
+                    const tariffMessage = pool[Math.floor(Math.random() * pool.length)];
+                    selected.text = tariffMessage.text;
+                    selected.icon = tariffMessage.icon;
+                    selected.color = tariffMessage.color;
+                    selected.category = tariffMessage.category;
+                }
             }
-            const selected = activeRoadnoteMoodMessage;
+
+            let recent = [];
+            try { recent = JSON.parse(sessionStorage.getItem('roadnoteMoodRecent') || '[]'); } catch (_) {}
+            try {
+                sessionStorage.setItem('roadnoteMoodRecent', JSON.stringify([selected.text, ...recent.filter(text => text !== selected.text)].slice(0, 12)));
+            } catch (_) {}
+
+            if (moodTypingTimer) {
+                clearInterval(moodTypingTimer);
+                moodTypingTimer = null;
+            }
+
+            const hour = new Date().getHours();
+            const greeting = window.qridePersonalGreeting || (hour >= 5 && hour < 11
+                ? 'Доброе утро'
+                : hour >= 11 && hour < 17
+                    ? 'Добрый день'
+                    : 'Добрый вечер');
             const icon = moodIcons[selected.icon] || moodIcons.sparkles;
             moodMessage.innerHTML =
                 '<span class="q-speech-greeting"></span>' +
@@ -2779,8 +2781,20 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                 '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
                 icon +
                 '</svg></span>';
-            moodMessage.querySelector('.q-speech-greeting').textContent = activeRoadnoteGreeting;
-            moodMessage.querySelector('.mood-message-text').textContent = selected.text;
+            moodMessage.querySelector('.q-speech-greeting').textContent = greeting;
+
+            const textNode = moodMessage.querySelector('.mood-message-text');
+            const characters = Array.from(selected.text);
+            let position = 0;
+            const typingSpeed = 24;
+            moodTypingTimer = window.setInterval(function () {
+                position += 1;
+                textNode.textContent = characters.slice(0, position).join('');
+                if (position >= characters.length) {
+                    clearInterval(moodTypingTimer);
+                    moodTypingTimer = null;
+                }
+            }, typingSpeed);
         }
         window.refreshRoadnoteMoodMessage = renderRoadnoteMoodMessage;
         renderRoadnoteMoodMessage();
