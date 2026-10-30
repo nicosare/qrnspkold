@@ -1763,6 +1763,9 @@ app.post('/api/paytag', async (req, res) => {
           return;
         }
         charged = true;
+        // If the last paid scan was just consumed, grant today's free scan
+        // before returning the updated balance, matching the existing policy.
+        ensureDailyScan(userId);
       }
 
       const scannedAt = new Date().toISOString();
