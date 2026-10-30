@@ -515,12 +515,11 @@
         }
 
         /* QRide mascot: calm, occasional eye movement and natural blinks. */
-        .start-brand-icon .qride-eye {
+        .start-brand-icon .qride-eyes {
             transform-box: fill-box;
             transform-origin: center;
             animation: qride-eye-life 10.5s ease-in-out infinite;
         }
-        .start-brand-icon .qride-eye-right { animation-delay: -0.08s; }
         @keyframes qride-eye-life {
             0%, 8%, 17%, 100% { transform: translate(0, 0) scale(1, 1) rotate(0); }
             9%, 10% { transform: translate(0, 0) scale(1, .08) rotate(0); }
@@ -534,7 +533,7 @@
             88% { transform: translate(0, 0) scale(1, 1) rotate(0); }
         }
         @media (prefers-reduced-motion: reduce) {
-            .start-brand-icon .qride-eye { animation: none; }
+            .start-brand-icon .qride-eyes { animation: none; }
         }
 
         .start-brand-name { font-size: 21px; font-weight: 700; letter-spacing: -.3px; }
@@ -1472,8 +1471,10 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                     <rect width="512" height="512" rx="140" ry="140" fill="url(#qrideBodyGradient)"/>
                     <path fill="url(#qrideBezelGradient)" filter="url(#qrideInnerBezelShadow)" d="M95 115 C170 75 342 75 417 115 C475 145 485 210 485 256 C485 302 475 367 417 397 C342 437 170 437 95 397 C37 367 27 302 27 256 C27 210 37 145 95 115Z"/>
                     <path fill="url(#qrideScreenGradient)" d="M105 128 C175 92 337 92 407 128 C455 152 464 210 464 256 C464 302 455 360 407 384 C337 420 175 420 105 384 C57 360 48 302 48 256 C48 210 57 152 105 128Z"/>
-                    <ellipse class="qride-eye qride-eye-left" cx="185" cy="256" rx="34" ry="46" fill="#020202"/>
-                    <ellipse class="qride-eye qride-eye-right" cx="327" cy="256" rx="34" ry="46" fill="#020202"/>
+                    <g class="qride-eyes">
+                        <ellipse cx="185" cy="256" rx="34" ry="46" fill="#020202"/>
+                        <ellipse cx="327" cy="256" rx="34" ry="46" fill="#020202"/>
+                    </g>
                 </svg>
             </div>
             <div>
