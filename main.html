@@ -439,6 +439,30 @@
         }
 
         .start-brand-name { font-size: 21px; font-weight: 700; letter-spacing: -.3px; }
+
+        .start-brand-icon.mascot-trigger {
+            padding: 0; border: 0; cursor: pointer; overflow: hidden;
+            -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+            transition: transform .16s ease, box-shadow .2s ease;
+        }
+        .start-brand-icon.mascot-trigger:active { transform: scale(.94); }
+        .mascot-face { width: 100%; height: 100%; display: block; }
+        .mascot-screen { fill: #f5f8ff; stroke: #d7e8ff; stroke-width: 12; }
+        .mascot-eye { fill: #020202; transform-box: fill-box; transform-origin: center; }
+        .mascot-brow { fill: none; stroke: transparent; stroke-width: 15; stroke-linecap: round; transition: stroke .18s ease; }
+        .mascot-trigger.is-angry { box-shadow: 0 0 0 3px #ff3b3b, 0 0 22px #ff202066; }
+        .mascot-trigger.is-angry .mascot-eye { fill: #ff2020; }
+        .mascot-trigger.is-angry .mascot-brow { stroke: #d91f2b; }
+        .mascot-trigger.is-angry .mascot-brow-left { d: path("M140 205 L218 180"); }
+        .mascot-trigger.is-angry .mascot-brow-right { d: path("M294 180 L372 205"); }
+        .mascot-trigger.is-angry .mascot-eye { animation: mascot-angry .28s ease-in-out infinite alternate; }
+        @keyframes mascot-angry { from { transform: scaleY(1); } to { transform: scaleY(.78); } }
+        .mascot-trigger.is-playing .mascot-eye { animation: mascot-look .48s ease-in-out; }
+        @keyframes mascot-look {
+            0%, 100% { transform: translateY(0) scaleY(1); }
+            45%, 65% { transform: translateY(5px) scaleY(.82); }
+        }
+
         .start-brand-caption { margin-top: 1px; color: #727983; font-size: 13px; }
 
         .start-intro { margin-bottom: 24px; }
@@ -769,15 +793,41 @@
 <section class="start-overlay" id="start-overlay" role="dialog" aria-modal="true" aria-labelledby="start-title">
     <div class="start-screen">
         <div class="start-brand">
-            <div class="start-brand-icon" aria-hidden="true">
-                <svg width="27" height="27" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 10V4a1 1 0 0 1 1-1h6M18 3h6a1 1 0 0 1 1 1v6M25 18v6a1 1 0 0 1-1 1h-6M10 25H4a1 1 0 0 1-1-1v-6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-                    <rect x="8" y="8" width="4" height="4" rx=".6" fill="currentColor"/>
-                    <rect x="16" y="8" width="4" height="4" rx=".6" fill="currentColor"/>
-                    <rect x="8" y="16" width="4" height="4" rx=".6" fill="currentColor"/>
-                    <path d="M16 16h2v2h-2zM19 19h2v2h-2zM18 20v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    <script>
+    (() => {
+        const mascot = document.getElementById('qride-mascot');
+        if (!mascot) return;
+        let taps = [];
+        let resetTimer;
+        mascot.addEventListener('click', () => {
+            const now = Date.now();
+            taps = taps.filter(time => now - time < 2200);
+            taps.push(now);
+            mascot.classList.remove('is-playing');
+            void mascot.offsetWidth;
+            mascot.classList.add('is-playing');
+            if (taps.length >= 4) {
+                mascot.classList.add('is-angry');
+                clearTimeout(resetTimer);
+                resetTimer = setTimeout(() => {
+                    mascot.classList.remove('is-angry', 'is-playing');
+                    taps = [];
+                }, 3200);
+            }
+            setTimeout(() => mascot.classList.remove('is-playing'), 520);
+        });
+    })();
+    </script>
+
+            <button class="start-brand-icon mascot-trigger" id="qride-mascot" type="button" aria-label="Поиграть с роботом">
+                <svg class="mascot-face" viewBox="0 0 512 512" role="img" aria-label="Робот QRide">
+                    <path class="mascot-screen" d="M 105,128 C 175,92 337,92 407,128 C 455,152 464,210 464,256 C 464,302 455,360 407,384 C 337,420 175,420 105,384 C 57,360 48,302 48,256 C 48,210 57,152 105,128 Z"/>
+                    <ellipse class="mascot-eye mascot-eye-left" cx="185" cy="256" rx="34" ry="46"/>
+                    <ellipse class="mascot-eye mascot-eye-right" cx="327" cy="256" rx="34" ry="46"/>
+                    <path class="mascot-brow mascot-brow-left" d="M140 190 L218 190"/>
+                    <path class="mascot-brow mascot-brow-right" d="M294 190 L372 190"/>
                 </svg>
-            </div>
+            </button>
             <div>
                 <div class="start-brand-name">QRide</div>
                 <div class="start-brand-caption">Транспортные данные в одном месте</div>
