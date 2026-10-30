@@ -2522,7 +2522,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                 ['Хорошей дороги! И пусть она ведёт туда, куда тебе действительно хочется.', 'map-pin', 'sage'],
                 ['Пусть поездка пройдёт быстрее, чем ты успеешь проверить время.', 'train-front', 'lilac']
             ].map(([text, icon, color]) => ({ text, icon, color, category: 'transport', weight: 7 })),
-            // 8% — короткие реплики Roadnote
+            // 12% — живые короткие реплики Кью
             ...[
                 ['Ну что, поехали?', 'arrow-right-circle', 'blue'],
                 ['О, снова ты.', 'smile', 'pink'],
@@ -2531,8 +2531,24 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                 ['Ну вот, уже маленький повод улыбнуться.', 'smile', 'yellow'],
                 ['Хорошего тебе дня. Без всяких условий.', 'sun', 'peach'],
                 ['Ладно, не отвлекаю. Удачи!', 'hand-heart', 'pink'],
-                ['Заглядывай, если что.', 'message-circle', 'blue']
-            ].map(([text, icon, color]) => ({ text, icon, color, category: 'roadnote', weight: 8 })),
+                ['Заглядывай, если что.', 'message-circle', 'blue'],
+                ['Куда едем на этот раз?', 'map-pin', 'blue'],
+                ['Ну что, какой маршрут сегодня покоряем?', 'route', 'lilac'],
+                ['Что будем сканировать сегодня?', 'search', 'lavender'],
+                ['Поехали искать что-нибудь интересное?', 'arrow-right-circle', 'blue'],
+                ['На карте ещё столько интересного. Куда направимся?', 'map-pin', 'sage'],
+                ['План на сегодня уже есть или придумаем по дороге?', 'compass', 'peach'],
+                ['Я готов к новым маршрутам. А ты?', 'train-front', 'blue'],
+                ['Есть идея, куда отправиться?', 'compass', 'lavender'],
+                ['Пусть сегодня дорога приведёт в хорошее место.', 'route', 'sage'],
+                ['Новая поездка? Я только за.', 'bus', 'blue'],
+                ['Снова в пути? Тогда начинаем!', 'ticket', 'yellow'],
+                ['Проверим, что интересного вокруг?', 'search', 'mint'],
+                ['Может, сегодня откроешь для себя новое место?', 'map-pin', 'peach'],
+                ['Как настроение? И куда сегодня путь держим?', 'smile', 'pink'],
+                ['Ты выбираешь направление, я помогаю с QR.', 'route', 'lilac'],
+                ['Ну что, едем дальше?', 'arrow-right-circle', 'blue']
+            ].map(([text, icon, color]) => ({ text, icon, color, category: 'roadnote', weight: 12 })),
             // 5% — стартовая скидка; дополнительно проверяется доступность промо
             ...[
                 ['Начать пользоваться платными возможностями сейчас выгоднее.', 'badge-percent', 'peach'],
@@ -2659,7 +2675,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             try { recent = JSON.parse(sessionStorage.getItem('roadnoteMoodRecent') || '[]'); } catch (_) {}
             let pool = available.filter(item => !recent.includes(item.text));
             if (!pool.length) pool = available;
-            const weights = { warm: 30, humor: 20, time: 12, weekday: 10, season: 8, transport: 7, roadnote: 8, promo: 5 };
+            const weights = { warm: 30, humor: 20, time: 12, weekday: 10, season: 8, transport: 7, roadnote: 12, promo: 5 };
             const activeCategories = Array.from(new Set(pool.map(item => item.category)));
             const totalWeight = activeCategories.reduce((sum, category) => sum + weights[category], 0);
             let choice = Math.random() * totalWeight;
@@ -2675,6 +2691,67 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             } catch (_) {}
             return selected;
         }
+        function buildRoadnoteTariffMoodMessages() {
+            const offers = Array.from(document.querySelectorAll('.start-offer[data-offer-id]'));
+            const suggestions = [];
+            const formatPrice = value => new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(value) + ' ₽';
+
+            offers.forEach(card => {
+                const priceNode = card.querySelector('.start-offer-current-price');
+                const price = Number(String(priceNode?.textContent || '').replace(/[^0-9]/g, ''));
+                const quantity = Number(card.dataset.quantity);
+                if (!Number.isSafeInteger(price) || price <= 0 || !Number.isSafeInteger(quantity) || quantity <= 0) return;
+
+                if (card.dataset.offerKind === 'pack') {
+                    const perScan = (price / quantity).toLocaleString('ru-RU', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                    const packLabel = quantity + ' ' + (quantity === 1 ? 'скан' : quantity < 5 ? 'скана' : 'сканов');
+                    suggestions.push(
+                        { text: 'Кстати, с пакетом на ' + quantity + ' сканов один скан выходит примерно в ' + perScan + ' ₽.', icon: 'ticket', color: 'blue', category: 'tariff' },
+                        { text: 'Пакет на ' + packLabel + ' сейчас стоит ' + formatPrice(price) + '. Можно взять на несколько поездок.', icon: 'ticket', color: 'sage', category: 'tariff' }
+                    );
+                    return;
+                }
+
+                if (card.dataset.offerKind === 'subscription') {
+                    const duration = quantity === 1 ? '1 месяц' : quantity + ' ' + (quantity < 5 ? 'месяца' : 'месяцев');
+                    const monthly = Math.round(price / quantity);
+                    suggestions.push(
+                        { text: 'Кстати, безлимит на ' + duration + ' сейчас стоит ' + formatPrice(price) + '.', icon: 'sparkles', color: 'lilac', category: 'tariff' },
+                        { text: 'С подпиской на ' + duration + ' выходит примерно ' + formatPrice(monthly) + ' в месяц — и сканировать можно без ограничений.', icon: 'sparkles', color: 'blue', category: 'tariff' }
+                    );
+                }
+            });
+
+            return suggestions;
+        }
+
+        let tariffMoodContextHandled = false;
+        function handleRoadnoteTariffMoodReady() {
+            if (tariffMoodContextHandled) return;
+            tariffMoodContextHandled = true;
+
+            // Commercial messages appear rarely; ordinary Q messages remain the default.
+            if (Math.random() >= 0.12) return;
+            const candidates = buildRoadnoteTariffMoodMessages();
+            if (!candidates.length) return;
+
+            let recent = [];
+            try { recent = JSON.parse(sessionStorage.getItem('roadnoteMoodRecent') || '[]'); } catch (_) {}
+            const pool = candidates.filter(item => !recent.includes(item.text));
+            const selected = (pool.length ? pool : candidates)[Math.floor(Math.random() * (pool.length || candidates.length))];
+            activeRoadnoteMoodMessage = selected;
+
+            try {
+                sessionStorage.setItem('roadnoteMoodRecent', JSON.stringify([selected.text, ...recent.filter(text => text !== selected.text)].slice(0, 12)));
+            } catch (_) {}
+            renderRoadnoteMoodMessage();
+        }
+
+        window.addEventListener('qride:tariff-state-ready', handleRoadnoteTariffMoodReady);
+
         let activeRoadnoteMoodMessage = null;
         let activeRoadnoteGreeting = '';
         function renderRoadnoteMoodMessage() {
@@ -3283,7 +3360,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             </section>
         </div>
 
-<script src="tariff-purchases.js?v=20261028-mood-stable-1"></script>
+<script src="tariff-purchases.js?v=20261030-qride-mood-offers-1"></script>
 <div class="roadnote-game-toast-host" id="roadnote-game-toast-host" aria-live="polite" aria-atomic="true"></div>
 
 <script>
