@@ -2663,7 +2663,9 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             if (!moodMessage) return;
             // Keep the greeting and mood stable for the lifetime of this Mini App launch.
             if (!activeRoadnoteMoodMessage) activeRoadnoteMoodMessage = chooseRoadnoteMoodMessage();
-            if (!activeRoadnoteGreeting) {
+            if (window.qridePersonalGreeting) {
+                activeRoadnoteGreeting = window.qridePersonalGreeting;
+            } else if (!activeRoadnoteGreeting) {
                 const hour = new Date().getHours();
                 activeRoadnoteGreeting = hour >= 5 && hour < 11
                     ? 'Доброе утро'
@@ -2921,9 +2923,10 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     const hour = new Date().getHours();
     const greeting = hour >= 5 && hour < 12 ? 'Доброе утро' : hour >= 12 && hour < 18 ? 'Добрый день' : 'Добрый вечер';
     const firstName = String(profile.first_name || '').trim();
-    activeRoadnoteGreeting = greeting + (firstName ? ', ' + firstName : '');
+    const personalGreeting = greeting + (firstName ? ', ' + firstName : '');
+    window.qridePersonalGreeting = personalGreeting;
     const moodGreeting = document.querySelector('#start-mood-message .q-speech-greeting');
-    if (moodGreeting) moodGreeting.textContent = activeRoadnoteGreeting;
+    if (moodGreeting) moodGreeting.textContent = personalGreeting;
 
     try {
       const pathname = window.location.pathname;
