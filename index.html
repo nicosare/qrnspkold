@@ -1096,39 +1096,7 @@
         }
 
     
-        /* Polished, lightweight motion for the Roadnote start screen. */
-        @keyframes roadnoteStartReveal {
-            from { opacity: 0; transform: translate3d(0, 16px, 0) scale(.985); filter: blur(3px); }
-            to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
-        }
-        @keyframes roadnoteBrandReveal {
-            from { opacity: 0; transform: translate3d(0, -8px, 0); }
-            to { opacity: 1; transform: translate3d(0, 0, 0); }
-        }
-        @keyframes roadnoteBalanceGlow {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-        .start-overlay:not([hidden]) .start-screen > * {
-            animation: roadnoteStartReveal .62s cubic-bezier(.2,.75,.25,1) both;
-        }
-        .start-overlay:not([hidden]) .start-screen > .start-brand {
-            animation-name: roadnoteBrandReveal;
-            animation-duration: .55s;
-        }
-        .start-overlay:not([hidden]) .start-screen > *:nth-child(1) { animation-delay: .02s; }
-        .start-overlay:not([hidden]) .start-screen > *:nth-child(2) { animation-delay: .07s; }
-        .start-overlay:not([hidden]) .start-screen > *:nth-child(3) { animation-delay: .13s; }
-        .start-overlay:not([hidden]) .start-screen > *:nth-child(4) { animation-delay: .19s; }
-        .start-overlay:not([hidden]) .start-screen > *:nth-child(5) { animation-delay: .24s; }
-        .start-overlay:not([hidden]) .start-screen > *:nth-child(6) { animation-delay: .29s; }
-        .start-overlay:not([hidden]) .start-screen > *:nth-child(7) { animation-delay: .34s; }
-        .start-overlay:not([hidden]) .start-screen > *:nth-child(8) { animation-delay: .39s; }
-        .start-balance-card {
-            background-size: 180% 180%;
-            animation: roadnoteBalanceGlow 12s ease-in-out infinite;
-            transition: box-shadow .28s ease, transform .28s cubic-bezier(.2,.75,.25,1);
-        }
+        /* The start screen is available immediately; only changed data gets a small reveal. */
         .start-balance-card {
             transition: box-shadow .22s ease, transform .22s cubic-bezier(.2,.75,.25,1);
         }
@@ -1179,11 +1147,6 @@
             }
         }
         @media (prefers-reduced-motion: reduce) {
-            .start-overlay:not([hidden]) .start-screen > *,
-            .start-overlay:not([hidden]) .start-brand,
-            .start-balance-card {
-                animation: none !important;
-            }
             .start-balance-card, .start-offers-section, .start-referral, .start-offer,
             .start-button, .start-referral-button, .start-referral-qr-toggle,
             .start-offer-details, .start-brand-icon {
@@ -1914,7 +1877,29 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         startScanButton.disabled = !scanSessionReady || scanProcessing || balanceIsEmpty;
     }
 
+    function animateStartValue(element) {
+        if (!element || typeof element.animate !== 'function') return;
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        if (element._qrideValueAnimation) element._qrideValueAnimation.cancel();
+
+        const animation = element.animate(
+            [
+                { opacity: 0.65, transform: 'translate3d(0, 2px, 0)' },
+                { opacity: 1, transform: 'translate3d(0, 0, 0)' }
+            ],
+            { duration: 210, easing: 'cubic-bezier(.2,.65,.3,1)' }
+        );
+        element._qrideValueAnimation = animation;
+        animation.onfinish = function () {
+            if (element._qrideValueAnimation === animation) element._qrideValueAnimation = null;
+        };
+    }
+    window.qrideAnimateStartValue = animateStartValue;
+
     function updateScanBalance(balance, subscriptionUntil = null, unlimited = false, subscriptionActive = false) {
+        const previousBalanceText = scanBalanceElement.textContent;
+        const previousExtraText = scanBalanceExtraElement.textContent;
+        const previousExtraHidden = scanBalanceExtraElement.hidden;
         scanAccessUnlimited = Boolean(unlimited || subscriptionActive);
         const numericBalance = balance === null || balance === undefined || balance === '' ? null : Number(balance);
         const hasPackScans = Number.isSafeInteger(numericBalance) && numericBalance > 0;
@@ -1958,6 +1943,13 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                     ? '0 сканов'
                     : currentScanBalance + (currentScanBalance === 1 ? ' скан' : currentScanBalance < 5 ? ' скана' : ' сканов');
             }
+        }
+        if (scanBalanceElement.textContent !== previousBalanceText) {
+            animateStartValue(scanBalanceElement);
+        }
+        if (!scanBalanceExtraElement.hidden &&
+            (previousExtraHidden || scanBalanceExtraElement.textContent !== previousExtraText)) {
+            animateStartValue(scanBalanceExtraElement);
         }
         refreshScanButton();
     }
