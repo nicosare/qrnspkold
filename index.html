@@ -1919,13 +1919,19 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             .trim();
     }
 
-    function isValidNspkQrUrl(rawValue) {
+    function getNspkPaytagId(rawValue) {
         try {
             const parsed = new URL(rawValue);
-            return parsed.protocol === 'https:' && parsed.hostname === 'qr.bilet.nspk.ru' && parsed.searchParams.has('paytagid');
-        } catch (error) {
-            return false;
-        }
+            if (parsed.protocol !== 'https:' || parsed.hostname !== 'qr.bilet.nspk.ru') return '';
+            for (const [key, value] of parsed.searchParams.entries()) {
+                if (key.toLowerCase() === 'paytagid') return value.trim();
+            }
+        } catch (error) {}
+        return '';
+    }
+
+    function isValidNspkQrUrl(rawValue) {
+        return Boolean(getNspkPaytagId(rawValue));
     }
 
     function buildProxyUrls(url) {
@@ -2178,29 +2184,36 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             throw new Error(payload.error || `Сервер QRide вернул HTTP ${response.status}`);
         }
 
-        window.dispatchEvent(new CustomEvent('qride:scan-success'));
         const source = payload?.data || {};
-        return {
+        const result = {
             vehicleType: normalizeTransportType(source.transportType || source.vehicleType || ''),
             routeNumber: cleanCapturedValue(String(source.routeNumber || '')),
             vehicleNumber: cleanCapturedValue(String(source.vehicleNumber || '')),
             price: Number.isFinite(source.price) ? source.price : null,
             scannedAt: payload.scannedAt || null,
-            scanBalance: Object.prototype.hasOwnProperty.call(payload, 'scanBalance') ? payload.scanBalance : null
+            scanBalance: Object.prototype.hasOwnProperty.call(payload, 'scanBalance') ? payload.scanBalance : null,
+            subscriptionUntil: payload.subscriptionUntil || null,
+            subscriptionActive: payload.subscriptionActive === true,
+            unlimited: payload.unlimited === true,
+            gameAttempts: Number.isSafeInteger(payload.gameAttempts) ? payload.gameAttempts : null
         };
+        window.dispatchEvent(new CustomEvent('qride:scan-success', {
+            detail: { gameAttempts: result.gameAttempts }
+        }));
+        return result;
     }
 
     async function handleScannedText(decodedText) {
         const scannedUrl = String(decodedText || '').trim();
-        if (!isValidNspkQrUrl(scannedUrl)) {
-            setScannerStatus('');
+        const paytagid = getNspkPaytagId(scannedUrl);
+        if (!paytagid) {
+            setScannerStatus('Это не QR-код билета НСПК. Попробуйте отсканировать QR ещё раз.');
             return false;
         }
 
         try {
-            const paytagid = new URL(scannedUrl).searchParams.get('paytagid') || '';
             if (!/^[0-9A-Za-z_-]{6,64}$/.test(paytagid)) {
-                throw new Error('В QR-коде отсутствует корректный paytagid.');
+                throw new Error('В QR-коде отсутствует корректный идентификатор paytagid.');
             }
 
             setScannerStatus('QR распознан. Загружаем данные с сервера…');
@@ -2215,8 +2228,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             setScannerStatus('Данные загружены. Основная страница обновлена.');
             return true;
         } catch (error) {
-            console.warn('QR не удалось обработать; продолжаем сканирование:', error);
-            setScannerStatus('');
+            console.warn('QR не удалось обработать:', error);
+            setScannerStatus(error?.message || 'Не удалось загрузить данные QR-кода. Попробуйте ещё раз.');
             return false;
         }
     }
@@ -2265,28 +2278,31 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         refreshScanButton();
         try {
             if (typeof window.qrideScanQr !== 'function') {
-                console.warn('VK QR scanner is unavailable.');
+                setScannerStatus('Сканер VK недоступен. Закройте и заново откройте QRide.');
                 return;
             }
-            while (!startOverlayElement.hidden) {
-                let code;
-                try {
-                    code = await window.qrideScanQr();
-                } catch (error) {
-                    // Closing/cancelling the native scanner is not an error to show in the UI.
-                    console.info('VK QR scanning ended:', error);
-                    break;
+
+            let code;
+            try {
+                code = await window.qrideScanQr();
+            } catch (error) {
+                // Cancelling the native scanner is expected; other errors remain visible.
+                console.info('VK QR scanning ended:', error);
+                if (error?.message && error.message !== 'Сканирование отменено или недоступно.') {
+                    setScannerStatus(error.message);
                 }
-                const success = await handleScannedText(code);
-                if (success) {
-                    closeStartOverlay();
-                    setScannerStatus('');
-                    break;
-                }
-                // Invalid QR or a failed lookup: reopen the native reader silently.
+                return;
             }
+
+            const success = await handleScannedText(code);
+            if (success) {
+                closeStartOverlay();
+                setScannerStatus('');
+            }
+        } catch (error) {
+            console.error('Не удалось обработать результат сканирования:', error);
+            setScannerStatus(error?.message || 'Не удалось обработать QR-код. Попробуйте ещё раз.');
         } finally {
-            setScannerStatus('');
             scanProcessing = false;
             refreshScanButton();
         }
@@ -3220,7 +3236,16 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   }
   refreshGameState(true);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshGameState(false); });
-  window.addEventListener('qride:scan-success', async () => {
+  window.addEventListener('qride:scan-success', async (event) => {
+    const receivedAttempts = Number(event.detail?.gameAttempts);
+    if (Number.isSafeInteger(receivedAttempts) && receivedAttempts >= 0) {
+      gameAttempts = receivedAttempts;
+      const energyNode = document.getElementById('qride-game-energy-count');
+      if (energyNode) energyNode.textContent = String(gameAttempts);
+      if (attemptsNode) {
+        attemptsNode.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> ' + gameAttempts;
+      }
+    }
     await refreshGameState(false);
     showGameToast('Начислены игровые попытки', '+3 за успешный скан', 'bolt');
   });
