@@ -516,8 +516,9 @@
 
         /* QRide mascot: both eyes move and blink as one unit. */
         .start-brand-icon .qride-eyes {
-            transform-box: view-box;
-            transform-origin: 256px 256px;
+            /* Animate the shared SVG group, not each eye independently. */
+            transform-box: fill-box;
+            transform-origin: center center;
             animation: qride-eye-life 10.5s ease-in-out infinite;
             will-change: transform;
         }
