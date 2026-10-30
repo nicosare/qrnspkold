@@ -722,7 +722,7 @@ function buildAdminMenuKeyboard() {
   });
 }
 
-async function sendAdminMenu(message = 'Меню администратора Roadnote.') {
+async function sendAdminMenu(message = 'Меню администратора QRide.') {
   if (!adminVkId) return;
   await sendCommunityMessage(adminVkId, message, { keyboard: buildAdminMenuKeyboard() });
 }
@@ -875,7 +875,7 @@ async function handleIncomingCommunityMessage(message) {
     })();
     if (text === 'обновить иконку' || buttonPayload.action === 'update_community_avatar') {
       avatarUploadAwaiting.add(userId);
-      await sendAdminMenu('Пришли следующим сообщением фотографию — она станет аватаром сообщества и иконкой Roadnote в миниаппе.');
+      await sendAdminMenu('Пришли следующим сообщением фотографию — она станет аватаром сообщества и иконкой QRide в миниаппе.');
       return;
     }
     if (avatarUploadAwaiting.has(userId) && photoAttachment) {
@@ -919,7 +919,7 @@ async function handleIncomingCommunityMessage(message) {
   if (!photoAttachment) {
     if (String(message?.text || '').trim()) {
       try {
-        await sendCommunityMessage(userId, 'Чтобы отправить заявку на проверку, пришли скриншот оплаты именно фотографией в этот диалог с Roadnote.');
+        await sendCommunityMessage(userId, 'Чтобы отправить заявку на проверку, пришли скриншот оплаты именно фотографией в этот диалог с QRide.');
       } catch (error) {
         console.warn('[tariff screenshot reminder]', error?.message || error);
       }
@@ -961,7 +961,7 @@ async function handleIncomingCommunityMessage(message) {
       "WHERE id = ? AND status = 'awaiting_review' AND screenshot_message_id = ?"
     ).run(new Date().toISOString(), Number(active.id), messageId);
     try {
-      await sendCommunityMessage(userId, 'Не удалось передать скриншот администратору. Заявка сохранена — проверь, что сообщения Roadnote разрешены, и отправь скриншот ещё раз.');
+      await sendCommunityMessage(userId, 'Не удалось передать скриншот администратору. Заявка сохранена — проверь, что сообщения QRide разрешены, и отправь скриншот ещё раз.');
     } catch (replyError) {
       console.warn('[tariff admin delivery failure reply]', replyError?.message || replyError);
     }
@@ -1063,7 +1063,7 @@ function gamePublicState(userId) {
 app.post('/api/game/state', (req, res) => {
   let userId;
   try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
-  catch { return res.status(401).json({ error: 'Открой Roadnote внутри VK и попробуй ещё раз.' }); }
+  catch { return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' }); }
   const now = new Date();
   const nowIso = now.toISOString();
   const today = yekaterinburgDayKey(now);
@@ -1091,7 +1091,7 @@ app.post('/api/game/state', (req, res) => {
 app.post('/api/game/start', (req, res) => {
   let userId;
   try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
-  catch { return res.status(401).json({ error: 'Открой Roadnote внутри VK и попробуй ещё раз.' }); }
+  catch { return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' }); }
   const now = Date.now();
   const sessionId = crypto.randomUUID();
   let started = false;
@@ -1107,7 +1107,7 @@ app.post('/api/game/start', (req, res) => {
 app.post('/api/game/finish', (req, res) => {
   let userId;
   try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
-  catch { return res.status(401).json({ error: 'Открой Roadnote внутри VK и попробуй ещё раз.' }); }
+  catch { return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' }); }
   const sessionId = String(req.body?.sessionId || '');
   const score = Number(req.body?.score);
   if (!/^[0-9a-f-]{36}$/i.test(sessionId) || !Number.isSafeInteger(score) || score < 0 || score > 100000) {
@@ -1157,7 +1157,7 @@ app.post('/api/tariffs/permission', async (req, res) => {
       appId: parsed.params.get('vk_app_id') || null
     }));
   } catch {
-    return res.status(401).json({ error: 'Открой Roadnote внутри VK и попробуй ещё раз.' });
+    return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' });
   }
   if (!communityToken) {
     return res.status(503).json({ error: 'Сообщения сообщества не настроены на сервере.' });
@@ -1194,7 +1194,7 @@ app.post('/api/tariffs/state', (req, res) => {
     const { userId } = parseLaunchParams(req.body?.launchParams);
     return res.json({ ok: true, ...getTariffState(userId) });
   } catch {
-    return res.status(401).json({ error: 'Открой Roadnote внутри VK и попробуй ещё раз.' });
+    return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' });
   }
 });
 
@@ -1514,7 +1514,7 @@ app.post('/api/vk/callback', (req, res) => {
       key: permissionEvent.key || null
     }));
     if (adminVkId && allowedUserId === adminVkId) {
-      Promise.resolve().then(() => sendAdminMenu('Меню администратора Roadnote готово.'))
+      Promise.resolve().then(() => sendAdminMenu('Меню администратора QRide готово.'))
         .catch(error => console.error('[Roadnote admin menu]', error?.message || error));
     }
   } else if (event.type === 'message_deny') {
@@ -1631,7 +1631,7 @@ app.post('/api/yoomoney/notification', (req, res) => {
     const buyerName = [buyer?.first_name, buyer?.last_name].filter(Boolean).join(' ').trim() || 'Пользователь VK';
     const purchasedOffer = requestId ? db.prepare('SELECT offer_name FROM tariff_requests WHERE id = ?').get(requestId) : null;
     const adminText = [
-      'Новая покупка Roadnote',
+      'Новая покупка QRide',
       'Пользователь: ' + buyerName + ' (VK ID ' + outcome.userId + ')',
       'Профиль: https://vk.com/id' + outcome.userId,
       'Тариф: ' + (purchasedOffer?.offer_name || 'неизвестен'),
@@ -1686,7 +1686,7 @@ app.post('/api/paytag', async (req, res) => {
   } catch (error) {
     return res.status(401).json({
       code: 'VK_AUTH_REQUIRED',
-      error: 'Откройте Roadnote внутри VK, чтобы подтвердить пользователя.'
+      error: 'Откройте QRide внутри VK, чтобы подтвердить пользователя.'
     });
   }
 
