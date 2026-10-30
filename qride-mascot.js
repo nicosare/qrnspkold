@@ -325,7 +325,7 @@
     if (overlay && window.MutationObserver) {
       new MutationObserver(syncVisibility).observe(overlay,{attributes:true,attributeFilter:['hidden','class','style']});
     }
-    const observerTarget=overlay || icon;
+    const observerTarget=icon;
     if (window.IntersectionObserver) {
       const observer=new IntersectionObserver(entries => {
         if (entries[0] && entries[0].isIntersecting) resume();
