@@ -520,20 +520,97 @@
         .start-brand-name { font-size: 21px; font-weight: 700; letter-spacing: -.3px; }
         .start-brand-caption { margin-top: 1px; color: #727983; font-size: 13px; }
 
-        .start-intro { margin-bottom: 0; }
-        .start-intro h2 {
-            margin: 0 0 10px;
-            color: #232a33;
-            font-size: 22px;
+        /* Q speaks through a compact messenger-style bubble on the start screen. */
+        .start-intro {
+            display: grid;
+            grid-template-columns: 42px minmax(0, 1fr);
+            align-items: start;
+            gap: 10px;
+            width: 100%;
+            margin: 0;
+            text-align: left;
+        }
+        .q-speech-avatar {
+            display: grid;
+            place-items: center;
+            width: 42px;
+            height: 42px;
+            margin-top: 2px;
+            overflow: hidden;
+            border: 2px solid #fff;
+            border-radius: 14px;
+            background: linear-gradient(145deg, #1674ff 0%, #0048df 100%);
+            box-shadow: 0 5px 13px rgba(0, 82, 238, .18);
+        }
+        .q-speech-avatar svg { display: block; width: 100%; height: 100%; }
+        .q-speech-bubble {
+            position: relative;
+            min-width: 0;
+            padding: 10px 13px 11px;
+            border: 1px solid #dce8f8;
+            border-radius: 5px 16px 16px 16px;
+            background: linear-gradient(145deg, #ffffff 0%, #f5f9ff 100%);
+            box-shadow: 0 5px 15px rgba(35, 75, 130, .055);
+        }
+        .q-speech-bubble::before {
+            position: absolute;
+            top: 13px;
+            left: -6px;
+            width: 10px;
+            height: 10px;
+            border-bottom: 1px solid #dce8f8;
+            border-left: 1px solid #dce8f8;
+            border-radius: 0 0 0 2px;
+            background: #fff;
+            content: '';
+            transform: rotate(45deg);
+        }
+        .q-speech-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 5px;
+        }
+        .q-speech-name {
+            color: #0052ee;
+            font-size: 12px;
             line-height: 1.2;
-            letter-spacing: -.35px;
+            font-weight: 850;
+            letter-spacing: .1px;
+        }
+        #start-mood-message {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 4px;
+            max-width: none;
+            margin: 0;
+            color: #38485b;
+            font-size: 14px;
+            line-height: 1.42;
+            text-align: left;
+        }
+        .q-speech-greeting {
+            color: #26384b;
+            font-size: 14px;
+            line-height: 1.35;
             font-weight: 800;
         }
-        .start-intro p { max-width: 360px; color: #727983; font-size: 16px; line-height: 1.5; }
-        .start-intro p { display: flex; align-items: flex-start; gap: 9px; }
-        .mood-message-icon { display: inline-flex; flex: 0 0 19px; width: 19px; height: 19px; margin-top: 2px; }
-        .mood-message-icon svg { display: block; width: 19px; height: 19px; }
-        .mood-message-text { min-width: 0; color: #727983; }
+        .mood-message-line {
+            display: flex;
+            align-items: flex-start;
+            gap: 7px;
+            min-width: 0;
+        }
+        .mood-message-icon {
+            display: inline-flex;
+            flex: 0 0 16px;
+            width: 16px;
+            height: 16px;
+            margin-top: 2px;
+        }
+        .mood-message-icon svg { display: block; width: 16px; height: 16px; }
+        .mood-message-text { min-width: 0; color: #647386; }
 
 
         .start-balance-card {
@@ -1471,8 +1548,23 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         </div>
 
         <div class="start-intro">
-            <h2 id="start-title">С чего начнём?</h2>
-            <p id="start-mood-message" aria-live="polite"><span class="mood-message-icon" aria-hidden="true"></span><span class="mood-message-text">Пусть сегодня случится что-то хорошее.</span></p>
+            <div class="q-speech-avatar" aria-hidden="true">
+                <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 5V2.5" stroke="#FFC34D" stroke-width="2.4" stroke-linecap="round"/>
+                    <circle cx="22" cy="4" r="3.2" fill="#FFC34D"/>
+                    <rect x="2" y="7" width="40" height="35" rx="13" fill="#0052EE"/>
+                    <path d="M11.1 13.2C16.7 10.1 27.3 10.1 32.9 13.2C36.2 15 37.2 19.2 37.2 24C37.2 28.8 36.2 33 32.9 34.8C27.3 37.9 16.7 37.9 11.1 34.8C7.8 33 6.8 28.8 6.8 24C6.8 19.2 7.8 15 11.1 13.2Z" fill="#F8FBFF"/>
+                    <ellipse cx="15.8" cy="24" rx="2.35" ry="4.2" fill="#101820"/>
+                    <ellipse cx="28.2" cy="24" rx="2.35" ry="4.2" fill="#101820"/>
+                </svg>
+            </div>
+            <div class="q-speech-bubble" role="group" aria-label="Сообщение от Кью">
+                <div class="q-speech-header"><span class="q-speech-name">Кью</span></div>
+                <p id="start-mood-message" aria-live="polite">
+                    <span class="q-speech-greeting">Привет! Рад тебя видеть.</span>
+                    <span class="mood-message-line"><span class="mood-message-icon" aria-hidden="true"></span><span class="mood-message-text">Пусть сегодня случится что-то хорошее.</span></span>
+                </p>
+            </div>
         </div>
 
         <div class="start-balance-card">
@@ -2586,12 +2678,21 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             } catch (_) {}
             return selected;
         }
+        let activeRoadnoteMoodMessage = null;
         function renderRoadnoteMoodMessage() {
             const moodMessage = document.getElementById('start-mood-message');
             if (!moodMessage) return;
-            const selected = chooseRoadnoteMoodMessage();
+            // Keep one selected mood for this Mini App launch, even if the UI asks to render it again.
+            if (!activeRoadnoteMoodMessage) activeRoadnoteMoodMessage = chooseRoadnoteMoodMessage();
+            const selected = activeRoadnoteMoodMessage;
             const icon = moodIcons[selected.icon] || moodIcons.sparkles;
-            moodMessage.innerHTML = '<span class="mood-message-icon" aria-hidden="true" style="color:' + (moodColors[selected.color] || moodColors.blue) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + icon + '</svg></span><span class="mood-message-text"></span>';
+            moodMessage.innerHTML =
+                '<span class="q-speech-greeting">Привет! Рад тебя видеть.</span>' +
+                '<span class="mood-message-line"><span class="mood-message-icon" aria-hidden="true" style="color:' +
+                (moodColors[selected.color] || moodColors.blue) +
+                '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
+                icon +
+                '</svg></span><span class="mood-message-text"></span></span>';
             moodMessage.querySelector('.mood-message-text').textContent = selected.text;
         }
         window.refreshRoadnoteMoodMessage = renderRoadnoteMoodMessage;
