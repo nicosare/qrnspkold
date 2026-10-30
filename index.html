@@ -460,7 +460,6 @@
             cursor: not-allowed;
             box-shadow: none;
         }
-
         .start-overlay {
             position: fixed;
             inset: 0;
@@ -539,9 +538,9 @@
             margin-bottom: 0;
             padding: 21px 22px;
             border-radius: 22px;
-            background: linear-gradient(130deg, #2787f5 0%, #1269ca 100%);
+            background: linear-gradient(130deg, #2787f5 0%, #2787f5 100%);
             color: #fff;
-            box-shadow: 0 14px 30px #176dcc28;
+            box-shadow: 0 14px 30px #2787f528;
         }
         .start-card-eyebrow {
             margin-bottom: 9px;
@@ -560,7 +559,7 @@
             padding: 6px 9px;
             border: 1px solid #ffffff55;
             border-radius: 999px;
-            background: #075bb6;
+            background: #2787f5;
             color: #fff;
             font-size: 12px;
             font-weight: 750;
@@ -791,7 +790,7 @@
             font-size: 8px;
             padding-inline: 3px;
         }
-        .start-offer-details:active:not(:disabled) { background: #176dcc; }
+        .start-offer-details:active:not(:disabled) { background: #2787f5; }
         .start-offer-details:disabled { opacity: .72; cursor: wait; }
         .start-offer-details.is-requested {
             background: #15945d;
@@ -816,14 +815,14 @@
         .start-offer-ribbon-value { background:#e8f7ee; color:#187747; }
         .start-offer-ribbon-hit { background:#2787f5; color:#fff; }
         .start-offer-monthly { border-color:#c8dcf8; background:linear-gradient(160deg,#f0f7ff 0%,#fff 90%); box-shadow:0 5px 15px rgba(39,135,245,.08); }
-        .start-offer-monthly .start-offer-current-price { color:#1766bc; }
+        .start-offer-monthly .start-offer-current-price { color:#2787f5; }
         .start-offer-subscription { min-height:165px; }
 
         .start-offer-meta { display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:7px; }
         .start-offer-discount { padding:3px 6px; border-radius:6px; background:#eaf7ef; color:#16824b; font-size:9px; line-height:1.2; font-weight:850; }
         .start-offer-unit-price { color:#6d7886; font-size:9px; line-height:1.2; font-weight:700; white-space:nowrap; }
         .start-offer-monthly { border-color:#c8dcf8; background:linear-gradient(160deg,#f0f7ff 0%,#fff 90%); box-shadow:0 5px 15px rgba(39,135,245,.08); }
-        .start-offer-monthly .start-offer-current-price { color:#1766bc; }
+        .start-offer-monthly .start-offer-current-price { color:#2787f5; }
         .start-offer { cursor: pointer; }
         .start-offer:focus-visible { outline: 2px solid #e4b800; outline-offset: 3px; }
         .start-offers-note { display:block; margin-top:13px; padding:10px 2px 0; border-top:1px solid #edf0f4; color:#7b8591; font-size:11px; line-height:1.4; text-align:center; }
@@ -848,7 +847,7 @@
         .start-promo-input { width:100%; min-width:0; min-height:44px; padding:10px 12px; border:1px solid #d9e1eb; border-radius:11px; background:#fff; color:#27313d; font:inherit; font-size:14px; font-weight:700; text-transform:uppercase; outline:none; }
         .start-promo-input:focus { border-color:#2787f5; box-shadow:0 0 0 3px rgba(39,135,245,.12); }
         .start-promo-button { min-height:44px; padding:10px 14px; border:1px solid #2787f5; border-radius:11px; background:#2787f5; color:#fff; font:inherit; font-size:13px; font-weight:750; white-space:nowrap; touch-action:manipulation; }
-        .start-promo-button:active:not(:disabled) { transform:scale(.98); background:#176dcc; }
+        .start-promo-button:active:not(:disabled) { transform:scale(.98); background:#2787f5; }
         .start-promo-button:disabled { opacity:.65; }
         .start-promo-current { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-top:10px; padding:10px 11px; border:1px solid #cfe9d9; border-radius:11px; background:#effaf3; color:#176b3b; font-size:12px; line-height:1.4; }
         .start-promo-current[hidden] { display:none!important; }
@@ -863,7 +862,7 @@
         .start-referral-qr { display: grid; place-items: center; width: 100%; margin: 12px 0 2px; }
         .start-referral-qr[hidden] { display: none !important; }
         .start-referral-qr canvas, .start-referral-qr img { display: block; width: 160px !important; height: 160px !important; max-width: 100%; border-radius: 8px; }
-        .start-referral-qr-toggle { width: 100%; min-height: 40px; margin-top: 9px; padding: 8px 10px; border: 1px solid #d9e6f7; border-radius: 10px; background: #eef4fc; color: #2875cc; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+        .start-referral-qr-toggle { width: 100%; min-height: 40px; margin-top: 9px; padding: 8px 10px; border: 1px solid #d9e6f7; border-radius: 10px; background: #eef4fc; color: #2787f5; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
         .start-referral-qr-toggle:disabled { opacity: .5; cursor: default; }
         .start-referral-link {
             display: block; width: 100%; margin-top: 12px; padding: 10px 11px;
@@ -878,7 +877,7 @@
             min-height: 40px; padding: 8px 10px; border: 0; border-radius: 10px;
             background: #2787f5; color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
         }
-        .start-referral-button-secondary { background: #eef4fc; color: #2875cc; }
+        .start-referral-button-secondary { background: #eef4fc; color: #2787f5; }
         .start-referral-button:disabled { opacity: .5; cursor: default; }
 
         .start-actions.start-scan-actions { width: 100%; flex-direction: row; flex-wrap: wrap; align-items: stretch; margin-bottom: 0; }
@@ -912,7 +911,7 @@
             color: #fff;
             box-shadow: 0 7px 15px #2787f52b;
         }
-        .start-button-primary:active:not(:disabled) { background: #176dcc; }
+        .start-button-primary:active:not(:disabled) { background: #2787f5; }
         .start-button-secondary { border: 1px solid #d9e0e8; background: #fff; color: #30343a; }
         .start-button:disabled { opacity: .42; cursor: not-allowed; box-shadow: none; }
         .start-button[hidden] { display: none; }
