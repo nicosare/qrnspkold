@@ -794,15 +794,17 @@
     <div class="start-screen">
         <div class="start-brand">
     <script>
-    (() => {
+    document.addEventListener('DOMContentLoaded', () => {
         const mascot = document.getElementById('qride-mascot');
         if (!mascot) return;
         let taps = [];
         let resetTimer;
+        let playTimer;
         mascot.addEventListener('click', () => {
             const now = Date.now();
             taps = taps.filter(time => now - time < 2200);
             taps.push(now);
+            clearTimeout(playTimer);
             mascot.classList.remove('is-playing');
             void mascot.offsetWidth;
             mascot.classList.add('is-playing');
@@ -814,9 +816,9 @@
                     taps = [];
                 }, 3200);
             }
-            setTimeout(() => mascot.classList.remove('is-playing'), 520);
+            playTimer = setTimeout(() => mascot.classList.remove('is-playing'), 520);
         });
-    })();
+    });
     </script>
 
             <button class="start-brand-icon mascot-trigger" id="qride-mascot" type="button" aria-label="Поиграть с роботом">
