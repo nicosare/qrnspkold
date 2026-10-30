@@ -75,17 +75,23 @@
       const discount = card.querySelector('.start-offer-discount');
       const unitPrice = card.querySelector('.start-offer-unit-price');
       if (oldPrice) oldPrice.hidden = promoApplies ? regular === price : (state.hasPurchased || regular === basePrice);
-      if (currentPrice) currentPrice.textContent = rubles(price);
+      const nextPriceText = rubles(price);
+      if (currentPrice && currentPrice.textContent !== nextPriceText) {
+        currentPrice.textContent = nextPriceText;
+        if (typeof window.qrideAnimateStartValue === 'function') window.qrideAnimateStartValue(currentPrice);
+      }
       if (discount) {
         if (!discount.dataset.defaultText) discount.dataset.defaultText = discount.textContent;
         discount.hidden = promoApplies ? regular === price : (state.hasPurchased || regular === basePrice);
         discount.textContent = promoApplies ? '−' + Number(activePromo.discountPercent) + '% по коду' : discount.dataset.defaultText;
       }
-      if (unitPrice) {
-        const quantity = Math.max(1, Number(card.dataset.quantity) || 1);
-        unitPrice.textContent = card.dataset.offerKind === 'subscription'
-          ? '≈ ' + rubles(Math.round(price / quantity)) + ' / мес.'
-          : new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price / quantity) + ' ₽ / скан';
+      const quantity = Math.max(1, Number(card.dataset.quantity) || 1);
+      const nextUnitPriceText = card.dataset.offerKind === 'subscription'
+        ? '≈ ' + rubles(Math.round(price / quantity)) + ' / мес.'
+        : new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price / quantity) + ' ₽ / скан';
+      if (unitPrice && unitPrice.textContent !== nextUnitPriceText) {
+        unitPrice.textContent = nextUnitPriceText;
+        if (typeof window.qrideAnimateStartValue === 'function') window.qrideAnimateStartValue(unitPrice);
       }
       const button = card.querySelector('.start-offer-details');
       if (button) {
