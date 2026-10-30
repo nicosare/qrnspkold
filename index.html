@@ -514,38 +514,9 @@
             border-radius: inherit;
         }
 
-        /* QRide mascot: both eyes move and blink as one unit. */
-        .start-brand-icon .qride-eyes {
-            /* Animate the shared SVG group, not each eye independently. */
-            transform-box: fill-box;
-            transform-origin: center center;
-            animation: qride-eye-life 10.5s ease-in-out infinite;
-            will-change: transform;
-        }
-        @keyframes qride-eye-life {
-            /* Clearer, more expressive glances while keeping both eyes synchronized. */
-            0%, 6%, 13%, 100% { transform: translate(0, 0) scaleY(1); }
-            7%, 8% { transform: translate(0, 0) scaleY(.06); }
-            9% { transform: translate(0, 0) scaleY(1); }
-
-            22%, 27% { transform: translate(-12px, -4px) scaleY(1); }
-            33%, 37% { transform: translate(9px, -8px) scaleY(1); }
-            43%, 47% { transform: translate(0, 9px) scaleY(1); }
-
-            48%, 49% { transform: translate(0, 9px) scaleY(.06); }
-            50% { transform: translate(0, 9px) scaleY(1); }
-
-            60%, 65% { transform: translate(12px, 3px) scaleY(1); }
-            71%, 75% { transform: translate(-6px, 9px) scaleY(1); }
-            82%, 85% { transform: translate(4px, -8px) scaleY(1); }
-
-            91%, 92% { transform: translate(4px, -8px) scaleY(.06); }
-            93%, 99% { transform: translate(0, 0) scaleY(1); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-            .start-brand-icon .qride-eyes { animation: none; }
-        }
-
+        /* Q's facial motion is rendered by qride-mascot.js as continuous SVG geometry. */
+        .start-brand-icon svg { display:block; width:100%; height:100%; overflow:visible; }
+        .start-brand-icon .qride-eye { fill:#020202; }
         .start-brand-name { font-size: 21px; font-weight: 700; letter-spacing: -.3px; }
         .start-brand-caption { margin-top: 1px; color: #727983; font-size: 13px; }
 
@@ -1477,13 +1448,19 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                         <filter id="qrideInnerBezelShadow" x="-10%" y="-10%" width="120%" height="120%">
                             <feDropShadow dx="0" dy="6" stdDeviation="4" flood-color="#002580" flood-opacity="0.35"/>
                         </filter>
-                    </defs>
+                                        <clipPath id="qrideScreenMask">
+                        <path d="M105 128 C175 92 337 92 407 128 C455 152 464 210 464 256 C464 302 455 360 407 384 C337 420 175 420 105 384 C57 360 48 302 48 256 C48 210 57 152 105 128Z"/>
+                    </clipPath>
+</defs>
                     <rect width="512" height="512" rx="140" ry="140" fill="url(#qrideBodyGradient)"/>
                     <path fill="url(#qrideBezelGradient)" filter="url(#qrideInnerBezelShadow)" d="M95 115 C170 75 342 75 417 115 C475 145 485 210 485 256 C485 302 475 367 417 397 C342 437 170 437 95 397 C37 367 27 302 27 256 C27 210 37 145 95 115Z"/>
                     <path fill="url(#qrideScreenGradient)" d="M105 128 C175 92 337 92 407 128 C455 152 464 210 464 256 C464 302 455 360 407 384 C337 420 175 420 105 384 C57 360 48 302 48 256 C48 210 57 152 105 128Z"/>
-                    <g class="qride-eyes">
-                        <ellipse cx="185" cy="256" rx="34" ry="46" fill="#020202"/>
-                        <ellipse cx="327" cy="256" rx="34" ry="46" fill="#020202"/>
+                    <g clip-path="url(#qrideScreenMask)">
+                        <path id="qrideEyeLeft" class="qride-eye" fill="#020202" d=""/>
+                        <path id="qrideEyeRight" class="qride-eye" fill="#020202" d=""/>
+                        <rect id="qrideScanBeam" x="91" y="252" width="330" height="5" rx="2.5" fill="#5d9dff" opacity="0"/>
+                        <circle id="qridePongBall" cx="376" cy="256" r="3" fill="#020202" opacity="0"/>
+                        <ellipse id="qridePulseRing" cx="256" cy="256" rx="20" ry="20" fill="none" stroke="#4d8dff" stroke-width="7" opacity="0"/>
                     </g>
                 </svg>
             </div>
@@ -3753,5 +3730,6 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   overlay.style.pointerEvents = 'auto';
 })();
 </script>
+<script src="qride-mascot.js"></script>
 </body>
 </html>
