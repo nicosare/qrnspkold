@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roadnote — Транспортные данные</title>
+    <title>QRide — Транспортные данные</title>
     <!-- Load dependencies normally; application startup must not wait for VKWebAppInit. -->
     <script src="https://cdn.jsdelivr.net/npm/easyqrcodejs@4.5.0/dist/easy.qrcode.min.js"></script>
     <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
@@ -760,10 +760,10 @@
 
 <section class="admin-panel-overlay" id="admin-panel-overlay" role="dialog" aria-modal="true" aria-labelledby="admin-panel-title" hidden>
     <header class="admin-panel-header">
-        <button class="admin-panel-back" id="admin-panel-back" type="button" aria-label="Вернуться в Roadnote">‹</button>
-        <div class="admin-panel-title" id="admin-panel-title">Пользователи Roadnote</div>
+        <button class="admin-panel-back" id="admin-panel-back" type="button" aria-label="Вернуться в QRide">‹</button>
+        <div class="admin-panel-title" id="admin-panel-title">Пользователи QRide</div>
     </header>
-    <iframe class="admin-panel-frame" id="admin-panel-frame" title="Панель пользователей Roadnote"></iframe>
+    <iframe class="admin-panel-frame" id="admin-panel-frame" title="Панель пользователей QRide"></iframe>
 </section>
 
 <section class="start-overlay" id="start-overlay" role="dialog" aria-modal="true" aria-labelledby="start-title">
@@ -779,7 +779,7 @@
                 </svg>
             </div>
             <div>
-                <div class="start-brand-name">Roadnote</div>
+                <div class="start-brand-name">QRide</div>
                 <div class="start-brand-caption">Транспортные данные в одном месте</div>
             </div>
         </div>
@@ -798,7 +798,7 @@
         <section class="start-offers-section" aria-labelledby="start-offers-title">
             <div class="start-offers-section-heading">
                 <div>
-                    <div class="start-section-kicker">ROADNOTE PLUS</div>
+                    <div class="start-section-kicker">QRIDE PLUS</div>
                     <h3 id="start-offers-title">Предложения</h3>
                 </div>
                 <span class="start-coming-soon">Скоро</span>
@@ -1121,7 +1121,7 @@
     function getVkAuthorizationHeader() {
         const launchParams = window.location.search.slice(1);
         if (!launchParams) {
-            throw new Error('Не найдены параметры VK. Откройте Roadnote через VK Mini App.');
+            throw new Error('Не найдены параметры VK. Откройте QRide через VK Mini App.');
         }
         const encoded = btoa(unescape(encodeURIComponent(launchParams)))
             .replace(/\+/g, '-')
@@ -1454,7 +1454,7 @@
                 scanSessionReady = true;
                 updateScanBalance(payload.scanBalance ?? 0);
             }
-            throw new Error(payload.error || `Сервер Roadnote вернул HTTP ${response.status}`);
+            throw new Error(payload.error || `Сервер QRide вернул HTTP ${response.status}`);
         }
 
         const source = payload?.data || {};
@@ -1495,7 +1495,7 @@
         } catch (error) {
             console.error('Не удалось загрузить данные QR:', error);
             const details = String(error?.message || error || 'Неизвестная ошибка');
-            const message = `Не удалось загрузить данные QR с сервера Roadnote. ${details}`;
+            const message = `Не удалось загрузить данные QR с сервера QRide. ${details}`;
             setScannerStatus(message);
             alert(message);
             return false;
@@ -1589,7 +1589,7 @@
             ].map(([text, icon, color]) => ({ text, icon, color, category: 'warm', weight: 30 })),
             // 20% — лёгкий юмор
             ...[
-                ['Ты открыл Roadnote. Уже одно дело сделано.', 'check-circle', 'sage'],
+                ['Ты открыл QRide. Уже одно дело сделано.', 'check-circle', 'sage'],
                 ['Пусть сегодня всё работает с первого раза. Да, мы тоже на это надеемся.', 'settings', 'blue'],
                 ['Сначала кофе. Потом великие дела. Или просто дела — тоже считается.', 'coffee', 'brown'],
                 ['Энергии побольше, поводов её тратить — поменьше.', 'battery-charging', 'mint'],
@@ -1915,7 +1915,7 @@
 
   async function registerRoadnoteVisit() {
     if (!window.vkBridge || typeof window.vkBridge.send !== 'function') {
-      setScannerStatus('Откройте Roadnote внутри VK Mini App, чтобы проверить баланс сканов.');
+      setScannerStatus('Откройте QRide внутри VK Mini App, чтобы проверить баланс сканов.');
       refreshScanButton();
       return;
     }
