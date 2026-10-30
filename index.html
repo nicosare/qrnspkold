@@ -3168,6 +3168,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   if (!canvas || !overlay || !overlayTitle || !overlayText || !recordNode) return;
   const launchParams = window.location.search.slice(1);
   let gameAttempts = 0, gameStreak = 0, gameSessionId = null, startingGame = false;
+  let gameStateRequestId = 0;
   function showGameToast(title, message, icon) {
     if (!toastHost) return;
     const toast = document.createElement('div'); toast.className = 'qride-game-toast';
@@ -3225,10 +3226,13 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   }
   async function refreshGameState(showLoginToast) {
     if (!launchParams) return;
+    const requestId = ++gameStateRequestId;
     try {
       let legacyBestScore = 0;
       try { legacyBestScore = Math.max(0, Number(localStorage.getItem('qrideRunnerBestV1')) || 0); } catch (_) {}
       const state = await gameRequest('/api/game/state', { legacyBestScore });
+      // Ignore an older response that started before a newer scan/state refresh.
+      if (requestId !== gameStateRequestId) return;
       renderGameState(state);
       best = Math.max(best, Number(state.bestScore) || 0);
       if (state.awarded > 0 && showLoginToast) showGameToast('Начислены игровые попытки', '+' + state.awarded + ' попыток за сегодняшний заход', 'bolt');
@@ -3237,7 +3241,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   refreshGameState(true);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshGameState(false); });
   window.addEventListener('qride:scan-success', async (event) => {
-    const receivedAttempts = Number(event.detail?.gameAttempts);
+    const receivedAttempts = event.detail?.gameAttempts;
     if (Number.isSafeInteger(receivedAttempts) && receivedAttempts >= 0) {
       gameAttempts = receivedAttempts;
       const energyNode = document.getElementById('qride-game-energy-count');
