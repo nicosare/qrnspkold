@@ -85,7 +85,7 @@
         const quantity = Math.max(1, Number(card.dataset.quantity) || 1);
         unitPrice.textContent = card.dataset.offerKind === 'subscription'
           ? '≈ ' + rubles(Math.round(price / quantity)) + ' / мес.'
-          : new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price / quantity) + ' ₽ / поездка';
+          : new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price / quantity) + ' ₽ / скан';
       }
       const button = card.querySelector('.start-offer-details');
       if (button) {
@@ -110,6 +110,7 @@
       : 'Скидка действует только на первую покупку.';
     updatePrices();
     renderPromoState();
+    window.dispatchEvent(new CustomEvent('qride:tariff-state-ready', { detail: { hasPurchased: state.hasPurchased } }));
     if (tariffStatus && next && next.notice) setTransientStatus(tariffStatus, next.notice, false);
     if (activePurchase && next && /Оплата подтверждена/.test(String(next.notice || ''))) {
       activePurchase.status = 'approved';
