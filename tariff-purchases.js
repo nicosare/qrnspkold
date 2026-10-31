@@ -153,8 +153,18 @@
       const data = await apiPost('api/promocodes/apply', { code: code });
       if (modal && !modal.hidden) closeModal();
       renderState(data);
+      if (data.rewardType === 'scans') {
+        window.dispatchEvent(new CustomEvent('qride:entitlement-state', { detail: {
+          scanBalance: data.scanBalance,
+          subscriptionUntil: data.subscriptionUntil,
+          unlimited: data.unlimited,
+          subscriptionActive: data.subscriptionActive
+        }}));
+      } else if (data.rewardType === 'energy') {
+        window.dispatchEvent(new CustomEvent('qride:game-state', { detail: { attempts: data.energy }}));
+      }
       if (promoInput) promoInput.value = '';
-      setPromoStatus(data.notice || 'Промокод применён. Скидка будет закреплена после успешной оплаты.', false);
+      setPromoStatus(data.notice || (data.rewardType ? 'Баланс пополнен.' : 'Промокод применён. Скидка будет закреплена после успешной оплаты.'), false);
     } catch (error) {
       if (error.data) renderState(error.data);
       setPromoStatus(error.message || 'Не удалось применить промокод.', true);
