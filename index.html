@@ -1647,19 +1647,19 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                 <div class="roadnote-game-kicker" id="qride-breaker-title">Q BREAKER</div>
             </div>
             <div class="roadnote-game-stage">
-                <div class="roadnote-game-record">Рекорд: <span id="qride-breaker-record">0/60</span></div>
+                <div class="roadnote-game-record">Рекорд: <span id="qride-breaker-record">0</span></div>
                 <canvas class="roadnote-game-canvas qride-breaker-canvas" id="qride-breaker-canvas" width="640" height="720" aria-label="Q Breaker: управляй платформой, отбивай мяч и разбивай блоки"></canvas>
                 <div class="roadnote-game-hud is-hidden" id="qride-breaker-hud" aria-live="polite">
-                    <span id="qride-breaker-progress">Блоки: 0/60</span>
+                    <span id="qride-breaker-progress">Блоки: 0</span>
                     <span id="qride-breaker-speed">Скорость ×1,0</span>
                 </div>
                 <div class="roadnote-game-overlay" id="qride-breaker-overlay">
                     <strong id="qride-breaker-overlay-title">Q Breaker</strong>
-                    <span id="qride-breaker-overlay-text">Управляй платформой, отбивай мяч и уничтожь все блоки.</span>
+                    <span id="qride-breaker-overlay-text">Управляй платформой, отбивай мяч и продержись как можно дольше.</span>
                     <div class="roadnote-game-reward-preview" data-game-rule="reward">
                         <span class="roadnote-game-reward-label">НАГРАДА</span>
-                        <strong class="roadnote-game-reward-title" id="qride-breaker-reward-title">Все 60 блоков → 1 бесплатный скан</strong>
-                        <span class="roadnote-game-reward-caption" id="qride-breaker-reward-caption">Одна жизнь · однократно для каждого игрока</span>
+                        <strong class="roadnote-game-reward-title" id="qride-breaker-reward-title">60 блоков → 1 бесплатный скан</strong>
+                        <span class="roadnote-game-reward-caption" id="qride-breaker-reward-caption">После 60 блоков скан будет получен при завершении игры · один раз</span>
                     </div>
                     <button class="roadnote-game-start" id="qride-breaker-start" type="button">Играть</button>
                 </div>
@@ -4012,7 +4012,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   }
 
   let attempts = 0, sessionId = null, starting = false, running = false, finished = false;
-  let raf = 0, last = 0, elapsed = 0, hits = 0, destroyed = 0, remaining = TOTAL_BLOCKS, speed = 235, tileSpeed = 10;
+  let raf = 0, last = 0, elapsed = 0, hits = 0, destroyed = 0, speed = 235, tileSpeed = 10, rowSpawnProgress = 0, rowIndex = ROWS;
   let blocks = [], particles = [], trail = [], leftPressed = false, rightPressed = false;
   const paddle = { x: W / 2, width: 112 };
   const ball = { x: W / 2, y: 570, vx: 112, vy: -206 };
@@ -4046,7 +4046,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     attempts = Math.max(0, Number(state.attempts || 0));
     const energy = document.getElementById('roadnote-game-energy-count');
     if (energy) energy.textContent = String(attempts);
-    if (state.breakerBestScore !== undefined) recordNode.textContent = Math.max(0, Number(state.breakerBestScore) || 0) + '/' + TOTAL_BLOCKS;
+    if (state.breakerBestScore !== undefined) recordNode.textContent = String(Math.max(0, Number(state.breakerBestScore) || 0));
     if (state.breakerRewardClaimed) {
       rewardTitle.textContent = 'Скан за Q Breaker уже получен';
       rewardCaption.textContent = 'Можно играть снова ради рекорда';
@@ -4076,31 +4076,31 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     ctx.closePath();
   }
 
+  function addRow(y, rowNumber, initial = false) {
+    const color = palette[rowNumber % palette.length];
+    const holeCount = initial ? 0 : 1 + Math.floor(Math.random() * 3);
+    const holes = new Set();
+    while (holes.size < holeCount) holes.add(Math.floor(Math.random() * COLS));
+    for (let col = 0; col < COLS; col++) {
+      if (holes.has(col)) continue;
+      blocks.push({ x: 29 + col * 58, y, w: 51, h: 14, hp: 1, maxHp: 1, color });
+    }
+  }
+
   function createLevel() {
     blocks = [];
-    for (let row = 0; row < ROWS; row++) {
-      for (let col = 0; col < COLS; col++) {
-        blocks.push({
-          x: 29 + col * 58,
-          y: 38 + row * 20,
-          w: 51,
-          h: 14,
-          hp: 1,
-          maxHp: 1,
-          color: palette[row % palette.length]
-        });
-      }
-    }
-    remaining = TOTAL_BLOCKS;
+    for (let row = 0; row < ROWS; row++) addRow(38 + row * 20, row, true);
     destroyed = 0;
     hits = 0;
     tileSpeed = 10;
+    rowSpawnProgress = 0;
+    rowIndex = ROWS;
     particles = [];
     trail = [];
   }
 
   function updateHud() {
-    progressNode.textContent = 'Блоки: ' + destroyed + '/' + TOTAL_BLOCKS;
+    progressNode.textContent = 'Блоки: ' + destroyed;
     speedNode.textContent = 'Темп ×' + (speed / 235).toFixed(1).replace('.', ',');
   }
 
@@ -4246,6 +4246,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       elapsed = 0;
       speed = 235;
       tileSpeed = 10;
+      rowSpawnProgress = 0;
+      rowIndex = ROWS;
       paddle.x = W / 2;
       ball.x = W / 2;
       ball.y = 570;
@@ -4269,15 +4271,14 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     }
   }
 
-  async function finishGame(won) {
+  async function finishGame() {
     if (finished) return;
     finished = true;
     running = false;
     cancelAnimationFrame(raf);
-    taptic(won ? 'medium' : 'light');
-    let message = won
-      ? 'Все 60 блоков уничтожены. Прохождение завершено.'
-      : 'Мяч упал. Уничтожено ' + destroyed + ' из ' + TOTAL_BLOCKS + ' блоков.';
+    const rewardEligible = destroyed >= TOTAL_BLOCKS;
+    taptic(rewardEligible ? 'medium' : 'light');
+    let message = 'Игра завершена. Уничтожено блоков: ' + destroyed + '.';
     if (sessionId) {
       const currentSession = sessionId;
       sessionId = null;
@@ -4285,16 +4286,16 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         const result = await gameRequest('/api/game/finish', {
           sessionId: currentSession,
           score: destroyed,
-          completed: won
+          completed: rewardEligible
         });
         renderState(result);
-        if (won && result.freeScanAwarded) {
-          message += ' Тебе начислен бесплатный скан.';
-          showToast('Бесплатный скан начислен', 'Награда за полное прохождение Q Breaker', true);
-        } else if (won && result.breakerRewardClaimed) {
+        if (rewardEligible && result.freeScanAwarded) {
+          message += ' Тебе начислен бесплатный скан за первые 60 блоков.';
+          showToast('Бесплатный скан начислен', 'Награда за 60 уничтоженных блоков', true);
+        } else if (rewardEligible && result.breakerRewardClaimed) {
           message += ' Скан за Q Breaker ты уже получал раньше.';
-        } else if (won) {
-          message += ' Результат сохранён.';
+        } else if (rewardEligible) {
+          message += ' Условие награды выполнено.';
         }
       } catch (error) {
         message += ' Не удалось сохранить результат: ' + error.message + '.';
@@ -4302,7 +4303,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     }
     hud.classList.add('is-hidden');
     card.classList.remove('is-playing');
-    overlayTitle.textContent = won ? 'Уровень пройден!' : 'Раунд завершён';
+    overlayTitle.textContent = 'Рекорд зафиксирован';
     overlayText.textContent = message;
     overlay.hidden = false;
     startButton.textContent = 'Играть ещё';
@@ -4348,7 +4349,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     }
     if (block.hp <= 0) {
       destroyed += 1;
-      remaining -= 1;
+      // Endless mode has no remaining-block counter.
     }
     if (hits % 5 === 0) taptic('light');
     return true;
@@ -4368,7 +4369,16 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     paddle.x = Math.max(paddle.width / 2 + 4, Math.min(W - paddle.width / 2 - 4, paddle.x));
 
     blocks.forEach(block => { if (block.hp > 0) block.y += tileSpeed * dt; });
-    if (blocks.some(block => block.hp > 0 && block.y + block.h >= PADDLE_Y - 18)) { finishGame(false); return; }
+
+    // Keep feeding rows into the stream regardless of how many blocks are destroyed.
+    // A row enters for every 20 px of movement, preserving the 6 px gap between rows.
+    rowSpawnProgress += tileSpeed * dt;
+    while (rowSpawnProgress >= 20) {
+      rowSpawnProgress -= 20;
+      addRow(18, rowIndex++);
+    }
+    blocks = blocks.filter(block => block.hp > 0 || block.y < H + 30);
+    if (blocks.some(block => block.hp > 0 && block.y + block.h >= PADDLE_Y - 18)) { finishGame(); return; }
 
     const oldX = ball.x, oldY = ball.y;
     ball.x += ball.vx * dt;
@@ -4402,12 +4412,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       if (block.hp > 0 && collideBlock(block, oldX, oldY)) break;
     }
 
-    if (remaining === 0) {
-      finishGame(true);
-      return;
-    }
     if (ball.y - BALL_RADIUS > H) {
-      finishGame(false);
+      finishGame();
       return;
     }
 
