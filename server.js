@@ -192,6 +192,26 @@ const promoCodeColumns = db.pragma('table_info(promo_codes)');
 if (!promoCodeColumns.some(column => column.name === 'max_redemptions')) {
   db.exec('ALTER TABLE promo_codes ADD COLUMN max_redemptions INTEGER DEFAULT NULL');
 }
+if (!promoCodeColumns.some(column => column.name === 'promo_type')) {
+  db.exec("ALTER TABLE promo_codes ADD COLUMN promo_type TEXT NOT NULL DEFAULT 'discount'");
+}
+if (!promoCodeColumns.some(column => column.name === 'reward_amount')) {
+  db.exec('ALTER TABLE promo_codes ADD COLUMN reward_amount INTEGER DEFAULT NULL');
+}
+db.exec(`
+  CREATE TABLE IF NOT EXISTS promo_code_redemptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    promo_code_id INTEGER NOT NULL,
+    code TEXT NOT NULL,
+    vk_id TEXT NOT NULL,
+    reward_type TEXT NOT NULL CHECK(reward_type IN ('scans','energy')),
+    reward_amount INTEGER NOT NULL CHECK(reward_amount > 0),
+    redeemed_at TEXT NOT NULL,
+    UNIQUE(promo_code_id, vk_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_promo_redemptions_code ON promo_code_redemptions(promo_code_id, redeemed_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_promo_redemptions_user ON promo_code_redemptions(vk_id, redeemed_at DESC);
+`);
 db.exec(`
   CREATE TABLE IF NOT EXISTS yoomoney_operations (
     operation_id TEXT PRIMARY KEY, request_id INTEGER DEFAULT NULL, label TEXT NOT NULL DEFAULT '',
@@ -310,7 +330,7 @@ const upsertUser = db.prepare(`
 const listUsers = db.prepare(`
   SELECT u.vk_id, u.first_name, u.last_name, u.photo_url, u.first_seen, u.last_seen, u.visit_count,
          u.scan_balance, u.subscription_until, u.unlimited, u.last_scan_at, u.last_transport_number,
-         u.welcome_bonus_granted, u.daily_scan_date, u.daily_scan_available,
+         u.game_attempts, u.welcome_bonus_granted, u.daily_scan_date, u.daily_scan_available,
          (SELECT COUNT(*) FROM scan_history sh WHERE sh.vk_id = u.vk_id) AS scan_count,
          (SELECT sh.transport_type FROM scan_history sh WHERE sh.vk_id = u.vk_id ORDER BY sh.scanned_at DESC, sh.id DESC LIMIT 1) AS last_transport_type,
          (SELECT sh.route_number FROM scan_history sh WHERE sh.vk_id = u.vk_id ORDER BY sh.scanned_at DESC, sh.id DESC LIMIT 1) AS last_route_number
@@ -358,7 +378,7 @@ const getUserScanBalance = db.prepare('SELECT scan_balance, subscription_until, 
 const grantPack = db.prepare('UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + ? WHERE vk_id = ?');
 const setUnlimited = db.prepare('UPDATE users SET unlimited = ?, scan_balance = CASE WHEN ? = 0 THEN COALESCE(scan_balance, 0) ELSE scan_balance END WHERE vk_id = ?');
 const updateSubscription = db.prepare('UPDATE users SET subscription_until = ?, scan_balance = COALESCE(scan_balance, 0) WHERE vk_id = ?');
-const getUserEntitlements = db.prepare('SELECT scan_balance, subscription_until, unlimited, daily_scan_date, daily_scan_available FROM users WHERE vk_id = ?');
+const getUserEntitlements = db.prepare('SELECT scan_balance, subscription_until, unlimited, daily_scan_date, daily_scan_available, game_attempts FROM users WHERE vk_id = ?');
 const spendUserScan = db.prepare(
   'UPDATE users SET scan_balance = scan_balance - 1 WHERE vk_id = ? AND scan_balance IS NOT NULL AND scan_balance > 0'
 );
@@ -1103,6 +1123,10 @@ function gamePublicState(userId) {
     rewardThreshold: 3000
   };
 }
+function sendLiveGameState(userId) {
+  const stream = liveStreams.get(String(userId));
+  if (stream) stream.write('event: game\\ndata: ' + JSON.stringify(gamePublicState(userId)) + '\\n\\n');
+}
 app.post('/api/game/state', (req, res) => {
   let userId;
   try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
@@ -1276,6 +1300,61 @@ app.post('/api/promocodes/apply', (req, res) => {
   if (!promo) return res.status(404).json({ error: 'Такой промокод не найден или уже отключён.' });
   if (promo.starts_at && Date.parse(promo.starts_at) > now) return res.status(400).json({ error: 'Срок действия этого промокода ещё не начался.' });
   if (promo.expires_at && Date.parse(promo.expires_at) < now) return res.status(400).json({ error: 'Срок действия этого промокода истёк.' });
+
+  const promoType = String(promo.promo_type || 'discount');
+  if (promoType === 'scans' || promoType === 'energy') {
+    const rewardAmount = Number(promo.reward_amount);
+    if (!Number.isSafeInteger(rewardAmount) || rewardAmount < 1 || rewardAmount > 100000) {
+      return res.status(409).json({ error: 'У этого промокода некорректно настроено начисление.' });
+    }
+    const nowIso = new Date().toISOString();
+    try {
+      db.transaction(() => {
+        if (!db.prepare('SELECT 1 FROM users WHERE vk_id = ?').get(String(userId))) {
+          const error = new Error('Сначала открой QRide, чтобы зарегистрировать аккаунт.'); error.statusCode = 409; throw error;
+        }
+        if (db.prepare('SELECT 1 FROM promo_code_redemptions WHERE promo_code_id = ? AND vk_id = ?').get(Number(promo.id), String(userId))) {
+          const error = new Error('Ты уже использовал этот промокод.'); error.statusCode = 409; throw error;
+        }
+        if (promo.max_redemptions != null) {
+          const usage = db.prepare(
+            "SELECT (SELECT COUNT(*) FROM promo_code_applications WHERE promo_code_id = ? AND (status = 'used' OR (status = 'selected' AND vk_id <> ?))) + " +
+            '(SELECT COUNT(*) FROM promo_code_redemptions WHERE promo_code_id = ?) AS count'
+          ).get(Number(promo.id), String(userId), Number(promo.id));
+          if (Number(usage?.count || 0) >= Number(promo.max_redemptions)) {
+            const error = new Error('Лимит активаций этого промокода исчерпан.'); error.statusCode = 409; throw error;
+          }
+        }
+        if (promoType === 'scans') {
+          const updated = db.prepare('UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + ? WHERE vk_id = ?').run(rewardAmount, String(userId));
+          if (updated.changes !== 1) throw new Error('Не удалось пополнить баланс сканов.');
+          recordScanCredit.run(String(userId), nowIso, rewardAmount, 'promo_code', 'Промокод ' + code);
+        } else {
+          const updated = db.prepare('UPDATE users SET game_attempts = COALESCE(game_attempts, 0) + ? WHERE vk_id = ?').run(rewardAmount, String(userId));
+          if (updated.changes !== 1) throw new Error('Не удалось пополнить энергию.');
+        }
+        db.prepare('INSERT INTO promo_code_redemptions (promo_code_id, code, vk_id, reward_type, reward_amount, redeemed_at) VALUES (?, ?, ?, ?, ?, ?)')
+          .run(Number(promo.id), code, String(userId), promoType, rewardAmount, nowIso);
+      })();
+    } catch (error) {
+      return res.status(error.statusCode || 409).json({ error: error.message || 'Не удалось применить промокод.' });
+    }
+    if (promoType === 'scans') sendLiveEntitlement(userId);
+    else sendLiveGameState(userId);
+    const entitlement = getLiveEntitlement(userId);
+    const energy = Number(db.prepare('SELECT game_attempts FROM users WHERE vk_id = ?').get(String(userId))?.game_attempts || 0);
+    const rewardLabel = promoType === 'scans' ? 'сканов' : 'энергии';
+    return res.json({
+      ok: true,
+      ...getTariffState(userId),
+      ...entitlement,
+      energy,
+      rewardType: promoType,
+      rewardAmount,
+      notice: 'Промокод ' + code + ' применён: +' + rewardAmount + ' ' + rewardLabel + '.'
+    });
+  }
+  if (promoType !== 'discount') return res.status(409).json({ error: 'Этот тип промокода больше не поддерживается.' });
   if (promo.max_redemptions != null) {
     const reservations = db.prepare("SELECT COUNT(*) AS count FROM promo_code_applications WHERE promo_code_id = ? AND (status = 'used' OR (status = 'selected' AND vk_id <> ?))").get(Number(promo.id), String(userId));
     if (Number(reservations?.count || 0) >= Number(promo.max_redemptions)) return res.status(409).json({ error: 'Не удалось применить промокод.' });
@@ -1953,14 +2032,16 @@ app.get('/api/admin/promocodes', requireAdmin, (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const now = Date.now();
   const promos = db.prepare(
-    "SELECT p.*, (SELECT COUNT(*) FROM promo_code_applications a WHERE a.promo_code_id = p.id AND a.status = 'used') AS redemptions, " +
+    "SELECT p.*, (SELECT COUNT(*) FROM promo_code_applications a WHERE a.promo_code_id = p.id AND a.status = 'used') + " +
+    "(SELECT COUNT(*) FROM promo_code_redemptions r WHERE r.promo_code_id = p.id) AS redemptions, " +
     "(SELECT COUNT(*) FROM promo_code_applications a WHERE a.promo_code_id = p.id AND a.status = 'selected') AS selected_count " +
     "FROM promo_codes p WHERE p.is_active = 1 ORDER BY p.created_at DESC, p.id DESC"
   ).all().map(promo => {
     let offerIds = [];
     try { offerIds = JSON.parse(promo.offer_ids_json); } catch (_) {}
     return {
-      id: Number(promo.id), code: promo.code, discountPercent: Number(promo.discount_percent),
+      id: Number(promo.id), code: promo.code, promoType: String(promo.promo_type || 'discount'),
+      discountPercent: Number(promo.discount_percent), rewardAmount: promo.reward_amount == null ? null : Number(promo.reward_amount),
       offerIds: Array.isArray(offerIds) ? offerIds : [], startsAt: promo.starts_at || null,
       expiresAt: promo.expires_at || null, maxRedemptions: promo.max_redemptions == null ? null : Number(promo.max_redemptions), createdAt: promo.created_at,
       redemptions: Number(promo.redemptions || 0), selectedCount: Number(promo.selected_count || 0),
@@ -1972,13 +2053,20 @@ app.get('/api/admin/promocodes', requireAdmin, (req, res) => {
 
 app.post('/api/admin/promocodes', requireAdmin, (req, res) => {
   const code = String(req.body?.code || '').trim().toUpperCase();
+  const promoType = String(req.body?.promoType || 'discount');
   const discountPercent = Number(req.body?.discountPercent);
+  const rewardAmount = Number(req.body?.rewardAmount);
   const offerIds = Array.isArray(req.body?.offerIds) ? [...new Set(req.body.offerIds.map(String))] : [];
   const maxRedemptions = req.body?.maxRedemptions == null || req.body?.maxRedemptions === '' ? null : Number(req.body.maxRedemptions);
   if (maxRedemptions !== null && (!Number.isSafeInteger(maxRedemptions) || maxRedemptions < 1 || maxRedemptions > 1000000)) return res.status(400).json({ error: 'Лимит активаций должен быть от 1 до 1000000 или пустым.' });
   if (!/^[A-Z0-9_-]{3,32}$/.test(code)) return res.status(400).json({ error: 'Код: 3–32 символа, латинские буквы, цифры, дефис или подчёркивание.' });
-  if (!Number.isInteger(discountPercent) || discountPercent < 1 || discountPercent > 99) return res.status(400).json({ error: 'Скидка должна быть от 1 до 99%.' });
-  if (!offerIds.length || offerIds.some(id => !Object.prototype.hasOwnProperty.call(tariffOffers, id))) return res.status(400).json({ error: 'Выбери хотя бы один тариф.' });
+  if (!['discount','scans','energy'].includes(promoType)) return res.status(400).json({ error: 'Выбери тип промокода.' });
+  if (promoType === 'discount') {
+    if (!Number.isInteger(discountPercent) || discountPercent < 1 || discountPercent > 99) return res.status(400).json({ error: 'Скидка должна быть от 1 до 99%.' });
+    if (!offerIds.length || offerIds.some(id => !Object.prototype.hasOwnProperty.call(tariffOffers, id))) return res.status(400).json({ error: 'Выбери хотя бы один тариф.' });
+  } else if (!Number.isSafeInteger(rewardAmount) || rewardAmount < 1 || rewardAmount > 100000) {
+    return res.status(400).json({ error: 'Количество начисления должно быть от 1 до 100000.' });
+  }
   const parseDate = (value, label) => {
     if (value == null || value === '') return null;
     const date = new Date(value);
@@ -1991,8 +2079,8 @@ app.post('/api/admin/promocodes', requireAdmin, (req, res) => {
   if (startsAt && expiresAt && Date.parse(startsAt) >= Date.parse(expiresAt)) return res.status(400).json({ error: 'Окончание срока должно быть позже начала.' });
   const nowIso = new Date().toISOString();
   try {
-    const result = db.prepare('INSERT INTO promo_codes (code, discount_percent, offer_ids_json, starts_at, expires_at, max_redemptions, is_active, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)')
-      .run(code, discountPercent, JSON.stringify(offerIds), startsAt, expiresAt, maxRedemptions, nowIso, req.vkUserId);
+    const result = db.prepare('INSERT INTO promo_codes (code, discount_percent, offer_ids_json, starts_at, expires_at, max_redemptions, is_active, created_at, created_by, promo_type, reward_amount) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)')
+      .run(code, promoType === 'discount' ? discountPercent : 1, JSON.stringify(promoType === 'discount' ? offerIds : []), startsAt, expiresAt, maxRedemptions, nowIso, req.vkUserId, promoType, promoType === 'discount' ? null : rewardAmount);
     return res.status(201).json({ ok: true, id: Number(result.lastInsertRowid) });
   } catch (error) {
     if (String(error?.code || '').includes('CONSTRAINT') || /UNIQUE/i.test(String(error?.message || ''))) return res.status(409).json({ error: 'Промокод с таким названием уже существует.' });
@@ -2084,6 +2172,16 @@ app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
         recordScanCredit.run(vkId, creditedAt, amount, 'admin', 'Ручное начисление администратором');
       });
       grant();
+    } else if (action === 'grant_days') {
+      const days = Number(req.body?.days);
+      if (!Number.isSafeInteger(days) || days < 1 || days > 3650) {
+        return res.status(400).json({ error: 'Укажите количество дней от 1 до 3650.' });
+      }
+      const currentExpiry = user.subscription_until && Date.parse(user.subscription_until) > now.getTime()
+        ? new Date(user.subscription_until)
+        : now;
+      const expiry = new Date(currentExpiry.getTime() + days * 86400000);
+      updateSubscription.run(expiry.toISOString(), vkId);
     } else if (action === 'grant_months') {
       const months = Number(req.body?.months);
       if (!Number.isSafeInteger(months) || months < 1 || months > 120) {
@@ -2099,6 +2197,13 @@ app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
       const lastDayOfMonth = new Date(Date.UTC(expiry.getUTCFullYear(), expiry.getUTCMonth() + 1, 0)).getUTCDate();
       expiry.setUTCDate(Math.min(originalDay, lastDayOfMonth));
       updateSubscription.run(expiry.toISOString(), vkId);
+    } else if (action === 'grant_energy') {
+      const amount = Number(req.body?.amount);
+      if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100000) {
+        return res.status(400).json({ error: 'Укажите количество энергии от 1 до 100000.' });
+      }
+      const updated = db.prepare('UPDATE users SET game_attempts = COALESCE(game_attempts, 0) + ? WHERE vk_id = ?').run(amount, vkId);
+      if (updated.changes !== 1) throw new Error('Не удалось начислить энергию.');
     } else if (action === 'set_unlimited') {
       if (typeof req.body?.enabled !== 'boolean') {
         return res.status(400).json({ error: 'Не задано состояние безлимита.' });
@@ -2110,6 +2215,7 @@ app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
     }
     const updated = getUserEntitlements.get(vkId);
     sendLiveEntitlement(vkId);
+    if (action === 'grant_energy') sendLiveGameState(vkId);
     return res.json({
       ok: true,
       user: {
@@ -2117,6 +2223,7 @@ app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
         scan_balance: updated.scan_balance,
         subscription_until: updated.subscription_until,
         unlimited: Number(updated.unlimited || 0) === 1,
+        energy: Math.max(0, Number(updated.game_attempts || 0)),
         subscriptionActive: Boolean(updated.subscription_until && Date.parse(updated.subscription_until) > Date.now())
       }
     });
