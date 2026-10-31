@@ -1149,7 +1149,7 @@ app.post('/api/game/finish', (req, res) => {
     return res.status(400).json({ error: 'Результат не прошёл проверку.' });
   }
   if (gameId === 'breaker') {
-    if (score > 60 || (completed && (score !== 60 || elapsedSeconds < 25)) || (!completed && score === 60)) {
+    if ((completed && (score < 60 || elapsedSeconds < 25)) || (!completed && score >= 60)) {
       return res.status(400).json({ error: 'Результат не прошёл проверку.' });
     }
   }
