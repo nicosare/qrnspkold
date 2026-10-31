@@ -1181,6 +1181,9 @@
         .roadnote-game-reward-caption{display:block;margin-top:4px;color:#65758a;font-size:11px;line-height:1.35}
         .roadnote-game-hud #roadnote-game-reward{display:none!important}
         .roadnote-game-overlay .roadnote-game-start:active {transform:scale(.97);background:#0052EE}
+        .qride-breaker-canvas { touch-action:none!important; cursor:crosshair; }
+        .qride-breaker-card.is-playing .roadnote-game-record { display:none; }
+        #qride-breaker-progress { font-variant-numeric:tabular-nums; }
         .game-streak-days{grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:0}
         .game-streak-day{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:66px;padding:8px 2px;border:1px solid #e3e8ef;border-radius:12px;background:#f2f3f4;text-align:center}
         .game-streak-day span{display:block;color:#424142;font-size:16px;font-weight:850;line-height:1}
@@ -1626,10 +1629,34 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                     <span id="roadnote-game-overlay-text">Перепрыгивай препятствия и набирай очки.</span>
                     <div class="roadnote-game-reward-preview" data-game-rule="reward">
                         <span class="roadnote-game-reward-label">НАГРАДА</span>
-                        <strong class="roadnote-game-reward-title">3000 очков → 1 бесплатный скан</strong>
-                        <span class="roadnote-game-reward-caption">За один раунд · не чаще одного раза в день</span>
+                        <strong class="roadnote-game-reward-title">3000 очков за раунд → 1 скан</strong>
+                        <span class="roadnote-game-reward-caption">Однократно для каждого игрока</span>
                     </div>
                     <button class="roadnote-game-start" id="roadnote-game-start" type="button">Играть</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="roadnote-game qride-breaker-card" id="qride-breaker-card" aria-labelledby="qride-breaker-title">
+            <div class="roadnote-game-head">
+                <div class="roadnote-game-kicker" id="qride-breaker-title">Q BREAKER</div>
+            </div>
+            <div class="roadnote-game-stage">
+                <div class="roadnote-game-record">Рекорд: <span id="qride-breaker-record">0/60</span></div>
+                <canvas class="roadnote-game-canvas qride-breaker-canvas" id="qride-breaker-canvas" width="640" height="240" aria-label="Q Breaker: управляй платформой, отбивай мяч и разбивай блоки"></canvas>
+                <div class="roadnote-game-hud is-hidden" id="qride-breaker-hud" aria-live="polite">
+                    <span id="qride-breaker-progress">Блоки: 0/60</span>
+                    <span id="qride-breaker-speed">Скорость ×1,0</span>
+                </div>
+                <div class="roadnote-game-overlay" id="qride-breaker-overlay">
+                    <strong id="qride-breaker-overlay-title">Q Breaker</strong>
+                    <span id="qride-breaker-overlay-text">Управляй платформой, отбивай мяч и уничтожь все блоки.</span>
+                    <div class="roadnote-game-reward-preview" data-game-rule="reward">
+                        <span class="roadnote-game-reward-label">НАГРАДА</span>
+                        <strong class="roadnote-game-reward-title" id="qride-breaker-reward-title">Все 60 блоков → 1 бесплатный скан</strong>
+                        <span class="roadnote-game-reward-caption" id="qride-breaker-reward-caption">Одна жизнь · однократно для каждого игрока</span>
+                    </div>
+                    <button class="roadnote-game-start" id="qride-breaker-start" type="button">Играть</button>
                 </div>
             </div>
         </section>
@@ -3436,7 +3463,13 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       streakDaysNode.replaceChildren(fragment);
       requestAnimationFrame(() => { streakDaysNode.scrollLeft = streakDaysNode.scrollWidth; });
     }
-    if (rewardNode) rewardNode.textContent = state.freeScanClaimedToday ? 'Бесплатный скан уже получен сегодня' : '3000 очков = 1 бесплатный скан';
+    if (rewardNode) rewardNode.textContent = state.runnerRewardClaimed ? 'Скан за эту игру уже получен' : '3000 очков = 1 бесплатный скан';
+    const runnerRewardTitle = document.querySelector('#roadnote-game .roadnote-game-reward-title');
+    const runnerRewardCaption = document.querySelector('#roadnote-game .roadnote-game-reward-caption');
+    if (state.runnerRewardClaimed) {
+      if (runnerRewardTitle) runnerRewardTitle.textContent = 'Скан за QRide Runner уже получен';
+      if (runnerRewardCaption) runnerRewardCaption.textContent = 'Можно продолжать играть ради рекорда';
+    }
     if (state.bestScore !== undefined) recordNode.textContent = String(Math.max(0, Number(state.bestScore) || 0));
   }
   async function refreshGameState(showLoginToast) {
@@ -3836,7 +3869,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     if (startingGame || running) return;
     startingGame = true;
     try {
-      const result = await gameRequest('/api/game/start', {});
+      const result = await gameRequest('/api/game/start', { gameId: 'runner' });
       gameSessionId = result.sessionId;
       renderGameState(result);
       taptic('light');
@@ -3873,8 +3906,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         if (result.freeScanAwarded) {
           endingText = 'Счёт: '+finalScore+'. Ты получил бесплатный скан.';
           showGameToast('Бесплатный скан начислен', 'Награда за 3000 очков', 'award');
-        } else if (finalScore >= 3000) {
-          endingText = 'Счёт: '+finalScore+'. Награда за сегодня уже получена — попробуем ещё?';
+        } else if (result.runnerRewardClaimed) {
+          endingText = 'Счёт: '+finalScore+'. Скан за QRide Runner уже получен — можно играть ради рекорда.';
         }
       } catch (error) {
         endingText = 'Счёт: '+finalScore+'. Не удалось сохранить результат: '+error.message+'. Вернись на старт и проверь соединение.';
@@ -3926,6 +3959,504 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   draw();
   overlay.style.pointerEvents = 'auto';
 })();
+<script>
+(function () {
+  const canvas = document.getElementById('qride-breaker-canvas');
+  const card = document.getElementById('qride-breaker-card');
+  const overlay = document.getElementById('qride-breaker-overlay');
+  const overlayTitle = document.getElementById('qride-breaker-overlay-title');
+  const overlayText = document.getElementById('qride-breaker-overlay-text');
+  const startButton = document.getElementById('qride-breaker-start');
+  const recordNode = document.getElementById('qride-breaker-record');
+  const hud = document.getElementById('qride-breaker-hud');
+  const progressNode = document.getElementById('qride-breaker-progress');
+  const speedNode = document.getElementById('qride-breaker-speed');
+  const rewardTitle = document.getElementById('qride-breaker-reward-title');
+  const rewardCaption = document.getElementById('qride-breaker-reward-caption');
+  const toastHost = document.getElementById('roadnote-game-toast-host');
+  if (!canvas || !card || !overlay || !startButton) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const W = canvas.width, H = canvas.height;
+  const TOTAL_BLOCKS = 60, COLS = 10, ROWS = 6;
+  const BALL_RADIUS = 6.5, PADDLE_Y = 218, PADDLE_HEIGHT = 10;
+  const palette = [
+    { fill: '#83bdf0', edge: '#4e91cf' },
+    { fill: '#e6b69c', edge: '#bd8266' },
+    { fill: '#a5c493', edge: '#759b62' },
+    { fill: '#b4a9df', edge: '#887bb9' },
+    { fill: '#91c9bd', edge: '#5c9f92' },
+    { fill: '#e6cc83', edge: '#b89b4c' }
+  ];
+
+  const pagePath = window.location.pathname;
+  const apiBase = pagePath.endsWith('/') ? pagePath : (pagePath.slice(pagePath.lastIndexOf('/') + 1).includes('.') ? pagePath.slice(0, pagePath.lastIndexOf('/') + 1) : pagePath + '/');
+  const launchParams = window.location.search.slice(1);
+  async function gameRequest(path, payload) {
+    const response = await fetch(apiBase + path.replace(/^\//, ''), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ launchParams, ...(payload || {}) }),
+      cache: 'no-store',
+      credentials: 'omit'
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Не удалось обновить игровую награду.');
+    return data;
+  }
+
+  let attempts = 0, sessionId = null, starting = false, running = false, finished = false;
+  let raf = 0, last = 0, elapsed = 0, hits = 0, destroyed = 0, remaining = TOTAL_BLOCKS, speed = 325;
+  let blocks = [], particles = [], trail = [], leftPressed = false, rightPressed = false;
+  const paddle = { x: W / 2, width: 98 };
+  const ball = { x: W / 2, y: 190, vx: 172, vy: -276 };
+
+  function showToast(title, message, award) {
+    if (!toastHost) return;
+    const toast = document.createElement('div');
+    toast.className = 'roadnote-game-toast';
+    const iconNode = document.createElement('span');
+    iconNode.className = 'roadnote-game-toast-icon';
+    iconNode.innerHTML = award
+      ? '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="m8.5 13-1 9 4.5-2.5 4.5 2.5-1-9"/></svg>'
+      : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg>';
+    const body = document.createElement('div');
+    body.style.minWidth = '0';
+    const heading = document.createElement('strong');
+    heading.textContent = title;
+    const detail = document.createElement('small');
+    detail.textContent = message;
+    body.append(heading, detail);
+    toast.append(iconNode, body);
+    toastHost.append(toast);
+    window.setTimeout(() => {
+      toast.classList.add('is-leaving');
+      window.setTimeout(() => toast.remove(), 220);
+    }, 3600);
+  }
+
+  function renderState(state) {
+    if (!state) return;
+    attempts = Math.max(0, Number(state.attempts || 0));
+    const energy = document.getElementById('roadnote-game-energy-count');
+    if (energy) energy.textContent = String(attempts);
+    if (state.breakerBestScore !== undefined) recordNode.textContent = Math.max(0, Number(state.breakerBestScore) || 0) + '/' + TOTAL_BLOCKS;
+    if (state.breakerRewardClaimed) {
+      rewardTitle.textContent = 'Скан за Q Breaker уже получен';
+      rewardCaption.textContent = 'Можно играть снова ради рекорда';
+    }
+  }
+
+  async function refreshState() {
+    try {
+      renderState(await gameRequest('/api/game/state', {}));
+    } catch (error) {
+      console.warn('[QRide Breaker state]', error.message);
+    }
+  }
+  refreshState();
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshState();
+  });
+
+  function roundedRect(x, y, w, h, radius) {
+    const r = Math.min(radius, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function createLevel() {
+    blocks = [];
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        blocks.push({
+          x: 29 + col * 58,
+          y: 27 + row * 18,
+          w: 51,
+          h: 13,
+          hp: row + 1,
+          maxHp: row + 1,
+          color: palette[row]
+        });
+      }
+    }
+    remaining = TOTAL_BLOCKS;
+    destroyed = 0;
+    hits = 0;
+    particles = [];
+    trail = [];
+  }
+
+  function updateHud() {
+    progressNode.textContent = 'Блоки: ' + destroyed + '/' + TOTAL_BLOCKS;
+    speedNode.textContent = 'Скорость ×' + (speed / 325).toFixed(1).replace('.', ',');
+  }
+
+  function drawBackground() {
+    const gradient = ctx.createLinearGradient(0, 0, 0, H);
+    gradient.addColorStop(0, '#eaf5ff');
+    gradient.addColorStop(.76, '#f7fbff');
+    gradient.addColorStop(1, '#e8f1fb');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(255,255,255,.42)';
+    ctx.beginPath();
+    ctx.arc(560, 45, 24, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(189,217,245,.32)';
+    for (let i = 0; i < 5; i++) {
+      const x = 32 + i * 146;
+      ctx.beginPath();
+      ctx.ellipse(x, 157 + (i % 2) * 12, 20, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawBlocks() {
+    blocks.forEach(block => {
+      if (block.hp <= 0) return;
+      const shade = block.color;
+      ctx.save();
+      ctx.shadowColor = 'rgba(39,76,116,.12)';
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetY = 2;
+      ctx.fillStyle = shade.fill;
+      roundedRect(block.x, block.y, block.w, block.h, 4);
+      ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = shade.edge;
+      ctx.lineWidth = 1;
+      roundedRect(block.x + .5, block.y + .5, block.w - 1, block.h - 1, 4);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.42)';
+      roundedRect(block.x + 2, block.y + 1.5, block.w - 4, 2.5, 1.2);
+      ctx.fill();
+      const pipGap = 5;
+      const totalWidth = block.maxHp * pipGap - 1;
+      const startX = block.x + (block.w - totalWidth) / 2;
+      for (let i = 0; i < block.hp; i++) {
+        ctx.beginPath();
+        ctx.fillStyle = 'rgba(255,255,255,.92)';
+        ctx.arc(startX + i * pipGap, block.y + 9, 1.25, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+  }
+
+  function drawPaddle() {
+    const x = paddle.x - paddle.width / 2;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,82,238,.22)';
+    ctx.shadowBlur = 9;
+    ctx.shadowOffsetY = 3;
+    ctx.fillStyle = '#0052EE';
+    roundedRect(x, PADDLE_Y, paddle.width, PADDLE_HEIGHT, 5);
+    ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = '#bcdcff';
+    roundedRect(x + 7, PADDLE_Y + 2, paddle.width - 14, 2, 1);
+    ctx.fill();
+    ctx.fillStyle = '#ffc84a';
+    roundedRect(paddle.x - 8, PADDLE_Y + 3, 16, 3, 1.5);
+    ctx.fill();
+  }
+
+  function drawBall() {
+    trail.forEach((point, index) => {
+      ctx.globalAlpha = (index + 1) / trail.length * .18;
+      ctx.fillStyle = '#0052EE';
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, BALL_RADIUS * (index + 1) / trail.length, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,82,238,.35)';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = '#0052EE';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, BALL_RADIUS - 1, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  function drawParticles() {
+    particles.forEach(particle => {
+      ctx.globalAlpha = Math.max(0, particle.life / .32);
+      ctx.fillStyle = particle.color;
+      ctx.beginPath();
+      ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  function draw() {
+    drawBackground();
+    drawBlocks();
+    drawParticles();
+    drawPaddle();
+    drawBall();
+    updateHud();
+  }
+
+  function taptic(style) {
+    try {
+      if (window.vkBridge && typeof window.vkBridge.send === 'function') {
+        Promise.resolve(window.vkBridge.send('VKWebAppTapticImpactOccurred', { style })).catch(() => {
+          if (navigator.vibrate) navigator.vibrate(style === 'medium' ? 28 : 10);
+        });
+        return;
+      }
+    } catch (_) {}
+    if (navigator.vibrate) navigator.vibrate(style === 'medium' ? 28 : 10);
+  }
+
+  function movePaddle(clientX) {
+    const rect = canvas.getBoundingClientRect();
+    const scale = W / Math.max(1, rect.width);
+    paddle.x = Math.max(paddle.width / 2 + 4, Math.min(W - paddle.width / 2 - 4, (clientX - rect.left) * scale));
+  }
+
+  async function startGame() {
+    if (starting || running) return;
+    starting = true;
+    try {
+      const state = await gameRequest('/api/game/start', { gameId: 'breaker' });
+      sessionId = state.sessionId;
+      renderState(state);
+      createLevel();
+      elapsed = 0;
+      speed = 325;
+      paddle.x = W / 2;
+      ball.x = W / 2;
+      ball.y = 190;
+      ball.vx = 172;
+      ball.vy = -276;
+      running = true;
+      finished = false;
+      last = 0;
+      hud.classList.remove('is-hidden');
+      card.classList.add('is-playing');
+      overlay.hidden = true;
+      startButton.textContent = 'Играть';
+      taptic('light');
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(frame);
+    } catch (error) {
+      showToast('Не удалось начать игру', error.message, false);
+      await refreshState();
+    } finally {
+      starting = false;
+    }
+  }
+
+  async function finishGame(won) {
+    if (finished) return;
+    finished = true;
+    running = false;
+    cancelAnimationFrame(raf);
+    taptic(won ? 'medium' : 'light');
+    let message = won
+      ? 'Все 60 блоков уничтожены. Прохождение завершено.'
+      : 'Мяч упал. Уничтожено ' + destroyed + ' из ' + TOTAL_BLOCKS + ' блоков.';
+    if (sessionId) {
+      const currentSession = sessionId;
+      sessionId = null;
+      try {
+        const result = await gameRequest('/api/game/finish', {
+          sessionId: currentSession,
+          score: destroyed,
+          completed: won
+        });
+        renderState(result);
+        if (won && result.freeScanAwarded) {
+          message += ' Тебе начислен бесплатный скан.';
+          showToast('Бесплатный скан начислен', 'Награда за полное прохождение Q Breaker', true);
+        } else if (won && result.breakerRewardClaimed) {
+          message += ' Скан за Q Breaker ты уже получал раньше.';
+        } else if (won) {
+          message += ' Результат сохранён.';
+        }
+      } catch (error) {
+        message += ' Не удалось сохранить результат: ' + error.message + '.';
+      }
+    }
+    hud.classList.add('is-hidden');
+    card.classList.remove('is-playing');
+    overlayTitle.textContent = won ? 'Уровень пройден!' : 'Раунд завершён';
+    overlayText.textContent = message;
+    overlay.hidden = false;
+    startButton.textContent = 'Играть ещё';
+    draw();
+  }
+
+  function collideBlock(block, oldX, oldY) {
+    const nearestX = Math.max(block.x, Math.min(ball.x, block.x + block.w));
+    const nearestY = Math.max(block.y, Math.min(ball.y, block.y + block.h));
+    const dx = ball.x - nearestX, dy = ball.y - nearestY;
+    if (dx * dx + dy * dy > BALL_RADIUS * BALL_RADIUS) return false;
+
+    const fromTop = oldY + BALL_RADIUS <= block.y;
+    const fromBottom = oldY - BALL_RADIUS >= block.y + block.h;
+    const fromLeft = oldX + BALL_RADIUS <= block.x;
+    const fromRight = oldX - BALL_RADIUS >= block.x + block.w;
+    if (fromTop) {
+      ball.y = block.y - BALL_RADIUS;
+      ball.vy = -Math.abs(ball.vy);
+    } else if (fromBottom) {
+      ball.y = block.y + block.h + BALL_RADIUS;
+      ball.vy = Math.abs(ball.vy);
+    } else if (fromLeft) {
+      ball.x = block.x - BALL_RADIUS;
+      ball.vx = -Math.abs(ball.vx);
+    } else if (fromRight) {
+      ball.x = block.x + block.w + BALL_RADIUS;
+      ball.vx = Math.abs(ball.vx);
+    } else {
+      ball.vy *= -1;
+    }
+
+    block.hp -= 1;
+    hits += 1;
+    for (let i = 0; i < 4; i++) {
+      particles.push({
+        x: nearestX, y: nearestY,
+        vx: (Math.random() - .5) * 90,
+        vy: (Math.random() - .5) * 90,
+        life: .32, size: 1.5 + Math.random() * 1.5,
+        color: block.color.edge
+      });
+    }
+    if (block.hp <= 0) {
+      destroyed += 1;
+      remaining -= 1;
+    }
+    if (hits % 5 === 0) taptic('light');
+    return true;
+  }
+
+  function step(dt) {
+    elapsed += dt;
+    const targetSpeed = Math.min(555, 325 + elapsed * 2.35 + hits * .45);
+    const currentSpeed = Math.hypot(ball.vx, ball.vy) || 1;
+    ball.vx *= targetSpeed / currentSpeed;
+    ball.vy *= targetSpeed / currentSpeed;
+    speed = targetSpeed;
+
+    if (leftPressed) paddle.x -= 470 * dt;
+    if (rightPressed) paddle.x += 470 * dt;
+    paddle.x = Math.max(paddle.width / 2 + 4, Math.min(W - paddle.width / 2 - 4, paddle.x));
+
+    const oldX = ball.x, oldY = ball.y;
+    ball.x += ball.vx * dt;
+    ball.y += ball.vy * dt;
+
+    if (ball.x < BALL_RADIUS) {
+      ball.x = BALL_RADIUS;
+      ball.vx = Math.abs(ball.vx);
+    } else if (ball.x > W - BALL_RADIUS) {
+      ball.x = W - BALL_RADIUS;
+      ball.vx = -Math.abs(ball.vx);
+    }
+    if (ball.y < BALL_RADIUS + 4) {
+      ball.y = BALL_RADIUS + 4;
+      ball.vy = Math.abs(ball.vy);
+    }
+
+    if (ball.vy > 0 && oldY + BALL_RADIUS <= PADDLE_Y + 3 &&
+        ball.y + BALL_RADIUS >= PADDLE_Y &&
+        ball.x >= paddle.x - paddle.width / 2 - BALL_RADIUS &&
+        ball.x <= paddle.x + paddle.width / 2 + BALL_RADIUS) {
+      ball.y = PADDLE_Y - BALL_RADIUS;
+      const offset = Math.max(-.88, Math.min(.88, (ball.x - paddle.x) / (paddle.width / 2)));
+      const angle = offset * 1.08;
+      ball.vx = Math.sin(angle) * speed;
+      ball.vy = -Math.cos(angle) * speed;
+      taptic('light');
+    }
+
+    for (const block of blocks) {
+      if (block.hp > 0 && collideBlock(block, oldX, oldY)) break;
+    }
+
+    if (remaining === 0) {
+      finishGame(true);
+      return;
+    }
+    if (ball.y - BALL_RADIUS > H) {
+      finishGame(false);
+      return;
+    }
+
+    trail.push({ x: ball.x, y: ball.y });
+    if (trail.length > 7) trail.shift();
+    particles.forEach(particle => {
+      particle.x += particle.vx * dt;
+      particle.y += particle.vy * dt;
+      particle.life -= dt;
+    });
+    particles = particles.filter(particle => particle.life > 0);
+  }
+
+  function frame(now) {
+    if (!running) return;
+    if (document.hidden) {
+      last = 0;
+      raf = requestAnimationFrame(frame);
+      return;
+    }
+    const dt = last ? Math.min((now - last) / 1000, .03) : 0;
+    last = now;
+    const subSteps = 2;
+    for (let i = 0; i < subSteps && running; i++) step(dt / subSteps);
+    draw();
+    if (running) raf = requestAnimationFrame(frame);
+  }
+
+  startButton.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    startGame();
+  });
+  canvas.addEventListener('pointerdown', event => {
+    event.preventDefault();
+    movePaddle(event.clientX);
+  }, { passive: false });
+  canvas.addEventListener('pointermove', event => {
+    if (!running) return;
+    event.preventDefault();
+    movePaddle(event.clientX);
+  }, { passive: false });
+  document.addEventListener('keydown', event => {
+    if (!running) return;
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') event.preventDefault();
+    if (event.key === 'ArrowLeft') leftPressed = true;
+    if (event.key === 'ArrowRight') rightPressed = true;
+  });
+  document.addEventListener('keyup', event => {
+    if (event.key === 'ArrowLeft') leftPressed = false;
+    if (event.key === 'ArrowRight') rightPressed = false;
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) last = 0;
+  });
+
+  createLevel();
+  draw();
+})();
+</script>
 </script>
 <script src="qride-mascot.js"></script>
 </body>
