@@ -1083,7 +1083,7 @@ async function handleAdminMessageEvent(event) {
 
 
 
-// QRide Arcade: streak-based energy, server-backed sessions and one-time rewards per game.
+// QRide Arcade: streak-based energy, server-backed sessions and daily rewards per game.
 const GAME_DAILY_REWARDS = [1, 1, 2, 2, 3, 3, 5];
 function gamePublicState(userId) {
   const row = db.prepare('SELECT game_attempts, game_streak, game_last_login_day, game_reward_day, game_total_score, game_best_score FROM users WHERE vk_id = ?').get(userId);
