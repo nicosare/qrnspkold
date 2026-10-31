@@ -3984,7 +3984,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   if (!ctx) return;
 
   const W = canvas.width, H = canvas.height;
-  const TOTAL_BLOCKS = 60, COLS = 10, ROWS = 6;
+  const TOTAL_BLOCKS = 60, COLS = 8, ROWS = 6;
+  const BLOCK_WIDTH = 64, BLOCK_GAP = 12, BLOCK_STEP = BLOCK_WIDTH + BLOCK_GAP;
   const BALL_RADIUS = 7, PADDLE_Y = 676, PADDLE_HEIGHT = 12;
   const palette = [
     { fill: '#83bdf0', edge: '#4e91cf' },
@@ -4012,7 +4013,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   }
 
   let attempts = 0, sessionId = null, starting = false, running = false, finished = false;
-  let raf = 0, last = 0, elapsed = 0, hits = 0, destroyed = 0, speed = 235, tileSpeed = 10, rowSpawnProgress = 0, rowIndex = ROWS;
+  let raf = 0, last = 0, elapsed = 0, hits = 0, destroyed = 0, speed = 235, tileSpeed = 5, rowSpawnProgress = 0, rowIndex = ROWS;
   let blocks = [], particles = [], trail = [], leftPressed = false, rightPressed = false;
   const paddle = { x: W / 2, width: 112 };
   const ball = { x: W / 2, y: 570, vx: 112, vy: -206 };
@@ -4083,7 +4084,9 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     while (holes.size < holeCount) holes.add(Math.floor(Math.random() * COLS));
     for (let col = 0; col < COLS; col++) {
       if (holes.has(col)) continue;
-      blocks.push({ x: 29 + col * 58, y, w: 51, h: 14, hp: 1, maxHp: 1, color });
+      const rowWidth = COLS * BLOCK_WIDTH + (COLS - 1) * BLOCK_GAP;
+      const startX = (W - rowWidth) / 2;
+      blocks.push({ x: startX + col * BLOCK_STEP, y, w: BLOCK_WIDTH, h: 14, hp: 1, maxHp: 1, color });
     }
   }
 
@@ -4092,7 +4095,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     for (let row = 0; row < ROWS; row++) addRow(18 + row * 20, row, true);
     destroyed = 0;
     hits = 0;
-    tileSpeed = 10;
+    tileSpeed = 5;
     rowSpawnProgress = 0;
     rowIndex = ROWS;
     particles = [];
@@ -4245,7 +4248,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       createLevel();
       elapsed = 0;
       speed = 235;
-      tileSpeed = 10;
+      tileSpeed = 5;
       rowSpawnProgress = 0;
       rowIndex = ROWS;
       paddle.x = W / 2;
@@ -4358,7 +4361,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   function step(dt) {
     elapsed += dt;
     const targetSpeed = Math.min(390, 235 + elapsed * 1.45 + hits * .22);
-    tileSpeed = Math.min(46, 10 + elapsed * .72);
+    tileSpeed = Math.min(18, 5 + elapsed * .17);
     const currentSpeed = Math.hypot(ball.vx, ball.vy) || 1;
     ball.vx *= targetSpeed / currentSpeed;
     ball.vy *= targetSpeed / currentSpeed;
