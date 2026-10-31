@@ -60,10 +60,10 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 .preset-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
 .preset-grid button{min-width:0;padding:10px 4px;font-size:13px}
 .preset-grid button span{display:block;font-size:11px;font-weight:500;opacity:.8;margin-top:3px}
-.grant-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:8px}
-.grant-grid input{min-width:0}
+ .grant-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(76px,.7fr) auto;gap:8px;margin-top:8px}
+ .grant-grid input,.grant-grid select{min-width:0;width:100%}
 .grant-grid button,.unlimited-toggle{white-space:nowrap}
-@media(max-width:420px){.grant-grid{grid-template-columns:1fr}.preset-grid button{font-size:12px}}
+ @media(max-width:420px){.grant-grid{grid-template-columns:minmax(0,1fr) minmax(76px,.7fr)}.grant-grid button{grid-column:1/-1}}
 .unlimited-toggle{width:100%;margin-top:8px;background:#f4f7fb}
 .reset-account{width:100%;margin-top:8px;background:#fff1f0;border-color:#ffccc7;color:#b42318}
 .action-status{font-size:12px;color:var(--muted);min-height:17px;margin-top:6px}
@@ -73,7 +73,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 .admin-nav a.active{background:#eaf3ff;border-color:#bfdaff;color:#1766bc}
 .promo-intro{margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.45}
 .promo-create{display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,.5fr);gap:10px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fafbfd}
-.promo-field{display:grid;gap:6px;min-width:0}.promo-field>span{font-size:12px;font-weight:750;color:#566171}.promo-field input{min-width:0;width:100%;min-height:44px}
+.promo-field{display:grid;gap:6px;min-width:0}.promo-field>span{font-size:12px;font-weight:750;color:#566171}.promo-field input,.promo-field select{min-width:0;width:100%;min-height:44px}.promo-field[hidden]{display:none!important}
 .promo-offers-field,.promo-create-button,.promo-form-status{grid-column:1/-1}
 .promo-offers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
 .promo-offer-check{display:flex;align-items:flex-start;gap:8px;min-height:42px;padding:9px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:12px;line-height:1.35}
@@ -108,14 +108,10 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  <div class="toolbar">
   <input id="search" type="search" placeholder="Имя, VK ID или транспорт №" autocomplete="off" aria-label="Поиск пользователей">
   <select id="sort" aria-label="Сортировка">
-   <option value="scans">Больше сканов</option>
-   <option value="subscription">Скоро истекает подписка</option>
-   <option value="lastscan">Последний скан</option>
-   <option value="recent">Последние посещения</option>
-   <option value="first">Первые посещения</option>
-   <option value="visits">Число посещений</option>
-   <option value="name">Имя</option>
-  </select>
+   <option value="date">Последний заход</option>
+   <option value="scans">Сканы на балансе</option>
+   <option value="subscription">Подписка</option>
+   </select>
   <button class="primary" id="refresh" type="button">Обновить</button>
  </div>
  <div id="status" class="status" role="status">Проверяем доступ…</div>
@@ -123,14 +119,16 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  <div class="foot">Доступ к списку защищён серверной проверкой подписи VK и разрешённым VK ID. Имена и аватары загружаются из профиля; идентификатор пользователя подтверждается сервером.</div>
  </div>
  <div id="promos-view" hidden>
-  <div class="promo-intro">Создавай промокоды для выбранных тарифов. Скидка закрепляется за покупкой только после успешной оплаты.</div>
+   <div class="promo-intro">Создавай коды со скидкой на тарифы или с пополнением баланса сканов и игровой энергии.</div>
   <form id="promo-create-form" class="promo-create">
    <label class="promo-field"><span>Промокод</span><input id="promo-code" name="code" type="text" minlength="3" maxlength="32" pattern="[A-Za-z0-9_-]{3,32}" placeholder="Например, QRIDE20" autocomplete="off" required></label>
-   <label class="promo-field"><span>Скидка, %</span><input id="promo-discount" name="discountPercent" type="number" min="1" max="99" step="1" value="10" required></label>
-   <div class="promo-field"><span>Действует с (необязательно)</span><input id="promo-starts" name="startsAt" type="datetime-local"></div>
-   <div class="promo-field"><span>Действует до (необязательно)</span><input id="promo-expires" name="expiresAt" type="datetime-local"></div>
-   <label class="promo-field"><span>Лимит активаций (необязательно)</span><input id="promo-max-redemptions" name="maxRedemptions" type="number" min="1" max="1000000" step="1" placeholder="Без ограничений"></label>
-   <div class="promo-field promo-offers-field"><span>Тарифы, на которые действует код</span><div id="promo-offers" class="promo-offers"><div class="status">Загружаем тарифы…</div></div></div>
+    <label class="promo-field"><span>Тип промокода</span><select id="promo-type" name="promoType"><option value="discount">Скидка на тариф</option><option value="scans">Пополнение сканов</option><option value="energy">Пополнение энергии</option></select></label>
+    <label class="promo-field" id="promo-discount-field"><span>Скидка, %</span><input id="promo-discount" name="discountPercent" type="number" min="1" max="99" step="1" value="10" required></label>
+    <label class="promo-field" id="promo-reward-field" hidden><span id="promo-reward-label">Количество сканов</span><input id="promo-reward" name="rewardAmount" type="number" min="1" max="100000" step="1" value="5"></label>
+    <div class="promo-field"><span>Действует с (необязательно)</span><input id="promo-starts" name="startsAt" type="datetime-local"></div>
+    <div class="promo-field"><span>Действует до (необязательно)</span><input id="promo-expires" name="expiresAt" type="datetime-local"></div>
+    <label class="promo-field"><span>Лимит активаций (необязательно)</span><input id="promo-max-redemptions" name="maxRedemptions" type="number" min="1" max="1000000" step="1" placeholder="Без ограничений"></label>
+    <div class="promo-field promo-offers-field" id="promo-offers-field"><span>Тарифы, на которые действует код</span><div id="promo-offers" class="promo-offers"><div class="status">Загружаем тарифы…</div></div></div>
    <button class="primary promo-create-button" type="submit" id="promo-create-button">Создать промокод</button>
    <div id="promo-form-status" class="action-status" role="status" aria-live="polite"></div>
   </form>
@@ -153,7 +151,14 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  const promosView = document.getElementById('promos-view');
  const promoForm = document.getElementById('promo-create-form');
  const promoCodeInput = document.getElementById('promo-code');
- const promoDiscountInput = document.getElementById('promo-discount');
+  const promoDiscountInput = document.getElementById('promo-discount');
+  const promoTypeInput = document.getElementById('promo-type');
+  const promoRewardInput = document.getElementById('promo-reward');
+  const promoDiscountField = document.getElementById('promo-discount-field');
+  const promoRewardField = document.getElementById('promo-reward-field');
+  const promoRewardLabel = document.getElementById('promo-reward-label');
+  const promoOffersField = document.getElementById('promo-offers-field');
+  const promoStartsInput = document.getElementById('promo-starts');
  const promoStartsInput = document.getElementById('promo-starts');
  const promoExpiresInput = document.getElementById('promo-expires');
  const promoMaxRedemptionsInput = document.getElementById('promo-max-redemptions');
@@ -178,16 +183,14 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    const q=search.value.trim().toLowerCase();
    const filtered=users.filter(u=>(u.first_name+' '+u.last_name+' '+u.vk_id+' '+(u.last_transport_number||'')).toLowerCase().includes(q));
    filtered.sort((a,b)=>{
-     if(sort.value==='scans') return (b.scan_balance??-1)-(a.scan_balance??-1);
+     if(sort.value==='scans') return Number(b.scan_balance??-1)-Number(a.scan_balance??-1);
      if(sort.value==='subscription') {
-       const ae=a.subscription_until&&Date.parse(a.subscription_until)>Date.now()?Date.parse(a.subscription_until):Infinity;
-       const be=b.subscription_until&&Date.parse(b.subscription_until)>Date.now()?Date.parse(b.subscription_until):Infinity;
-       return ae-be;
+       const rank=u=>u.unlimited?2:(u.subscription_until&&Date.parse(u.subscription_until)>Date.now()?1:0);
+       const priority=rank(b)-rank(a);
+       if(priority) return priority;
+       if(rank(a)===1) return Date.parse(a.subscription_until)-Date.parse(b.subscription_until);
      }
-     if(sort.value==='lastscan') return (b.last_scan_at||'').localeCompare(a.last_scan_at||'');
-     if(sort.value==='visits') return b.visit_count-a.visit_count;
-     if(sort.value==='name') return (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name,'ru');
-     return b.last_seen.localeCompare(a.last_seen);
+     return (b.last_seen||'').localeCompare(a.last_seen||'');
    });
    cards.innerHTML=filtered.map(u=>{
      const name=(u.first_name+' '+u.last_name).trim()||'Пользователь VK';
@@ -204,23 +207,18 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
          '<div class="stat"><span class="stat-label">Баланс сканов</span><span class="stat-value">'+esc(u.unlimited?'Безлимит':(u.scan_balance===null||u.scan_balance===undefined?'Не назначен':u.scan_balance))+'</span></div>'+
          '<div class="stat"><span class="stat-label">Подписка</span><span class="stat-value">'+esc(subscriptionActive?new Date(u.subscription_until).toLocaleDateString('ru-RU'):(u.subscription_until?'Истекла':'Нет'))+'</span></div>'+
          '<div class="stat"><span class="stat-label">Последний скан</span><span class="stat-value">'+esc(lastScan)+'</span></div>'+
-         '<div class="stat"><span class="stat-label">Последний транспорт</span><span class="stat-value">'+esc(transport)+'</span></div>'+
+          '<div class="stat"><span class="stat-label">Последний транспорт</span><span class="stat-value">'+esc(transport)+'</span></div>'+
+          '<div class="stat"><span class="stat-label">Энергия</span><span class="stat-value">'+esc(Number(u.game_attempts||0))+'</span></div>'+
        '</div>'+
        '<details class="scan-history" data-scan-history="'+esc(u.vk_id)+'"><summary>История сканов · '+esc(u.scan_count||0)+'</summary><div class="scan-history-list"><div class="scan-history-empty">Нажмите, чтобы загрузить историю.</div></div></details>'+
        '<details class="credit-history" data-credit-history="'+esc(u.vk_id)+'"><summary>История начислений</summary><div class="scan-history-list"><div class="scan-history-empty">Нажмите, чтобы загрузить историю.</div></div></details>'+
        '<div class="entitlement">'+
        '<details class="manage"><summary>Управление доступом</summary><div class="manage-body">'+
-       '<div class="grant-section"><div class="grant-section-title">СКАНЫ</div><div class="preset-grid">'+
-       '<button class="primary" type="button" data-action="grant-pack" data-amount="9">+9</button>'+
-       '<button class="primary" type="button" data-action="grant-pack" data-amount="29">+29</button>'+
-       '<button class="primary" type="button" data-action="grant-pack" data-amount="49">+49</button></div>'+
-       '<div class="grant-grid"><input type="number" min="1" max="100000" step="1" value="9" aria-label="Своё количество сканов" data-pack-input><button class="primary" type="button" data-action="grant-pack-custom">Начислить</button></div></div>'+
-       '<div class="grant-section"><div class="grant-section-title">ПОДПИСКА</div><div class="preset-grid">'+
-       '<button class="primary" type="button" data-action="grant-months" data-months="1">+1 мес.</button>'+
-       '<button class="primary" type="button" data-action="grant-months" data-months="3">+3 мес.</button>'+
-       '<button class="primary" type="button" data-action="grant-months" data-months="6">+6 мес.</button></div>'+
-       '<div class="grant-grid"><input type="number" min="1" max="120" step="1" value="1" aria-label="Своё количество месяцев" data-months-input><button class="primary" type="button" data-action="grant-months-custom">Начислить</button></div></div>'+
-       '<button class="unlimited-toggle" type="button" data-action="toggle-unlimited">'+(u.unlimited?'Отключить безлимит':'Включить безлимит')+'</button>'+
+        '<div class="grant-section"><div class="grant-section-title">НАЧИСЛЕНИЕ</div>'+
+        '<div class="grant-grid"><select aria-label="Что начислить" data-grant-type><option value="scans">Скан</option><option value="days">День</option><option value="months">Месяц</option><option value="energy">Энергия</option></select>'+
+        '<input type="number" min="1" max="100000" step="1" value="9" aria-label="Количество для начисления" data-grant-amount>'+
+        '<button class="primary" type="button" data-action="grant-custom">Начислить</button></div></div>'+
+        '<button class="unlimited-toggle" type="button" data-action="toggle-unlimited">'+(u.unlimited?'Отключить безлимит':'Включить безлимит')+'</button>' +
        (String(u.vk_id)===String(adminUserId)?'<button class="reset-account" type="button" data-action="reset-account">Обнулить мой аккаунт</button>':'')+
        '<div class="action-status" aria-live="polite"></div></div></details></div></article>';
      }).join('');
@@ -245,15 +243,14 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    const vkId=card.dataset.userCard;
    const message=card.querySelector('.action-status');
    let body;
-   if(button.dataset.action==='grant-pack'||button.dataset.action==='grant-pack-custom'){
-     const amount=button.dataset.amount!==undefined?Number(button.dataset.amount):Number(card.querySelector('[data-pack-input]').value);
-     if(!Number.isSafeInteger(amount)||amount<1||amount>100000){message.className='action-status error';message.textContent='Введите количество сканов от 1 до 100000.';return}
-     body={action:'grant_pack',amount};
-   }else if(button.dataset.action==='grant-months'||button.dataset.action==='grant-months-custom'){
-     const months=button.dataset.months!==undefined?Number(button.dataset.months):Number(card.querySelector('[data-months-input]').value);
-     if(!Number.isSafeInteger(months)||months<1||months>120){message.className='action-status error';message.textContent='Введите количество месяцев от 1 до 120.';return}
-     body={action:'grant_months',months};
-   }else if(button.dataset.action==='reset-account'){
+    if(button.dataset.action==='grant-custom'){
+      const type=String(card.querySelector('[data-grant-type]')?.value||'scans');
+      const amount=Number(card.querySelector('[data-grant-amount]')?.value);
+      const settings={scans:{action:'grant_pack',field:'amount',max:100000},days:{action:'grant_days',field:'days',max:3650},months:{action:'grant_months',field:'months',max:120},energy:{action:'grant_energy',field:'amount',max:100000}};
+      const selected=settings[type];
+      if(!selected||!Number.isSafeInteger(amount)||amount<1||amount>selected.max){message.className='action-status error';message.textContent='Введите количество от 1 до '+(selected?selected.max:100000)+'.';return}
+      body={action:selected.action,[selected.field]:amount};
+    }else if(button.dataset.action==='reset-account'){
      if(vkId!==String(adminUserId)){message.className='action-status error';message.textContent='Можно обнулить только собственный аккаунт администратора.';return}
      const confirmed=window.confirm('Обнулить твой аккаунт QRide?\n\nБаланс сканов и подписка будут сброшены, история покупок и отметки о покупках удалены. История сканирований останется. Скидка на первую покупку снова станет доступна. Это действие нельзя отменить.');
      if(!confirmed)return;
@@ -327,10 +324,22 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  document.getElementById('refresh').addEventListener('click',load);
  function promoMessage(message,isError){promoFormStatus.className='action-status'+(isError?' error':'');promoFormStatus.textContent=message||'';}
  function promoDate(value){return value?new Date(value).toLocaleString('ru-RU',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'Без ограничения';}
- function renderPromoOffers(){
-   promoOffers.innerHTML=promoOfferOptions.map(offer=>'<label class="promo-offer-check"><input type="checkbox" name="promoOffer" value="'+esc(offer.id)+'"><span>'+esc(offer.name)+'</span></label>').join('');
- }
- async function loadPromos(){
+  function renderPromoOffers(){
+    promoOffers.innerHTML=promoOfferOptions.map(offer=>'<label class="promo-offer-check"><input type="checkbox" name="promoOffer" value="'+esc(offer.id)+'"><span>'+esc(offer.name)+'</span></label>').join('');
+  }
+  function syncPromoFields(){
+    const type=promoTypeInput.value;
+    const isReward=type!=='discount';
+    promoDiscountField.hidden=isReward;
+    promoRewardField.hidden=!isReward;
+    promoOffersField.hidden=isReward;
+    promoDiscountInput.required=!isReward;
+    promoRewardInput.required=isReward;
+    promoRewardLabel.textContent=type==='energy'?'Количество энергии':'Количество сканов';
+  }
+  promoTypeInput.addEventListener('change',syncPromoFields);
+  syncPromoFields();
+  async function loadPromos(){
    if(!query){promoListStatus.className='status error';promoListStatus.textContent='Откройте панель из VK Mini App.';return;}
    promoListStatus.hidden=false;promoListStatus.className='status';promoListStatus.textContent='Загрузка промокодов…';promoList.hidden=true;
    try{
@@ -342,28 +351,35 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
      promoList.innerHTML=promos.map(p=>{
        const statusLabel=p.status==='expired'?'Истёк':p.status==='scheduled'?'Запланирован':'Активен';
        const badgeClass=p.status==='expired'?' expired':p.status==='scheduled'?' scheduled':'';
-       const names=(p.offerIds||[]).map(id=>offersById[id]||id).join(', ');
-       const dates=(p.startsAt?'С '+promoDate(p.startsAt):'Сразу')+' · '+(p.expiresAt?'до '+promoDate(p.expiresAt):'без даты окончания');
-       const cap=p.maxRedemptions==null?'Без лимита активаций':('Использовано: '+p.redemptions+' из '+p.maxRedemptions);
-       return '<article class="promo-card" data-promo-card="'+esc(p.id)+'"><div class="promo-card-top"><div class="promo-code-name">'+esc(p.code)+'</div><span class="promo-badge'+badgeClass+'">'+statusLabel+'</span></div><div class="promo-meta"><strong>Скидка '+esc(p.discountPercent)+'%</strong><br>'+esc(names)+'<br>'+esc(dates)+'<br>'+esc(cap)+' · Ожидают оплаты: '+esc(p.selectedCount)+'</div><div class="promo-card-actions"><span class="promo-meta">Создан '+esc(promoDate(p.createdAt))+'</span><button type="button" data-delete-promo="'+esc(p.id)+'">Удалить</button></div></article>';
-     }).join('');
+        const names=(p.offerIds||[]).map(id=>offersById[id]||id).join(', ');
+        const dates=(p.startsAt?'С '+promoDate(p.startsAt):'Сразу')+' · '+(p.expiresAt?'до '+promoDate(p.expiresAt):'без даты окончания');
+        const cap=p.maxRedemptions==null?'Без лимита активаций':('Использовано: '+p.redemptions+' из '+p.maxRedemptions);
+        const type=p.promoType||'discount';
+        const reward=type==='discount'?'Скидка '+esc(p.discountPercent)+'%':'+'+esc(p.rewardAmount)+' '+(type==='energy'?'энергии':'сканов');
+        const details=type==='discount'?esc(names):'Разовое пополнение баланса после ввода кода';
+        return '<article class="promo-card" data-promo-card="'+esc(p.id)+'"><div class="promo-card-top"><div class="promo-code-name">'+esc(p.code)+'</div><span class="promo-badge'+badgeClass+'">'+statusLabel+'</span></div><div class="promo-meta"><strong>'+reward+'</strong><br>'+details+'<br>'+esc(dates)+'<br>'+esc(cap)+(type==='discount'?' · Ожидают оплаты: '+esc(p.selectedCount):'')+'</div><div class="promo-card-actions"><span class="promo-meta">Создан '+esc(promoDate(p.createdAt))+'</span><button type="button" data-delete-promo="'+esc(p.id)+'">Удалить</button></div></article>';
+      }).join('');
      promoList.hidden=!promos.length;promoListStatus.hidden=Boolean(promos.length);promoListStatus.className='status';promoListStatus.textContent=promos.length?'':'Промокодов пока нет.';
    }catch(error){promoListStatus.hidden=false;promoListStatus.className='status error';promoListStatus.textContent=error.message;}
  }
  promoForm.addEventListener('submit',async event=>{
    event.preventDefault();
-   const code=String(promoCodeInput.value||'').trim().toUpperCase();
-   const offerIds=Array.from(promoOffers.querySelectorAll('input[name="promoOffer"]:checked')).map(input=>input.value);
-   if(!offerIds.length){promoMessage('Выбери хотя бы один тариф.',true);return;}
+    const code=String(promoCodeInput.value||'').trim().toUpperCase();
+    const promoType=promoTypeInput.value;
+    const offerIds=Array.from(promoOffers.querySelectorAll('input[name="promoOffer"]:checked')).map(input=>input.value);
+    const rewardAmount=Number(promoRewardInput.value);
+    if(promoType==='discount'&&!offerIds.length){promoMessage('Выбери хотя бы один тариф.',true);return;}
+    if(promoType!=='discount'&&(!Number.isSafeInteger(rewardAmount)||rewardAmount<1||rewardAmount>100000)){promoMessage('Укажи количество от 1 до 100000.',true);return;}
+    const startsRaw=
    const startsRaw=promoStartsInput.value,expiresRaw=promoExpiresInput.value;
    const startsAt=startsRaw?new Date(startsRaw).toISOString():null;
    const expiresAt=expiresRaw?new Date(expiresRaw).toISOString():null;
    if(startsAt&&expiresAt&&Date.parse(startsAt)>=Date.parse(expiresAt)){promoMessage('Окончание срока должно быть позже начала.',true);return;}
    const button=document.getElementById('promo-create-button');button.disabled=true;button.textContent='Создаём…';
    try{
-     const response=await fetch('../api/admin/promocodes',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify({code,discountPercent:Number(promoDiscountInput.value),offerIds,startsAt,expiresAt,maxRedemptions:promoMaxRedemptionsInput.value===''?null:Number(promoMaxRedemptionsInput.value)}),cache:'no-store'});
+      const response=await fetch('../api/admin/promocodes',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify({code,promoType,discountPercent:Number(promoDiscountInput.value),rewardAmount,offerIds,startsAt,expiresAt,maxRedemptions:promoMaxRedemptionsInput.value===''?null:Number(promoMaxRedemptionsInput.value)}),cache:'no-store'});
      const data=await response.json();if(!response.ok)throw new Error(data.error||'Не удалось создать промокод.');
-     promoForm.reset();promoDiscountInput.value='10';promoMessage('Промокод '+code+' создан.',false);await loadPromos();
+      promoForm.reset();promoDiscountInput.value='10';promoRewardInput.value='5';syncPromoFields();promoMessage('Промокод '+code+' создан.',false);await loadPromos();
    }catch(error){promoMessage(error.message,true);}
    finally{button.disabled=false;button.textContent='Создать промокод';}
  });
@@ -381,7 +397,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    document.querySelectorAll('[data-admin-view]').forEach(item=>item.classList.toggle('active',item===link));
    usersView.hidden=view!=='users';promosView.hidden=view!=='promos';
    document.querySelector('h1').textContent=view==='promos'?'Промокоды QRide':'Пользователи QRide';
-   document.querySelector('.top .sub').textContent=view==='promos'?'Создание, сроки и скидки промокодов':'Нажми на карточку, чтобы открыть профиль VK';
+    document.querySelector('.top .sub').textContent=view==='promos'?'Коды скидок и пополнения баланса':'Нажми на карточку, чтобы открыть профиль VK';
    count.textContent=view==='users'?(users.length?'Всего: '+users.length:'Загрузка…'):'Промокоды';
    if(view==='promos')loadPromos();
    if(view==='users'&&!users.length)load();
