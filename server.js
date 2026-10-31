@@ -271,6 +271,13 @@ db.exec(`
     PRIMARY KEY (vk_id, game_id)
   );
   CREATE INDEX IF NOT EXISTS idx_game_reward_claims_user ON game_reward_claims(vk_id);
+  CREATE TABLE IF NOT EXISTS game_reward_daily_claims (
+    vk_id TEXT NOT NULL,
+    game_id TEXT NOT NULL,
+    day_key TEXT NOT NULL,
+    claimed_at TEXT NOT NULL,
+    PRIMARY KEY (vk_id, game_id, day_key)
+  );
   INSERT OR IGNORE INTO game_reward_claims (vk_id, game_id, claimed_at)
   SELECT DISTINCT vk_id, 'runner', MIN(credited_at)
   FROM scan_credit_history
@@ -373,6 +380,19 @@ function yekaterinburgDayKey(date = new Date()) {
   }).formatToParts(date);
   const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
   return values.year + '-' + values.month + '-' + values.day;
+}
+
+// Carry forward existing claims as claims for the day they were earned.
+const migrateGameRewardClaims = db.prepare(
+  'INSERT OR IGNORE INTO game_reward_daily_claims (vk_id, game_id, day_key, claimed_at) VALUES (?, ?, ?, ?)'
+);
+for (const claim of db.prepare('SELECT vk_id, game_id, claimed_at FROM game_reward_claims').all()) {
+  migrateGameRewardClaims.run(
+    claim.vk_id,
+    claim.game_id,
+    yekaterinburgDayKey(new Date(claim.claimed_at)),
+    claim.claimed_at
+  );
 }
 
 // The daily bonus is a regular scan added to the ordinary balance.
@@ -1068,7 +1088,7 @@ const GAME_DAILY_REWARDS = [1, 1, 2, 2, 3, 3, 5];
 function gamePublicState(userId) {
   const row = db.prepare('SELECT game_attempts, game_streak, game_last_login_day, game_reward_day, game_total_score, game_best_score FROM users WHERE vk_id = ?').get(userId);
   const today = yekaterinburgDayKey();
-  const claims = new Set(db.prepare('SELECT game_id FROM game_reward_claims WHERE vk_id = ?').all(userId).map(item => item.game_id));
+  const claims = new Set(db.prepare('SELECT game_id FROM game_reward_daily_claims WHERE vk_id = ? AND day_key = ?').all(userId, today).map(item => item.game_id));
   const breakerBestScore = Number(db.prepare("SELECT COALESCE(MAX(score), 0) AS score FROM game_sessions WHERE vk_id = ? AND game_id = 'breaker'").get(userId)?.score || 0);
   return {
     attempts: Math.max(0, Number(row?.game_attempts || 0)),
@@ -1120,12 +1140,18 @@ app.post('/api/game/start', (req, res) => {
   const now = Date.now();
   const sessionId = crypto.randomUUID();
   let started = false;
+  let alreadyPlaying = false;
   db.transaction(() => {
+    db.prepare('UPDATE game_sessions SET finished_at = ?, score = COALESCE(score, 0) WHERE vk_id = ? AND finished_at IS NULL AND started_at <= ?')
+      .run(now, userId, now - 30 * 60 * 1000);
+    const active = db.prepare('SELECT id FROM game_sessions WHERE vk_id = ? AND finished_at IS NULL LIMIT 1').get(userId);
+    if (active) { alreadyPlaying = true; return; }
     const spend = db.prepare('UPDATE users SET game_attempts = game_attempts - 1 WHERE vk_id = ? AND game_attempts > 0').run(userId);
     if (spend.changes !== 1) return;
     db.prepare('INSERT INTO game_sessions (id, vk_id, started_at, game_id) VALUES (?, ?, ?, ?)').run(sessionId, userId, now, gameId);
     started = true;
   })();
+  if (alreadyPlaying) return res.status(409).json({ error: 'Сначала заверши уже начатую игру.', ...gamePublicState(userId) });
   if (!started) return res.status(402).json({ error: 'Игровые попытки закончились. Загляни завтра или получи +3 за успешный скан.', ...gamePublicState(userId) });
   return res.json({ ok: true, sessionId, ...gamePublicState(userId) });
 });
@@ -1163,15 +1189,15 @@ app.post('/api/game/finish', (req, res) => {
     if (gameId === 'runner') {
       db.prepare('UPDATE users SET game_total_score = COALESCE(game_total_score, 0) + ?, game_best_score = MAX(COALESCE(game_best_score, 0), ?) WHERE vk_id = ?').run(score, score, userId);
       if (score >= 3000) {
-        const claim = db.prepare("INSERT OR IGNORE INTO game_reward_claims (vk_id, game_id, claimed_at) VALUES (?, 'runner', ?)").run(userId, creditedAt);
+        const claim = db.prepare("INSERT OR IGNORE INTO game_reward_daily_claims (vk_id, game_id, day_key, claimed_at) VALUES (?, 'runner', ?, ?)").run(userId, today, creditedAt);
         if (claim.changes === 1) {
           db.prepare('UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + 1, game_reward_day = ? WHERE vk_id = ?').run(today, userId);
-          recordScanCredit.run(userId, creditedAt, 1, 'game_reward', 'Бесплатный скан за 3000 очков в QRide Runner');
+          recordScanCredit.run(userId, creditedAt, 1, 'game_reward', 'Бесплатный скан за 3000 очков в Q Runner');
           freeScanAwarded = true;
         }
       }
     } else if (gameId === 'breaker' && completed) {
-      const claim = db.prepare("INSERT OR IGNORE INTO game_reward_claims (vk_id, game_id, claimed_at) VALUES (?, 'breaker', ?)").run(userId, creditedAt);
+      const claim = db.prepare("INSERT OR IGNORE INTO game_reward_daily_claims (vk_id, game_id, day_key, claimed_at) VALUES (?, 'breaker', ?, ?)").run(userId, today, creditedAt);
       if (claim.changes === 1) {
         db.prepare('UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + 1 WHERE vk_id = ?').run(userId);
         recordScanCredit.run(userId, creditedAt, 1, 'game_reward', 'Бесплатный скан за прохождение Q Breaker');
