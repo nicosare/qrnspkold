@@ -1184,7 +1184,11 @@
         .arcade-shell { display:flex; flex-direction:column; gap:12px; }
         .arcade-shell > .roadnote-game-head { margin-bottom:0; }
         .arcade-shell > .roadnote-game-stage { flex:0 0 auto; }
-        #qride-breaker-card { margin:0; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
+        .arcade-divider { display:flex; align-items:center; gap:11px; padding:1px 2px; color:#9aa8b8; }
+         .arcade-divider span { flex:1; height:1px; background:linear-gradient(90deg,transparent,#dce6f2); }
+         .arcade-divider span:last-child { background:linear-gradient(90deg,#dce6f2,transparent); }
+         .arcade-divider i { width:5px; height:5px; border-radius:50%; background:#b8c9dc; }
+         #qride-breaker-card { margin:0; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
         .qride-breaker-canvas { touch-action:none!important; cursor:crosshair; height:auto!important; min-height:0; aspect-ratio:8/9; }
         .qride-breaker-card.is-playing .roadnote-game-record { display:none; }
         #qride-breaker-progress { font-variant-numeric:tabular-nums; }
@@ -1635,12 +1639,13 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                     <div class="roadnote-game-reward-preview" data-game-rule="reward">
                         <span class="roadnote-game-reward-label">НАГРАДА</span>
                         <strong class="roadnote-game-reward-title">3000 очков за раунд → 1 скан</strong>
-                        <span class="roadnote-game-reward-caption">Однократно для каждого игрока</span>
+                        <span class="roadnote-game-reward-caption">Один бесплатный скан в день за эту игру</span>
                     </div>
                     <button class="roadnote-game-start" id="roadnote-game-start" type="button">Играть</button>
                 </div>
             </div>
 
+            <div class="arcade-divider" aria-hidden="true"><span></span><i></i><span></span></div>
 
         <section class="qride-breaker-card" id="qride-breaker-card" aria-label="Q Breaker">
             <div class="roadnote-game-stage">
@@ -3412,6 +3417,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   if (!canvas || !overlay || !overlayTitle || !overlayText || !recordNode) return;
   const launchParams = window.location.search.slice(1);
   let gameAttempts = 0, gameStreak = 0, gameSessionId = null, startingGame = false;
+  const arcadeLock = window.__qrideArcadeLock || (window.__qrideArcadeLock = { game: null });
   function showGameToast(title, message, icon) {
     if (!toastHost) return;
     const toast = document.createElement('div'); toast.className = 'roadnote-game-toast';
@@ -3467,10 +3473,12 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     if (rewardNode) rewardNode.textContent = state.runnerRewardClaimed ? 'Скан за эту игру уже получен' : '3000 очков = 1 бесплатный скан';
     const runnerRewardTitle = document.querySelector('#roadnote-game .roadnote-game-reward-title');
     const runnerRewardCaption = document.querySelector('#roadnote-game .roadnote-game-reward-caption');
-    if (state.runnerRewardClaimed) {
-      if (runnerRewardTitle) runnerRewardTitle.textContent = 'Скан за Q Runner уже получен';
-      if (runnerRewardCaption) runnerRewardCaption.textContent = 'Можно продолжать играть ради рекорда';
-    }
+    if (runnerRewardTitle) runnerRewardTitle.textContent = state.runnerRewardClaimed
+      ? 'Скан за Q Runner на сегодня уже получен'
+      : '3000 очков за раунд → 1 скан';
+    if (runnerRewardCaption) runnerRewardCaption.textContent = state.runnerRewardClaimed
+      ? 'Новая награда будет доступна завтра'
+      : 'Один бесплатный скан в день за эту игру';
     if (state.bestScore !== undefined) recordNode.textContent = String(Math.max(0, Number(state.bestScore) || 0));
   }
   async function refreshGameState(showLoginToast) {
@@ -3868,7 +3876,12 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   }
   async function start() {
     if (startingGame || running) return;
+    if (arcadeLock.game) {
+      showGameToast('Сначала заверши текущую игру', 'Одновременно можно играть только в одну игру', 'info');
+      return;
+    }
     startingGame = true;
+    arcadeLock.game = 'runner';
     try {
       const result = await gameRequest('/api/game/start', { gameId: 'runner' });
       gameSessionId = result.sessionId;
@@ -3881,7 +3894,10 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     } catch (error) {
       showGameToast('Пока не выезжаем', error.message, 'info');
       await refreshGameState(false);
-    } finally { startingGame = false; }
+    } finally {
+      startingGame = false;
+      if (!running && arcadeLock.game === 'runner') arcadeLock.game = null;
+    }
   }
   function jump() {
     if(!running){ if (!startingGame && over) start(); return; }
@@ -3916,6 +3932,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     }
     const hud = document.getElementById('roadnote-game-hud'); if (hud) hud.classList.add('is-hidden');
     const gameCard = document.getElementById('roadnote-game'); if (gameCard) gameCard.classList.remove('is-playing');
+    if (arcadeLock.game === 'runner') arcadeLock.game = null;
     overlay.style.pointerEvents = 'auto';
     showOverlay('Раунд завершён', endingText + ' Осталось попыток: ' + gameAttempts + '.');
     const replayButton = document.getElementById('roadnote-game-start'); if (replayButton) replayButton.textContent = 'Играть ещё';
@@ -4010,6 +4027,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   }
 
   let attempts = 0, sessionId = null, starting = false, running = false, finished = false;
+  const arcadeLock = window.__qrideArcadeLock || (window.__qrideArcadeLock = { game: null });
   let raf = 0, last = 0, elapsed = 0, hits = 0, destroyed = 0, speed = 235, tileSpeed = 5, rowSpawnProgress = 0, rowIndex = ROWS;
   let blocks = [], particles = [], trail = [], leftPressed = false, rightPressed = false;
   const paddle = { x: W / 2, width: 112 };
@@ -4045,10 +4063,12 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     const energy = document.getElementById('roadnote-game-energy-count');
     if (energy) energy.textContent = String(attempts);
     if (state.breakerBestScore !== undefined) recordNode.textContent = String(Math.max(0, Number(state.breakerBestScore) || 0));
-    if (state.breakerRewardClaimed) {
-      rewardTitle.textContent = 'Скан за Q Breaker уже получен';
-      rewardCaption.textContent = 'Можно играть снова ради рекорда';
-    }
+    rewardTitle.textContent = state.breakerRewardClaimed
+      ? 'Скан за Q Breaker на сегодня уже получен'
+      : '60 блоков → 1 бесплатный скан';
+    rewardCaption.textContent = state.breakerRewardClaimed
+      ? 'Новая награда будет доступна завтра'
+      : 'Один бесплатный скан в день за эту игру';
   }
 
   async function refreshState() {
@@ -4237,7 +4257,12 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
 
   async function startGame() {
     if (starting || running) return;
+    if (arcadeLock.game) {
+      showToast('Сначала заверши текущую игру', 'Одновременно можно играть только в одну игру', false);
+      return;
+    }
     starting = true;
+    arcadeLock.game = 'breaker';
     try {
       const state = await gameRequest('/api/game/start', { gameId: 'breaker' });
       sessionId = state.sessionId;
@@ -4268,6 +4293,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       await refreshState();
     } finally {
       starting = false;
+      if (!running && arcadeLock.game === 'breaker') arcadeLock.game = null;
     }
   }
 
@@ -4278,7 +4304,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     cancelAnimationFrame(raf);
     const rewardEligible = destroyed >= TOTAL_BLOCKS;
     taptic(rewardEligible ? 'medium' : 'light');
-    let message = 'Игра завершена. Уничтожено блоков: ' + destroyed + '.';
+    let endingText = 'Уничтожено блоков: ' + destroyed + '.';
     if (sessionId) {
       const currentSession = sessionId;
       sessionId = null;
@@ -4290,21 +4316,24 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         });
         renderState(result);
         if (rewardEligible && result.freeScanAwarded) {
-          message += ' Тебе начислен бесплатный скан за первые 60 блоков.';
-          showToast('Бесплатный скан начислен', 'Награда за 60 уничтоженных блоков', true);
+          endingText += ' Ты получил бесплатный скан.';
+          showToast('Бесплатный скан начислен', 'Награда за 60 блоков', true);
         } else if (rewardEligible && result.breakerRewardClaimed) {
-          message += ' Скан за Q Breaker ты уже получал раньше.';
+          endingText += ' Скан за Q Breaker на сегодня уже получен — можно играть ради рекорда.';
         } else if (rewardEligible) {
-          message += ' Условие награды выполнено.';
+          endingText += ' Условие награды выполнено.';
+        } else {
+          endingText += ' Для бесплатного скана нужно уничтожить 60 блоков.';
         }
       } catch (error) {
-        message += ' Не удалось сохранить результат: ' + error.message + '.';
+        endingText += ' Не удалось сохранить результат: ' + error.message + '. Вернись на старт и проверь соединение.';
       }
     }
     hud.classList.add('is-hidden');
     card.classList.remove('is-playing');
-    overlayTitle.textContent = 'Рекорд зафиксирован';
-    overlayText.textContent = message;
+    if (arcadeLock.game === 'breaker') arcadeLock.game = null;
+    overlayTitle.textContent = 'Раунд завершён';
+    overlayText.textContent = endingText + ' Осталось попыток: ' + attempts + '.';
     overlay.hidden = false;
     startButton.textContent = 'Играть ещё';
     draw();
