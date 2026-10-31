@@ -1184,7 +1184,7 @@
         .arcade-shell { display:flex; flex-direction:column; gap:12px; }
         .arcade-shell > .roadnote-game-head { margin-bottom:0; }
         .arcade-shell > .roadnote-game-stage { flex:0 0 auto; }
-        .qride-breaker-card { margin:0; padding:12px 0 0; border:0; border-top:1px solid #e3ebf5; border-radius:0; background:transparent; box-shadow:none; }
+        #qride-breaker-card { margin:0; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
         .qride-breaker-canvas { touch-action:none!important; cursor:crosshair; height:auto!important; min-height:0; aspect-ratio:8/9; }
         .qride-breaker-card.is-playing .roadnote-game-record { display:none; }
         #qride-breaker-progress { font-variant-numeric:tabular-nums; }
@@ -1458,7 +1458,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             <details><summary><span class="faq-number">07</span><span>Как работает скидка на первую покупку?</span></summary><div class="faq-answer"><p>Скидка действует до первого подтверждённого подключения любого платного тарифа. После начисления цены всех тарифов переключаются на обычные. Если оплата не состоялась, первая покупка ещё не считается совершённой и скидка сохраняется.</p></div></details>
             <details><summary><span class="faq-number">08</span><span>Как работает серия ежедневных заходов?</span></summary><div class="faq-answer"><p>Открывай QRide каждый день — запускать игру необязательно. За заход начисляются игровые попытки: в первый и второй день по одной, в третий и четвёртый по две, в пятый и шестой по три, а начиная с седьмого — по пять каждый день. Если пропустить целый день, серия начнётся заново. Уже полученные попытки не сгорают.</p></div></details>
             <details><summary><span class="faq-number">09</span><span>Как получить дополнительные игровые попытки?</span></summary><div class="faq-answer"><p>За каждый успешный скан начисляются ещё 3 <svg class="faq-inline-bolt" viewBox="0 0 24 24" aria-label="игровые попытки"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> игровых попытки. Попытки также выдаются за ежедневные заходы в QRide. Их остаток виден прямо в игре, а накопленные попытки сохраняются.</p></div></details>
-            <details><summary><span class="faq-number">10</span><span>Как получить бесплатный скан за игру?</span></summary><div class="faq-answer"><p>В QRide Runner набери 3000 очков за один раунд, а в Q Breaker уничтожь все 60 блоков. За каждую игру можно получить по одному скану однократно. Твой рекорд и общий прогресс не сбрасываются. Когда скан будет начислен, QRide покажет уведомление.</p></div></details>
+            <details><summary><span class="faq-number">10</span><span>Как получить бесплатный скан за игру?</span></summary><div class="faq-answer"><p>В Q Runner набери 3000 очков за один раунд, а в Q Breaker уничтожь все 60 блоков. За каждую игру можно получить по одному скану однократно. Твой рекорд и общий прогресс не сбрасываются. Когда скан будет начислен, QRide покажет уведомление.</p></div></details>
             <details><summary><span class="faq-number">11</span><span>Можно ли оплатить проезд через QRide?</span></summary><div class="faq-answer"><p>Нет. QRide не продаёт билеты, не принимает оплату за проезд и не является платёжным средством. Приложение предназначено для считывания и отображения информации из транспортных QR-кодов.</p></div></details>
             <details><summary><span class="faq-number">12</span><span>Насколько точны данные?</span></summary><div class="faq-answer"><p>QRide показывает данные, полученные от внешнего сервиса, и не гарантирует их постоянную доступность, полноту или точность. Используй приложение на свой страх и риск и самостоятельно проверяй важную информацию. QRide не заменяет официальный билет или подтверждение оплаты.</p></div></details>
             <details><summary><span class="faq-number">13</span><span>Что важно знать о безопасности и ответственности?</span></summary><div class="faq-answer"><p>Не используй отображённую информацию как единственное подтверждение оплаты. За фактическую оплату проезда отвечают официальные транспортные сервисы и перевозчик. QRide — информационный инструмент; использование приложения не создаёт платёжных обязательств и не гарантирует принятие QR-кода перевозчиком.</p></div></details>
@@ -1630,7 +1630,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                 <canvas class="roadnote-game-canvas" id="roadnote-game-canvas" width="640" height="240" aria-label="Мини-игра: нажимай, чтобы перепрыгивать препятствия"></canvas>
                 <div class="roadnote-game-hud is-hidden" id="roadnote-game-hud" aria-live="polite"><span id="roadnote-game-score">Счёт: 0</span><span id="roadnote-game-reward">3000 очков = бесплатный скан</span></div>
                 <div class="roadnote-game-overlay" id="roadnote-game-overlay">
-                    <strong id="roadnote-game-overlay-title">QRide Runner</strong>
+                    <strong id="roadnote-game-overlay-title">Q Runner</strong>
                     <span id="roadnote-game-overlay-text">Перепрыгивай препятствия и набирай очки.</span>
                     <div class="roadnote-game-reward-preview" data-game-rule="reward">
                         <span class="roadnote-game-reward-label">НАГРАДА</span>
@@ -1642,10 +1642,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             </div>
 
 
-        <section class="roadnote-game qride-breaker-card" id="qride-breaker-card" aria-labelledby="qride-breaker-title">
-            <div class="roadnote-game-head">
-                <div class="roadnote-game-kicker" id="qride-breaker-title">Q BREAKER</div>
-            </div>
+        <section class="qride-breaker-card" id="qride-breaker-card" aria-label="Q Breaker">
             <div class="roadnote-game-stage">
                 <div class="roadnote-game-record">Рекорд: <span id="qride-breaker-record">0</span></div>
                 <canvas class="roadnote-game-canvas qride-breaker-canvas" id="qride-breaker-canvas" width="640" height="720" aria-label="Q Breaker: управляй платформой, отбивай мяч и разбивай блоки"></canvas>
@@ -3471,7 +3468,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     const runnerRewardTitle = document.querySelector('#roadnote-game .roadnote-game-reward-title');
     const runnerRewardCaption = document.querySelector('#roadnote-game .roadnote-game-reward-caption');
     if (state.runnerRewardClaimed) {
-      if (runnerRewardTitle) runnerRewardTitle.textContent = 'Скан за QRide Runner уже получен';
+      if (runnerRewardTitle) runnerRewardTitle.textContent = 'Скан за Q Runner уже получен';
       if (runnerRewardCaption) runnerRewardCaption.textContent = 'Можно продолжать играть ради рекорда';
     }
     if (state.bestScore !== undefined) recordNode.textContent = String(Math.max(0, Number(state.bestScore) || 0));
@@ -3911,7 +3908,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
           endingText = 'Счёт: '+finalScore+'. Ты получил бесплатный скан.';
           showGameToast('Бесплатный скан начислен', 'Награда за 3000 очков', 'award');
         } else if (result.runnerRewardClaimed) {
-          endingText = 'Счёт: '+finalScore+'. Скан за QRide Runner уже получен — можно играть ради рекорда.';
+          endingText = 'Счёт: '+finalScore+'. Скан за Q Runner уже получен — можно играть ради рекорда.';
         }
       } catch (error) {
         endingText = 'Счёт: '+finalScore+'. Не удалось сохранить результат: '+error.message+'. Вернись на старт и проверь соединение.';
