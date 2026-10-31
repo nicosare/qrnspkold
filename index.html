@@ -1181,7 +1181,11 @@
         .roadnote-game-reward-caption{display:block;margin-top:4px;color:#65758a;font-size:11px;line-height:1.35}
         .roadnote-game-hud #roadnote-game-reward{display:none!important}
         .roadnote-game-overlay .roadnote-game-start:active {transform:scale(.97);background:#0052EE}
-        .qride-breaker-canvas { touch-action:none!important; cursor:crosshair; }
+        .arcade-shell { display:flex; flex-direction:column; gap:12px; }
+        .arcade-shell > .roadnote-game-head { margin-bottom:0; }
+        .arcade-shell > .roadnote-game-stage { flex:0 0 auto; }
+        .qride-breaker-card { margin:0; padding:12px 0 0; border:0; border-top:1px solid #e3ebf5; border-radius:0; background:transparent; box-shadow:none; }
+        .qride-breaker-canvas { touch-action:none!important; cursor:crosshair; height:auto!important; min-height:0; aspect-ratio:8/9; }
         .qride-breaker-card.is-playing .roadnote-game-record { display:none; }
         #qride-breaker-progress { font-variant-numeric:tabular-nums; }
         .game-streak-days{grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:0}
@@ -1615,7 +1619,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             </button>
         </div>
 
-        <section class="roadnote-game" id="roadnote-game" aria-labelledby="roadnote-game-title">
+        <section class="roadnote-game arcade-shell" id="roadnote-game" aria-labelledby="roadnote-game-title">
             <div class="roadnote-game-head">
                 <div class="roadnote-game-kicker" id="roadnote-game-title">QRide Arcade</div>
                 <div class="roadnote-game-energy" aria-label="Запас игровых попыток"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg><span id="roadnote-game-energy-count">—</span></div>
@@ -1635,7 +1639,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                     <button class="roadnote-game-start" id="roadnote-game-start" type="button">Играть</button>
                 </div>
             </div>
-        </section>
+
 
         <section class="roadnote-game qride-breaker-card" id="qride-breaker-card" aria-labelledby="qride-breaker-title">
             <div class="roadnote-game-head">
@@ -1643,7 +1647,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             </div>
             <div class="roadnote-game-stage">
                 <div class="roadnote-game-record">Рекорд: <span id="qride-breaker-record">0/60</span></div>
-                <canvas class="roadnote-game-canvas qride-breaker-canvas" id="qride-breaker-canvas" width="640" height="240" aria-label="Q Breaker: управляй платформой, отбивай мяч и разбивай блоки"></canvas>
+                <canvas class="roadnote-game-canvas qride-breaker-canvas" id="qride-breaker-canvas" width="640" height="720" aria-label="Q Breaker: управляй платформой, отбивай мяч и разбивай блоки"></canvas>
                 <div class="roadnote-game-hud is-hidden" id="qride-breaker-hud" aria-live="polite">
                     <span id="qride-breaker-progress">Блоки: 0/60</span>
                     <span id="qride-breaker-speed">Скорость ×1,0</span>
@@ -1660,8 +1664,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                 </div>
             </div>
         </section>
-
-
+        </section>
 
     </div>
 </section>
@@ -3981,7 +3984,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
 
   const W = canvas.width, H = canvas.height;
   const TOTAL_BLOCKS = 60, COLS = 10, ROWS = 6;
-  const BALL_RADIUS = 6.5, PADDLE_Y = 218, PADDLE_HEIGHT = 10;
+  const BALL_RADIUS = 7, PADDLE_Y = 676, PADDLE_HEIGHT = 12;
   const palette = [
     { fill: '#83bdf0', edge: '#4e91cf' },
     { fill: '#e6b69c', edge: '#bd8266' },
@@ -4008,10 +4011,10 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
   }
 
   let attempts = 0, sessionId = null, starting = false, running = false, finished = false;
-  let raf = 0, last = 0, elapsed = 0, hits = 0, destroyed = 0, remaining = TOTAL_BLOCKS, speed = 325;
+  let raf = 0, last = 0, elapsed = 0, hits = 0, destroyed = 0, remaining = TOTAL_BLOCKS, speed = 235, tileSpeed = 10;
   let blocks = [], particles = [], trail = [], leftPressed = false, rightPressed = false;
-  const paddle = { x: W / 2, width: 98 };
-  const ball = { x: W / 2, y: 190, vx: 172, vy: -276 };
+  const paddle = { x: W / 2, width: 112 };
+  const ball = { x: W / 2, y: 570, vx: 112, vy: -206 };
 
   function showToast(title, message, award) {
     if (!toastHost) return;
@@ -4078,18 +4081,19 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       for (let col = 0; col < COLS; col++) {
         blocks.push({
           x: 29 + col * 58,
-          y: 27 + row * 18,
+          y: 38 + row * 20,
           w: 51,
-          h: 13,
-          hp: row + 1,
-          maxHp: row + 1,
-          color: palette[row]
+          h: 14,
+          hp: 1,
+          maxHp: 1,
+          color: palette[row % palette.length]
         });
       }
     }
     remaining = TOTAL_BLOCKS;
     destroyed = 0;
     hits = 0;
+    tileSpeed = 10;
     particles = [];
     trail = [];
   }
@@ -4239,12 +4243,13 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       renderState(state);
       createLevel();
       elapsed = 0;
-      speed = 325;
+      speed = 235;
+      tileSpeed = 10;
       paddle.x = W / 2;
       ball.x = W / 2;
-      ball.y = 190;
-      ball.vx = 172;
-      ball.vy = -276;
+      ball.y = 570;
+      ball.vx = 112;
+      ball.vy = -206;
       running = true;
       finished = false;
       last = 0;
@@ -4350,7 +4355,8 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
 
   function step(dt) {
     elapsed += dt;
-    const targetSpeed = Math.min(555, 325 + elapsed * 2.35 + hits * .45);
+    const targetSpeed = Math.min(390, 235 + elapsed * 1.45 + hits * .22);
+    tileSpeed = Math.min(46, 10 + elapsed * .72);
     const currentSpeed = Math.hypot(ball.vx, ball.vy) || 1;
     ball.vx *= targetSpeed / currentSpeed;
     ball.vy *= targetSpeed / currentSpeed;
@@ -4359,6 +4365,9 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     if (leftPressed) paddle.x -= 470 * dt;
     if (rightPressed) paddle.x += 470 * dt;
     paddle.x = Math.max(paddle.width / 2 + 4, Math.min(W - paddle.width / 2 - 4, paddle.x));
+
+    blocks.forEach(block => { if (block.hp > 0) block.y += tileSpeed * dt; });
+    if (blocks.some(block => block.hp > 0 && block.y + block.h >= PADDLE_Y - 18)) { finishGame(false); return; }
 
     const oldX = ball.x, oldY = ball.y;
     ball.x += ball.vx * dt;
