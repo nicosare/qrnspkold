@@ -1987,6 +1987,13 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         refreshScanButton();
     }
 
+    window.addEventListener('qride:entitlement-state', (event) => {
+        const current = event.detail || {};
+        scanSessionReady = true;
+        updateScanBalance(current.scanBalance, current.subscriptionUntil, current.unlimited, current.subscriptionActive);
+        if (!scanBalanceAssigned) setScannerStatus('');
+    });
+
     function getVkAuthorizationHeader() {
         const launchParams = window.location.search.slice(1);
         if (!launchParams) {
@@ -3128,6 +3135,14 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             console.warn('Roadnote entitlement event was invalid:', eventError);
           }
         });
+        source.addEventListener('game', (event) => {
+          try {
+            const current = JSON.parse(event.data);
+            window.dispatchEvent(new CustomEvent('qride:game-state', { detail: current }));
+          } catch (eventError) {
+            console.warn('QRide game event was invalid:', eventError);
+          }
+        });
         source.onerror = () => {
           if (entitlementReconnectTimer !== null || entitlementReconnectInProgress) return;
           source.close();
@@ -3399,7 +3414,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             </section>
         </div>
 
-<script src="tariff-purchases.js?v=20261030-qride-mood-offers-1"></script>
+<script src="tariff-purchases.js?v=20261031-admin-reward-codes-1"></script>
 <div class="roadnote-game-toast-host" id="roadnote-game-toast-host" aria-live="polite" aria-atomic="true"></div>
 
 <script>
@@ -3481,6 +3496,15 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       : 'Один бесплатный скан в день за эту игру';
     if (state.bestScore !== undefined) recordNode.textContent = String(Math.max(0, Number(state.bestScore) || 0));
   }
+  window.addEventListener('qride:game-state', (event) => {
+    const amount = Number(event.detail && event.detail.attempts);
+    if (!Number.isSafeInteger(amount)) return;
+    gameAttempts = Math.max(0, amount);
+    const energyNode = document.getElementById('roadnote-game-energy-count');
+    if (energyNode) energyNode.textContent = String(gameAttempts);
+    if (attemptsNode) attemptsNode.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> ' + gameAttempts;
+  });
+
   async function refreshGameState(showLoginToast) {
     if (!launchParams) return;
     try {
@@ -4070,6 +4094,14 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
       ? 'Новая награда будет доступна завтра'
       : 'Один бесплатный скан в день за эту игру';
   }
+
+  window.addEventListener('qride:game-state', (event) => {
+    const amount = Number(event.detail && event.detail.attempts);
+    if (!Number.isSafeInteger(amount)) return;
+    attempts = Math.max(0, amount);
+    const energy = document.getElementById('roadnote-game-energy-count');
+    if (energy) energy.textContent = String(attempts);
+  });
 
   async function refreshState() {
     try {
