@@ -1310,6 +1310,7 @@
         .roadnote-game-head { margin-bottom: 8px; }
         .roadnote-game-stage { isolation: isolate; }
         .roadnote-game-canvas { height: 180px !important; }
+        #qride-breaker-canvas { height:auto!important; aspect-ratio:8/9; }
         .roadnote-game-record { z-index: 5 !important; top: 8px !important; right: 8px !important; }
         .roadnote-game-overlay { gap: 5px !important; padding: 30px 10px 25px !important; justify-content: center !important; background: rgba(238,246,255,.48) !important; }
         .roadnote-game-overlay > strong { font-size: 17px !important; line-height: 1.1 !important; }
@@ -4100,7 +4101,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
 
   function updateHud() {
     progressNode.textContent = 'Блоки: ' + destroyed + '/' + TOTAL_BLOCKS;
-    speedNode.textContent = 'Скорость ×' + (speed / 325).toFixed(1).replace('.', ',');
+    speedNode.textContent = 'Темп ×' + (speed / 235).toFixed(1).replace('.', ',');
   }
 
   function drawBackground() {
