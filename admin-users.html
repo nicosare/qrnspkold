@@ -370,8 +370,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
     const rewardAmount=Number(promoRewardInput.value);
     if(promoType==='discount'&&!offerIds.length){promoMessage('Выбери хотя бы один тариф.',true);return;}
     if(promoType!=='discount'&&(!Number.isSafeInteger(rewardAmount)||rewardAmount<1||rewardAmount>100000)){promoMessage('Укажи количество от 1 до 100000.',true);return;}
-    const startsRaw=
-   const startsRaw=promoStartsInput.value,expiresRaw=promoExpiresInput.value;
+    const startsRaw=promoStartsInput.value,expiresRaw=promoExpiresInput.value;
    const startsAt=startsRaw?new Date(startsRaw).toISOString():null;
    const expiresAt=expiresRaw?new Date(expiresRaw).toISOString():null;
    if(startsAt&&expiresAt&&Date.parse(startsAt)>=Date.parse(expiresAt)){promoMessage('Окончание срока должно быть позже начала.',true);return;}
