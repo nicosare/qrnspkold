@@ -1125,7 +1125,7 @@ function gamePublicState(userId) {
 }
 function sendLiveGameState(userId) {
   const stream = liveStreams.get(String(userId));
-  if (stream) stream.write('event: game\\ndata: ' + JSON.stringify(gamePublicState(userId)) + '\\n\\n');
+  if (stream) stream.write('event: game\ndata: ' + JSON.stringify(gamePublicState(userId)) + '\n\n');
 }
 app.post('/api/game/state', (req, res) => {
   let userId;
