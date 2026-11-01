@@ -3469,9 +3469,10 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     if (attemptsNode) attemptsNode.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> ' + gameAttempts;
     if (streakDaysNode) {
       const rewards = [1, 1, 2, 2, 3, 3, 5];
-      const dayCount = Math.max(7, gameStreak + 3);
+      const firstDay = gameStreak > 7 ? Math.floor((gameStreak - 1) / 7) * 7 + 1 : 1;
+      const lastDay = firstDay + 6;
       const fragment = document.createDocumentFragment();
-      for (let day = 1; day <= dayCount; day++) {
+      for (let day = firstDay; day <= lastDay; day++) {
         const card = document.createElement('div');
         card.className = 'game-streak-day' + (day < gameStreak ? ' is-done' : day === gameStreak ? ' is-active' : '');
         const number = document.createElement('span');
