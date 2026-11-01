@@ -1191,6 +1191,7 @@
          #qride-breaker-card { margin:0; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
         .qride-breaker-canvas { touch-action:none!important; cursor:crosshair; height:auto!important; min-height:0; aspect-ratio:8/9; }
         .qride-breaker-card.is-playing .roadnote-game-record { display:none; }
+         .qride-breaker-card.is-playing #qride-breaker-speed { display:none!important; }
         #qride-breaker-progress { font-variant-numeric:tabular-nums; }
         .game-streak-days{grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:0}
         .game-streak-day{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:66px;padding:8px 2px;border:1px solid #e3e8ef;border-radius:12px;background:#f2f3f4;text-align:center}
@@ -1660,7 +1661,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
                     <span id="qride-breaker-overlay-text">Управляй платформой, отбивай мяч и продержись как можно дольше.</span>
                     <div class="roadnote-game-reward-preview" data-game-rule="reward">
                         <span class="roadnote-game-reward-label">НАГРАДА</span>
-                        <strong class="roadnote-game-reward-title" id="qride-breaker-reward-title">60 блоков → 1 бесплатный скан</strong>
+                        <strong class="roadnote-game-reward-title" id="qride-breaker-reward-title">60 блоков → 1 скан</strong>
                         <span class="roadnote-game-reward-caption" id="qride-breaker-reward-caption">После 60 блоков скан будет получен при завершении игры · один раз</span>
                     </div>
                     <button class="roadnote-game-start" id="qride-breaker-start" type="button">Играть</button>
@@ -4089,7 +4090,7 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     if (state.breakerBestScore !== undefined) recordNode.textContent = String(Math.max(0, Number(state.breakerBestScore) || 0));
     rewardTitle.textContent = state.breakerRewardClaimed
       ? 'Скан за Q Breaker на сегодня уже получен'
-      : '60 блоков → 1 бесплатный скан';
+      : '60 блоков → 1 скан';
     rewardCaption.textContent = state.breakerRewardClaimed
       ? 'Новая награда будет доступна завтра'
       : 'Один бесплатный скан в день за эту игру';
