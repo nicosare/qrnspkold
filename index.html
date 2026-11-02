@@ -223,38 +223,50 @@
     <section class="card" aria-labelledby="title">
       <svg class="mascot" viewBox="0 0 220 220" role="img" aria-label="Кью — синий робот QRide">
         <defs>
-          <linearGradient id="body" x1="38" y1="42" x2="184" y2="198" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#5D9AFF"/>
-            <stop offset="1" stop-color="#2461E4"/>
+          <linearGradient id="qBody" x1="54" y1="42" x2="166" y2="198" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#68A5FF"/>
+            <stop offset="1" stop-color="#245FDF"/>
           </linearGradient>
-          <linearGradient id="screen" x1="63" y1="76" x2="159" y2="151" gradientUnits="userSpaceOnUse">
+          <linearGradient id="qFace" x1="66" y1="69" x2="154" y2="145" gradientUnits="userSpaceOnUse">
             <stop stop-color="#FFFFFF"/>
             <stop offset="1" stop-color="#EAF2FF"/>
           </linearGradient>
-          <linearGradient id="lamp" x1="98" y1="18" x2="126" y2="52" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#FFE68A"/>
+          <linearGradient id="qBeacon" x1="101" y1="13" x2="119" y2="43" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#FFE99A"/>
             <stop offset="1" stop-color="#FFB52E"/>
           </linearGradient>
         </defs>
-        <ellipse cx="110" cy="198" rx="65" ry="10" fill="#DCE8FC"/>
-        <path d="M104 47V38c0-8 6-14 14-14s14 6 14 14v9" stroke="#2864DF" stroke-width="8" stroke-linecap="round"/>
-        <rect x="108" y="12" width="24" height="29" rx="12" fill="url(#lamp)" stroke="#E69A22" stroke-width="2"/>
-        <path d="M85 46h70c17 0 30 13 30 30v87c0 22-18 40-40 40H75c-22 0-40-18-40-40V86c0-22 18-40 40-40h10Z" fill="url(#body)"/>
-        <path d="M76 66h68c13 0 23 10 23 23v45c0 13-10 23-23 23H76c-13 0-23-10-23-23V89c0-13 10-23 23-23Z" fill="url(#screen)"/>
-        <ellipse cx="85" cy="112" rx="8" ry="12" fill="#2261D9"/>
-        <ellipse cx="135" cy="112" rx="8" ry="12" fill="#2261D9"/>
-        <path d="M94 139c5 5 10 7 16 7s11-2 16-7" stroke="#6F9CEB" stroke-width="4" stroke-linecap="round" fill="none"/>
-        <path d="M34 111H23M197 111h-11" stroke="#2461E4" stroke-width="8" stroke-linecap="round"/>
-        <rect x="26" y="101" width="13" height="20" rx="6.5" fill="#82B2FF"/>
-        <rect x="181" y="101" width="13" height="20" rx="6.5" fill="#82B2FF"/>
-        <rect x="77" y="177" width="25" height="10" rx="5" fill="#174FC5" opacity=".75"/>
-        <rect x="118" y="177" width="25" height="10" rx="5" fill="#174FC5" opacity=".75"/>
-        <g transform="translate(145 145) rotate(9)">
-          <rect width="57" height="57" rx="15" fill="#FFFFFF" stroke="#D8E6FF" stroke-width="2"/>
-          <path d="M12 12h13v13H12zM32 12h13v13H32zM12 32h13v13H12z" fill="#2461E4"/>
-          <path d="M32 32h6v6h-6zM41 41h4v4h-4zM41 32h4" stroke="#2461E4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        </g>
-        <path d="M55 57c7-8 17-12 28-12" stroke="#A9CCFF" stroke-width="5" stroke-linecap="round" opacity=".8"/>
+
+        <ellipse cx="110" cy="202" rx="55" ry="7" fill="#DCE8FC"/>
+
+        <!-- Центральная антенна -->
+        <path d="M110 43V34" stroke="#2864DF" stroke-width="8" stroke-linecap="round"/>
+        <rect x="99" y="12" width="22" height="27" rx="11" fill="url(#qBeacon)" stroke="#E9A12D" stroke-width="2"/>
+
+        <!-- Симметричный корпус -->
+        <rect x="39" y="43" width="142" height="151" rx="43" fill="url(#qBody)"/>
+        <path d="M52 76c0-12 10-22 22-22" stroke="#A9CCFF" stroke-width="5" stroke-linecap="round" opacity=".7"/>
+
+        <!-- Боковые элементы -->
+        <rect x="25" y="101" width="17" height="31" rx="8.5" fill="#4C8AF0"/>
+        <rect x="178" y="101" width="17" height="31" rx="8.5" fill="#4C8AF0"/>
+        <rect x="29" y="108" width="8" height="17" rx="4" fill="#91BCFF"/>
+        <rect x="183" y="108" width="8" height="17" rx="4" fill="#91BCFF"/>
+
+        <!-- Лицевая панель с одинаковым радиусом по сторонам -->
+        <rect x="54" y="65" width="112" height="83" rx="31" fill="url(#qFace)"/>
+        <ellipse cx="84" cy="105" rx="7.5" ry="11" fill="#2461D9"/>
+        <ellipse cx="136" cy="105" rx="7.5" ry="11" fill="#2461D9"/>
+        <path d="M96 126c4 4 9 6 14 6s10-2 14-6" fill="none" stroke="#79A1E8" stroke-width="3.5" stroke-linecap="round"/>
+
+        <!-- QR-эмблема по центру корпуса -->
+        <rect x="91" y="157" width="38" height="27" rx="8" fill="#FFFFFF" opacity=".98"/>
+        <path d="M98 163h8v8h-8zM114 163h8v8h-8zM98 175h8v5h-8z" fill="#2461D9"/>
+        <path d="M114 175h4v4h-4zM122 175v5" stroke="#2461D9" stroke-width="2.5" stroke-linecap="round"/>
+
+        <!-- Парные опоры -->
+        <rect x="65" y="185" width="34" height="10" rx="5" fill="#174FC5"/>
+        <rect x="121" y="185" width="34" height="10" rx="5" fill="#174FC5"/>
       </svg>
 
       <p class="eyebrow"><span class="eyebrow-dot"></span> Мы переехали</p>
