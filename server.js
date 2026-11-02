@@ -25,9 +25,9 @@ const tariffOffers = Object.freeze({
   scans_9: { id: 'scans_9', name: 'Пакет «Старт» — 9 сканов', kind: 'pack', quantity: 9, energyBonus: 9, regularPrice: 99, promoPrice: 69 },
   scans_29: { id: 'scans_29', name: 'Пакет «Оптимальный» — 29 сканов', kind: 'pack', quantity: 29, energyBonus: 29, regularPrice: 249, promoPrice: 179 },
   scans_49: { id: 'scans_49', name: 'Пакет «Большой запас» — 49 сканов', kind: 'pack', quantity: 49, energyBonus: 49, regularPrice: 369, promoPrice: 279 },
-  subscription_1m: { id: 'subscription_1m', name: 'Безлимит на 1 месяц', kind: 'subscription', quantity: 1, energyBonus: 19, regularPrice: 349, promoPrice: 249 },
-  subscription_3m: { id: 'subscription_3m', name: 'Безлимит на 3 месяца', kind: 'subscription', quantity: 3, energyBonus: 59, regularPrice: 799, promoPrice: 599 },
-  subscription_6m: { id: 'subscription_6m', name: 'Безлимит на 6 месяцев', kind: 'subscription', quantity: 6, energyBonus: 119, regularPrice: 1299, promoPrice: 949 }
+  subscription_1m: { id: 'subscription_1m', name: 'Безлимит на 1 месяц', kind: 'subscription', quantity: 1, energyBonus: 39, regularPrice: 349, promoPrice: 249 },
+  subscription_3m: { id: 'subscription_3m', name: 'Безлимит на 3 месяца', kind: 'subscription', quantity: 3, energyBonus: 69, regularPrice: 799, promoPrice: 599 },
+  subscription_6m: { id: 'subscription_6m', name: 'Безлимит на 6 месяцев', kind: 'subscription', quantity: 6, energyBonus: 99, regularPrice: 1299, promoPrice: 949 }
 });
 const databasePath = process.env.DATABASE_PATH || '/data/roadnote.sqlite';
 const paytagDirectTimeoutMs = Math.max(3000, Number(process.env.PAYTAG_DIRECT_TIMEOUT_MS || 12000));
