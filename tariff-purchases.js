@@ -87,7 +87,7 @@
       }
       const quantity = Math.max(1, Number(card.dataset.quantity) || 1);
       const nextUnitPriceText = card.dataset.offerKind === 'subscription'
-        ? '≈ ' + rubles(Math.round(price / quantity)) + ' / мес.'
+        ? '≈ ' + rubles(Math.round(price / quantity)) + ' / мес'
         : new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price / quantity) + ' ₽ / скан';
       if (unitPrice && unitPrice.textContent !== nextUnitPriceText) {
         unitPrice.textContent = nextUnitPriceText;
