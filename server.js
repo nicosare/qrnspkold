@@ -22,12 +22,12 @@ const vkApiVersion = '5.199';
 console.info('[Roadnote VK config]', JSON.stringify({ appId, communityId, communityIdSource: process.env.VK_GROUP_ID ? 'VK_GROUP_ID' : 'default', hasCommunityToken: Boolean(communityToken) }));
 
 const tariffOffers = Object.freeze({
-  scans_9: { id: 'scans_9', name: 'Пакет «Старт» — 9 сканов', kind: 'pack', quantity: 9, regularPrice: 99, promoPrice: 69 },
-  scans_29: { id: 'scans_29', name: 'Пакет «Оптимальный» — 29 сканов', kind: 'pack', quantity: 29, regularPrice: 249, promoPrice: 179 },
-  scans_49: { id: 'scans_49', name: 'Пакет «Большой запас» — 49 сканов', kind: 'pack', quantity: 49, regularPrice: 369, promoPrice: 279 },
-  subscription_1m: { id: 'subscription_1m', name: 'Безлимит на 1 месяц', kind: 'subscription', quantity: 1, regularPrice: 349, promoPrice: 249 },
-  subscription_3m: { id: 'subscription_3m', name: 'Безлимит на 3 месяца', kind: 'subscription', quantity: 3, regularPrice: 799, promoPrice: 599 },
-  subscription_6m: { id: 'subscription_6m', name: 'Безлимит на 6 месяцев', kind: 'subscription', quantity: 6, regularPrice: 1299, promoPrice: 949 }
+  scans_9: { id: 'scans_9', name: 'Пакет «Старт» — 9 сканов', kind: 'pack', quantity: 9, energyBonus: 9, regularPrice: 99, promoPrice: 69 },
+  scans_29: { id: 'scans_29', name: 'Пакет «Оптимальный» — 29 сканов', kind: 'pack', quantity: 29, energyBonus: 29, regularPrice: 249, promoPrice: 179 },
+  scans_49: { id: 'scans_49', name: 'Пакет «Большой запас» — 49 сканов', kind: 'pack', quantity: 49, energyBonus: 49, regularPrice: 369, promoPrice: 279 },
+  subscription_1m: { id: 'subscription_1m', name: 'Безлимит на 1 месяц', kind: 'subscription', quantity: 1, energyBonus: 19, regularPrice: 349, promoPrice: 249 },
+  subscription_3m: { id: 'subscription_3m', name: 'Безлимит на 3 месяца', kind: 'subscription', quantity: 3, energyBonus: 59, regularPrice: 799, promoPrice: 599 },
+  subscription_6m: { id: 'subscription_6m', name: 'Безлимит на 6 месяцев', kind: 'subscription', quantity: 6, energyBonus: 119, regularPrice: 1299, promoPrice: 949 }
 });
 const databasePath = process.env.DATABASE_PATH || '/data/roadnote.sqlite';
 const paytagDirectTimeoutMs = Math.max(3000, Number(process.env.PAYTAG_DIRECT_TIMEOUT_MS || 12000));
@@ -886,7 +886,15 @@ function decideTariffRequest(requestId, decision) {
     if (marked.changes !== 1) return { ok: false, request: request };
 
     let subscriptionUntil = null;
+    let energyBonus = 0;
     if (decision === 'approve') {
+      const offer = tariffOffers[String(request.offer_id || '')];
+      if (!offer || offer.kind !== request.offer_kind || Number(request.quantity) !== offer.quantity ||
+          !Number.isSafeInteger(offer.energyBonus) || offer.energyBonus < 1) {
+        throw new Error('Не удалось определить бонус энергии для этого тарифа.');
+      }
+      energyBonus = offer.energyBonus;
+
       if (request.promo_application_id) {
         db.prepare("UPDATE promo_code_applications SET status = 'used', used_at = ?, tariff_request_id = ? WHERE id = ? AND vk_id = ? AND status = 'selected'")
           .run(nowIso, requestId, Number(request.promo_application_id), String(request.vk_id));
@@ -913,9 +921,14 @@ function decideTariffRequest(requestId, decision) {
       } else {
         throw new Error('У заявки неизвестный тип тарифа.');
       }
+
+      const energyGrant = db.prepare(
+        'UPDATE users SET game_attempts = COALESCE(game_attempts, 0) + ? WHERE vk_id = ?'
+      ).run(energyBonus, String(request.vk_id));
+      if (energyGrant.changes !== 1) throw new Error('Не удалось начислить бонус энергии.');
     }
 
-    return { ok: true, request: { ...request, status: nextStatus }, subscriptionUntil };
+    return { ok: true, request: { ...request, status: nextStatus }, subscriptionUntil, energyBonus };
   });
   return transaction();
 }
@@ -1086,6 +1099,7 @@ async function handleAdminMessageEvent(event) {
         : '';
       notice = 'Тариф «' + request.offer_name + '» подключён.' + (until ? ' Безлимит действует до ' + until + '.' : '');
     }
+    notice += ' Дополнительно начислено +' + result.energyBonus + ' энергии.';
   } else {
     notice = 'Заявка на тариф «' + request.offer_name + '» отклонена. Тариф не начислен.';
   }
@@ -1097,6 +1111,7 @@ async function handleAdminMessageEvent(event) {
   }
   // Push both the request status and the updated balance to the open Mini App immediately.
   sendLiveEntitlement(request.vk_id);
+  if (decision === 'approve') sendLiveGameState(request.vk_id);
   sendLiveTariffState(request.vk_id, notice);
   await answerAdminButton(event, decision === 'approve' ? 'Тариф начислен.' : 'Заявка отклонена.');
 }
