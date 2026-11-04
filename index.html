@@ -1428,6 +1428,24 @@ body.scan-loading-open { overflow: hidden !important; }
 .scan-loading-overlay[hidden] { display: none !important; }
 .scan-loading-overlay.is-visible { opacity: 1; visibility: visible; pointer-events: auto; }
 .scan-loading-overlay.is-leaving { opacity: 0; visibility: visible; pointer-events: none; }
+.scan-loading-overlay.is-complete {
+    background: radial-gradient(ellipse at 50% 35%, rgba(0,82,238,.16) 0%, rgba(0,82,238,0) 48%), linear-gradient(180deg, #fbfdff 0%, #edf4ff 100%);
+}
+.scan-loading-overlay.is-complete .scan-loading-orbit { border-color: rgba(0,82,238,.34); animation-duration: 3.2s; }
+.scan-loading-overlay.is-complete .scan-loading-mascot { animation: scanLoadingCelebrate 1s cubic-bezier(.18,.78,.24,1) both; }
+.scan-loading-overlay.is-complete .scan-loading-mascot [data-qride-part="beacon"] { animation-duration: .38s; }
+.scan-loading-overlay.is-complete .scan-loading-ticket { transform: translate3d(0,-5px,0) rotate(0) scale(1.08); box-shadow: 0 14px 28px rgba(0,82,238,.2); }
+.scan-loading-success-mark {
+    position: absolute; z-index: 5; top: 13px; right: calc(50% - 91px);
+    width: 36px; height: 36px; display: grid; place-items: center;
+    border: 3px solid #fff; border-radius: 50%; background: #16a66a;
+    box-shadow: 0 7px 18px rgba(22,166,106,.28); color: #fff;
+    font-size: 21px; line-height: 1; font-weight: 900; opacity: 0;
+    transform: translate3d(-5px,9px,0) scale(.35) rotate(-18deg); pointer-events: none;
+}
+.scan-loading-overlay.is-complete .scan-loading-success-mark {
+    animation: scanLoadingSuccessPop .52s .28s cubic-bezier(.16,.85,.25,1.25) both;
+}
 .scan-loading-content {
     width: 100%;
     max-width: 420px;
@@ -1694,6 +1712,18 @@ body.scan-loading-open { overflow: hidden !important; }
 @keyframes scanLoadingFloat {
     0%,100% { transform: translateY(1px) rotate(-1deg); }
     50% { transform: translateY(-6px) rotate(1deg); }
+}
+@keyframes scanLoadingCelebrate {
+    0% { transform: translateY(0) rotate(0) scale(1); }
+    22% { transform: translateY(-17px) rotate(-7deg) scale(1.06); }
+    42% { transform: translateY(1px) rotate(5deg) scale(.98); }
+    62% { transform: translateY(-8px) rotate(-2deg) scale(1.025); }
+    82%,100% { transform: translateY(0) rotate(0) scale(1); }
+}
+@keyframes scanLoadingSuccessPop {
+    0% { opacity: 0; transform: translate3d(-5px,9px,0) scale(.35) rotate(-18deg); }
+    72% { opacity: 1; transform: translate3d(0,0,0) scale(1.14) rotate(4deg); }
+    100% { opacity: 1; transform: translate3d(0,0,0) scale(1) rotate(0); }
 }
 @keyframes scanLoadingBlink {
     0%,43%,47%,100% { transform: scaleY(1); }
@@ -2064,6 +2094,7 @@ body.scan-loading-open { overflow: hidden !important; }
         <div class="scan-loading-visual" id="scan-loading-visual" data-stage="0">
             <div class="scan-loading-orbit" aria-hidden="true"></div>
             <div class="scan-loading-mascot" id="scan-loading-mascot" aria-hidden="true"></div>
+            <span class="scan-loading-success-mark" aria-hidden="true">✓</span>
             <div class="scan-loading-chip" id="scan-loading-transport-chip">QR-код распознан</div>
             <div class="scan-loading-ticket" aria-hidden="true">
                 <span class="scan-loading-ticket-label">QR TICKET</span>
@@ -2462,14 +2493,16 @@ body.scan-loading-open { overflow: hidden !important; }
         scanLoadingOverlayElement.dataset.stage = '0';
         scanLoadingOverlayElement.setAttribute('aria-busy', 'true');
         scanLoadingOverlayElement.hidden = false;
-        scanLoadingOverlayElement.classList.remove('is-leaving');
+        scanLoadingOverlayElement.classList.remove('is-leaving', 'is-complete');
         pageBody.classList.add('scan-loading-open');
-        window.requestAnimationFrame(() => scanLoadingOverlayElement.classList.add('is-visible'));
+        // Reveal in the same task as the QR result; RAF caused a one-frame start-screen flash.
+        scanLoadingOverlayElement.classList.add('is-visible');
         return scanLoadingStartedAt;
     }
 
     function completeScanLoading(transportLabel) {
         if (!scanLoadingOverlayElement) return;
+        scanLoadingOverlayElement.classList.add('is-complete');
         Array.from(scanLoadingOverlayElement.querySelectorAll('[data-scan-step]')).forEach((step) => {
             step.classList.remove('is-active');
             step.classList.add('is-complete');
@@ -2492,7 +2525,7 @@ body.scan-loading-open { overflow: hidden !important; }
         scanLoadingOverlayElement.classList.add('is-leaving');
         await waitForScanLoading(210);
         scanLoadingOverlayElement.hidden = true;
-        scanLoadingOverlayElement.classList.remove('is-leaving');
+        scanLoadingOverlayElement.classList.remove('is-leaving', 'is-complete');
         pageBody.classList.remove('scan-loading-open');
         scanLoadingStartedAt = 0;
     }
@@ -2998,7 +3031,8 @@ body.scan-loading-open { overflow: hidden !important; }
 
             await waitForScanLoading(randomStageDuration(900, 1350));
             completeScanLoading(transportDetails);
-            await waitForScanLoading(170);
+            // Hold the completed state while Q performs a short celebratory bounce.
+            await waitForScanLoading(1050);
 
             closeStartOverlay();
             await hideScanLoading();
