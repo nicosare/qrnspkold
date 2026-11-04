@@ -32,6 +32,7 @@ const tariffOffers = Object.freeze({
 const databasePath = process.env.DATABASE_PATH || '/data/roadnote.sqlite';
 const paytagDirectTimeoutMs = Math.max(3000, Number(process.env.PAYTAG_DIRECT_TIMEOUT_MS || 12000));
 const paytagFetchesInFlight = new Map();
+let paytagCacheGeneration = 0;
 const liveStreams = new Map();
 const liveTokens = new Map();
 const avatarUploadAwaiting = new Set();
@@ -121,6 +122,29 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_referrals_inviter
     ON referrals(inviter_vk_id, created_at DESC);
 `);
+// Persistent transport metadata cache. Price rules remain separate so admins can
+// change the default fare without invalidating the transport lookup cache.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS paytag_cache (
+    paytag_id TEXT PRIMARY KEY,
+    transport_type TEXT NOT NULL,
+    route_number TEXT NOT NULL,
+    vehicle_number TEXT NOT NULL,
+    nspk_price REAL DEFAULT NULL,
+    nspk_price_updated_at TEXT DEFAULT NULL,
+    custom_price REAL DEFAULT NULL,
+    custom_price_updated_at TEXT DEFAULT NULL,
+    added_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_paytag_cache_added
+    ON paytag_cache(added_at DESC);
+  CREATE TABLE IF NOT EXISTS app_settings (
+    setting_key TEXT PRIMARY KEY,
+    setting_value TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+`);
+
 // Keep legacy data untouched and persist tariff requests independently of app restarts.
 db.exec(
   "CREATE TABLE IF NOT EXISTS tariff_requests (" +
@@ -625,6 +649,81 @@ async function fetchPaytagViaDirectApi(paytagid) {
 }
 
 
+const getPaytagCache = db.prepare(`
+  SELECT paytag_id, transport_type, route_number, vehicle_number,
+         nspk_price, nspk_price_updated_at, custom_price,
+         custom_price_updated_at, added_at
+  FROM paytag_cache
+  WHERE paytag_id = ?
+`);
+const insertPaytagCache = db.prepare(`
+  INSERT OR IGNORE INTO paytag_cache (
+    paytag_id, transport_type, route_number, vehicle_number,
+    nspk_price, nspk_price_updated_at, added_at
+  ) VALUES (
+    @paytag_id, @transport_type, @route_number, @vehicle_number,
+    @nspk_price, @nspk_price_updated_at, @added_at
+  )
+`);
+const listPaytagCache = db.prepare(`
+  SELECT paytag_id, transport_type, route_number, vehicle_number,
+         nspk_price, nspk_price_updated_at, custom_price,
+         custom_price_updated_at, added_at
+  FROM paytag_cache
+  ORDER BY added_at DESC, paytag_id ASC
+`);
+const getGlobalPaytagPriceRow = db.prepare(
+  "SELECT setting_value, updated_at FROM app_settings WHERE setting_key = 'paytag_global_price'"
+);
+
+function getGlobalPaytagPrice() {
+  const row = getGlobalPaytagPriceRow.get();
+  if (!row) return null;
+  const price = Number(row.setting_value);
+  return Number.isFinite(price) && price >= 0
+    ? { price, updatedAt: row.updated_at }
+    : null;
+}
+
+function resolveCachedPaytagData(row) {
+  if (!row) return null;
+  const globalPrice = getGlobalPaytagPrice();
+  const customPrice = row.custom_price === null || row.custom_price === undefined
+    ? null
+    : Number(row.custom_price);
+  const hasCustomPrice = customPrice !== null && Number.isFinite(customPrice);
+  const priceSource = hasCustomPrice ? 'individual' : globalPrice ? 'global' : 'nspk';
+  const price = hasCustomPrice
+    ? customPrice
+    : globalPrice
+      ? globalPrice.price
+      : row.nspk_price === null || row.nspk_price === undefined
+        ? null
+        : Number(row.nspk_price);
+  return {
+    transportType: String(row.transport_type || ''),
+    routeNumber: String(row.route_number || ''),
+    vehicleNumber: String(row.vehicle_number || ''),
+    price: Number.isFinite(price) ? price : null,
+    priceSource
+  };
+}
+
+function applyGlobalPaytagPrice(data) {
+  const globalPrice = getGlobalPaytagPrice();
+  return {
+    ...data,
+    price: globalPrice ? globalPrice.price : data.price,
+    priceSource: globalPrice ? 'global' : 'nspk'
+  };
+}
+
+function normalizeAdminPaytagPrice(raw) {
+  if (raw === null || raw === '') return null;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0 || value > 100000) return undefined;
+  return Math.round(value * 100) / 100;
+}
 
 function formatRubles(value) {
   return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(Number(value) || 0) + ' ₽';
@@ -1874,21 +1973,47 @@ app.post('/api/paytag', async (req, res) => {
     });
   }
 
-  let task = paytagFetchesInFlight.get(paytagid);
-  if (!task && paytagFetchesInFlight.size >= 5) {
-    return res.status(429).json({ error: 'Сервер уже обрабатывает другие QR-коды. Повторите попытку через несколько секунд.' });
-  }
-  if (!task) {
-    task = fetchPaytagViaDirectApi(paytagid);
-    paytagFetchesInFlight.set(paytagid, task);
-    task.finally(() => {
-      if (paytagFetchesInFlight.get(paytagid) === task) paytagFetchesInFlight.delete(paytagid);
-    }).catch(() => {});
-  }
-
   res.setHeader('Cache-Control', 'no-store');
   try {
-    const data = await task;
+    // Resolve transport metadata from SQLite first. A cache hit never contacts NSPK.
+    let data = resolveCachedPaytagData(getPaytagCache.get(paytagid));
+    const cacheHit = Boolean(data);
+
+    if (!data) {
+      let task = paytagFetchesInFlight.get(paytagid);
+      if (!task && paytagFetchesInFlight.size >= 5) {
+        return res.status(429).json({ error: 'Сервер уже обрабатывает другие QR-коды. Повторите попытку через несколько секунд.' });
+      }
+      if (!task) {
+        const generation = paytagCacheGeneration;
+        task = (async () => {
+          // fetchPaytagViaDirectApi validates all required transport fields before
+          // this point, so incomplete/error responses are never persisted.
+          const upstreamData = await fetchPaytagViaDirectApi(paytagid);
+          if (generation === paytagCacheGeneration) {
+            const cachedAt = new Date().toISOString();
+            insertPaytagCache.run({
+              paytag_id: paytagid,
+              transport_type: upstreamData.transportType,
+              route_number: upstreamData.routeNumber,
+              vehicle_number: upstreamData.vehicleNumber,
+              nspk_price: Number.isFinite(upstreamData.price) ? upstreamData.price : null,
+              nspk_price_updated_at: Number.isFinite(upstreamData.price) ? cachedAt : null,
+              added_at: cachedAt
+            });
+            const stored = resolveCachedPaytagData(getPaytagCache.get(paytagid));
+            if (stored) return stored;
+          }
+          // The admin may have cleared the cache while this lookup was in flight.
+          return applyGlobalPaytagPrice(upstreamData);
+        })();
+        paytagFetchesInFlight.set(paytagid, task);
+        task.finally(() => {
+          if (paytagFetchesInFlight.get(paytagid) === task) paytagFetchesInFlight.delete(paytagid);
+        }).catch(() => {});
+      }
+      data = await task;
+    }
     // Re-read entitlements after the upstream request: another tab or request
     // may have consumed a scan while this QR was being resolved.
     const currentBeforeCharge = getUserScanBalance.get(userId);
@@ -1958,7 +2083,8 @@ app.post('/api/paytag', async (req, res) => {
       ok: true,
       data,
       scannedAt: scannedAt,
-      source: 'direct-api',
+      source: cacheHit ? 'cache' : 'direct-api',
+      cacheHit,
       scanBalance,
       subscriptionUntil,
       unlimited,
@@ -2119,6 +2245,104 @@ app.delete('/api/admin/promocodes/:id', requireAdmin, (req, res) => {
     db.prepare("UPDATE promo_code_applications SET status = 'cancelled', tariff_request_id = NULL WHERE promo_code_id = ? AND status = 'selected' AND (tariff_request_id IS NULL OR tariff_request_id IN (SELECT id FROM tariff_requests WHERE status NOT IN ('awaiting_payment','awaiting_review')))").run(id);
   })();
   return res.json({ ok: true });
+});
+
+app.get('/api/admin/paytags', requireAdmin, (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const globalPrice = getGlobalPaytagPrice();
+  const paytags = listPaytagCache.all().map(row => {
+    const customPrice = row.custom_price === null || row.custom_price === undefined ? null : Number(row.custom_price);
+    const hasCustomPrice = customPrice !== null && Number.isFinite(customPrice);
+    const priceSource = hasCustomPrice ? 'individual' : globalPrice ? 'global' : 'nspk';
+    const effectivePrice = hasCustomPrice
+      ? customPrice
+      : globalPrice
+        ? globalPrice.price
+        : row.nspk_price === null || row.nspk_price === undefined
+          ? null
+          : Number(row.nspk_price);
+    const priceUpdatedAt = hasCustomPrice
+      ? row.custom_price_updated_at || null
+      : globalPrice
+        ? globalPrice.updatedAt
+        : row.nspk_price_updated_at || null;
+    return {
+      paytagId: row.paytag_id,
+      transportType: row.transport_type,
+      routeNumber: row.route_number,
+      vehicleNumber: row.vehicle_number,
+      nspkPrice: row.nspk_price === null || row.nspk_price === undefined ? null : Number(row.nspk_price),
+      customPrice: hasCustomPrice ? customPrice : null,
+      effectivePrice: Number.isFinite(effectivePrice) ? effectivePrice : null,
+      priceSource,
+      priceUpdatedAt,
+      addedAt: row.added_at
+    };
+  });
+  return res.json({
+    paytags,
+    total: paytags.length,
+    globalPrice: globalPrice ? globalPrice.price : null,
+    globalPriceUpdatedAt: globalPrice ? globalPrice.updatedAt : null
+  });
+});
+
+app.post('/api/admin/paytags/global-price', requireAdmin, (req, res) => {
+  if (!Object.prototype.hasOwnProperty.call(req.body || {}, 'price')) {
+    return res.status(400).json({ error: 'Укажите глобальную цену или передайте null для её сброса.' });
+  }
+  const price = normalizeAdminPaytagPrice(req.body.price);
+  if (price === undefined) {
+    return res.status(400).json({ error: 'Цена должна быть числом от 0 до 100000 ₽.' });
+  }
+  const now = new Date().toISOString();
+  if (price === null) {
+    db.prepare("DELETE FROM app_settings WHERE setting_key = 'paytag_global_price'").run();
+  } else {
+    db.prepare(`
+      INSERT INTO app_settings (setting_key, setting_value, updated_at)
+      VALUES ('paytag_global_price', ?, ?)
+      ON CONFLICT(setting_key) DO UPDATE SET
+        setting_value = excluded.setting_value,
+        updated_at = excluded.updated_at
+    `).run(String(price), now);
+  }
+  const updated = getGlobalPaytagPrice();
+  return res.json({ ok: true, globalPrice: updated ? updated.price : null, globalPriceUpdatedAt: updated ? updated.updatedAt : null });
+});
+
+app.post('/api/admin/paytags/:paytagId/price', requireAdmin, (req, res) => {
+  const paytagId = String(req.params.paytagId || '').trim();
+  if (!/^[0-9A-Za-z_-]{6,64}$/.test(paytagId)) {
+    return res.status(400).json({ error: 'Некорректный идентификатор paytagid.' });
+  }
+  if (!Object.prototype.hasOwnProperty.call(req.body || {}, 'price')) {
+    return res.status(400).json({ error: 'Укажите индивидуальную цену или передайте null, чтобы использовать цену по умолчанию.' });
+  }
+  const price = normalizeAdminPaytagPrice(req.body.price);
+  if (price === undefined) {
+    return res.status(400).json({ error: 'Цена должна быть числом от 0 до 100000 ₽.' });
+  }
+  const exists = getPaytagCache.get(paytagId);
+  if (!exists) return res.status(404).json({ error: 'Paytag не найден в кеше.' });
+  const updatedAt = price === null ? null : new Date().toISOString();
+  db.prepare('UPDATE paytag_cache SET custom_price = ?, custom_price_updated_at = ? WHERE paytag_id = ?')
+    .run(price, updatedAt, paytagId);
+  return res.json({ ok: true, paytagId, customPrice: price, customPriceUpdatedAt: updatedAt });
+});
+
+app.post('/api/admin/paytags/reset', requireAdmin, (req, res) => {
+  if (req.body?.confirm !== true) {
+    return res.status(400).json({ error: 'Для очистки кеша требуется явное подтверждение.' });
+  }
+  // Prevent lookups started before this reset from repopulating the just-cleared cache.
+  paytagCacheGeneration += 1;
+  const result = db.prepare('DELETE FROM paytag_cache').run();
+  return res.json({
+    ok: true,
+    deletedCount: Number(result.changes || 0),
+    globalPrice: getGlobalPaytagPrice()?.price ?? null
+  });
 });
 
 app.get('/api/admin/users', requireAdmin, (req, res) => {
