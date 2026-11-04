@@ -2956,25 +2956,31 @@ body.scan-loading-open { overflow: hidden !important; }
                 throw new Error('В QR-коде отсутствует корректный paytagid.');
             }
 
-            const loadingStartedAt = beginScanLoading();
+            beginScanLoading();
             loadingStarted = Boolean(scanLoadingOverlayElement);
             const dataPromise = fetchPaytagFromBackend(paytagid).then(
                 (data) => ({ data }),
                 (error) => ({ error })
             );
 
-            // Let Q acknowledge the scanned code while the real lookup runs in parallel.
-            await waitForScanLoading(250);
+            // Give every stage its own varied pause while the transport lookup runs in parallel.
+            const randomStageDuration = (min, max) =>
+                Math.round(min + Math.random() * (max - min));
+
+            await waitForScanLoading(randomStageDuration(850, 1250));
             updateScanLoadingStage(1, 'Получаем сведения о транспорте…');
 
-            const result = await dataPromise;
+            const [result] = await Promise.all([
+                dataPromise,
+                waitForScanLoading(randomStageDuration(900, 1350))
+            ]);
             if (result.error) throw result.error;
             const data = result.data;
             if (!data.vehicleType || !data.routeNumber || !data.vehicleNumber) {
                 throw new Error('Сервер НСПК не вернул все данные транспорта: тип, маршрут и номер Т/С.');
             }
 
-            const route = String(data.routeNumber || '').replace(/^№\s*/, '').trim();
+            const route = String(data.routeNumber || '').replace(/^№\\s*/, '').trim();
             const transportLabel = (data.vehicleType || 'Транспорт') + (route ? ' №' + route : '');
             const vehicleLabel = data.vehicleNumber ? ' · Т/С ' + data.vehicleNumber : '';
             const transportDetails = transportLabel + vehicleLabel;
@@ -2982,7 +2988,7 @@ body.scan-loading-open { overflow: hidden !important; }
             if (scanLoadingTransportChipElement) scanLoadingTransportChipElement.textContent = transportLabel;
 
             updateScanLoadingStage(2, transportDetails + ' · данные получены');
-            await waitForScanLoading(235);
+            await waitForScanLoading(randomStageDuration(800, 1250));
 
             updateScanBalance(data.scanBalance, data.subscriptionUntil, data.unlimited, data.subscriptionActive);
             updateScanLoadingStage(3, 'Кью собирает QR-билет…');
@@ -2990,10 +2996,7 @@ body.scan-loading-open { overflow: hidden !important; }
             updateContinueTicketButton(Math.max(currentScanCount, 1));
             setScanLoadingStepDetail(3, 'QR-код сформирован');
 
-            // A fast cache hit still gets a short, polished interstitial. Slow lookups
-            // use their real waiting time, so no extra fixed delay is added afterwards.
-            const minimumVisibleTime = 1450;
-            await waitForScanLoading(Math.max(0, minimumVisibleTime - (performance.now() - loadingStartedAt)));
+            await waitForScanLoading(randomStageDuration(900, 1350));
             completeScanLoading(transportDetails);
             await waitForScanLoading(170);
 
