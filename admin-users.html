@@ -91,6 +91,36 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 }
 @media(min-width:420px) and (max-width:600px){.cards{grid-template-columns:minmax(0,1fr)}.user-card{padding:12px}.person{align-items:flex-start;gap:8px}.avatar{width:40px;height:40px;flex-basis:40px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.stat{padding:8px}.name{font-size:15px}}
 @media(prefers-reduced-motion:reduce){.user-card{transition:none}}
+
+/* Paytag cache */
+.paytag-intro{margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.5}
+.paytag-global-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,.42fr) auto;align-items:end;gap:10px;padding:13px;border:1px solid #cfe2fb;border-radius:14px;background:#f5f9ff}
+.paytag-global-copy{display:grid;gap:4px;align-self:center;min-width:0}.paytag-global-copy strong{font-size:15px}.paytag-global-copy span{font-size:12px;color:var(--muted);line-height:1.45}
+.paytag-field{display:grid;gap:6px;min-width:0}.paytag-field>span{font-size:12px;font-weight:750;color:#566171}.paytag-field input{width:100%;min-width:0}
+.paytag-global-status{grid-column:1/-1;min-height:16px;margin:0;font-size:12px;color:var(--muted)}.paytag-global-status.error{color:#b42318}
+.paytag-toolbar{display:grid;grid-template-columns:minmax(180px,1fr) minmax(150px,.55fr) minmax(135px,.45fr) auto;gap:8px;margin:14px 0 10px}
+.paytag-toolbar input,.paytag-toolbar select{width:100%;min-width:0}
+.paytag-list-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 8px}.paytag-list-heading strong{font-size:15px}.paytag-total{font-size:12px;color:var(--muted);white-space:nowrap}
+.paytag-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,390px),1fr));align-items:start;gap:9px}
+.paytag-card{min-width:0;padding:12px;border:1px solid var(--line);border-radius:13px;background:#fff}
+.paytag-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.paytag-id{min-width:0;font-size:14px;font-weight:800;overflow-wrap:anywhere}.paytag-added{font-size:11px;color:var(--muted);margin-top:4px}
+.paytag-price{flex:0 0 auto;max-width:48%;padding:5px 8px;border-radius:8px;background:var(--soft);color:#1766bc;font-size:12px;font-weight:800;text-align:right;overflow-wrap:anywhere}
+.paytag-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:10px}
+.paytag-detail{min-width:0;padding:8px;border-radius:8px;background:#f7f8fa}.paytag-detail span{display:block;font-size:10px;color:var(--muted);margin-bottom:3px}.paytag-detail strong{display:block;font-size:13px;overflow-wrap:anywhere}
+.paytag-price-meta{font-size:11px;line-height:1.45;color:var(--muted);margin-top:8px}
+.paytag-price-editor{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
+.paytag-price-editor label{display:grid;gap:5px;min-width:0}.paytag-price-editor label span{font-size:11px;font-weight:750;color:#566171}.paytag-price-editor input{width:100%;min-width:0;min-height:40px;padding:8px 10px}
+.paytag-price-actions{display:flex;align-items:end;gap:6px}.paytag-price-actions button{min-height:40px;padding:7px 10px;font-size:12px}.paytag-clear-price{background:#f7f8fa;color:#485363}
+.paytag-danger{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;padding:12px;border:1px solid #f1cccc;border-radius:12px;background:#fffafa}
+.paytag-danger-copy{min-width:0}.paytag-danger-copy strong{display:block;font-size:13px;color:#9f2722}.paytag-danger-copy span{display:block;font-size:11px;line-height:1.45;color:var(--muted);margin-top:3px}
+.paytag-reset{flex:0 0 auto;min-height:40px;padding:8px 11px;border-color:#ffd4d1;background:#fff1f0;color:#b42318;font-size:12px}
+@media(max-width:600px){
+ .paytag-global-form{grid-template-columns:minmax(0,1fr) minmax(110px,.65fr)}.paytag-global-copy{grid-column:1/-1}.paytag-global-form>button{grid-column:1/-1}
+ .paytag-toolbar{grid-template-columns:minmax(0,1fr) auto}.paytag-toolbar input{grid-column:1/-1;grid-row:1}.paytag-toolbar select:nth-of-type(1){grid-column:1;grid-row:2}.paytag-toolbar select:nth-of-type(2){grid-column:2;grid-row:2}.paytag-toolbar button{grid-column:1/-1;grid-row:3}
+ .paytag-card{padding:10px}.paytag-danger{align-items:stretch;flex-direction:column}.paytag-reset{width:100%}
+}
+@media(max-width:370px){.paytag-price-editor{grid-template-columns:minmax(0,1fr)}.paytag-price-actions button{flex:1}}
+
 </style>
 </head>
 <body>
@@ -102,6 +132,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 <nav class="admin-nav" aria-label="Разделы админ-панели">
  <a href="#users" class="active" data-admin-view="users">Пользователи</a>
  <a href="#promos" data-admin-view="promos">Промокоды</a>
+ <a href="#paytags" data-admin-view="paytags">Paytag</a>
 </nav>
 <section class="panel">
  <div id="users-view">
@@ -136,6 +167,30 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
   <div id="promo-list-status" class="status" role="status">Загрузка промокодов…</div>
   <div id="promo-list" class="promo-list" hidden></div>
  </div>
+ <div id="paytags-view" hidden>
+  <div class="paytag-intro">Здесь хранятся найденные транспортные QR-коды. Повторные сканирования используют кеш и не обращаются к НСПК повторно. Цена управляется независимо от транспортных данных.</div>
+  <form id="paytag-global-form" class="paytag-global-form">
+   <div class="paytag-global-copy"><strong>Глобальная цена</strong><span>Применяется ко всем paytag без индивидуального исключения, включая новые записи. Индивидуальные цены останутся без изменений.</span></div>
+   <label class="paytag-field"><span>Цена, ₽</span><input id="paytag-global-price" type="number" min="0" max="100000" step="0.01" inputmode="decimal" placeholder="Не задана"></label>
+   <button class="primary" type="submit" id="paytag-global-save">Сохранить</button>
+   <div class="paytag-global-status" id="paytag-global-status" role="status" aria-live="polite">Загружаем настройки…</div>
+  </form>
+  <div class="paytag-toolbar">
+   <input id="paytag-search" type="search" placeholder="Поиск по paytagid, маршруту, Т/С или типу" autocomplete="off" aria-label="Поиск paytag">
+   <select id="paytag-sort" aria-label="Сортировка paytag">
+    <option value="added">Дата добавления</option><option value="id">Paytag ID</option><option value="type">Тип транспорта</option><option value="route">Маршрут</option><option value="vehicle">Номер Т/С</option><option value="price">Цена</option>
+   </select>
+   <select id="paytag-order" aria-label="Порядок сортировки"><option value="desc">По убыванию</option><option value="asc">По возрастанию</option></select>
+   <button class="primary" id="paytag-refresh" type="button">Обновить</button>
+  </div>
+  <div class="paytag-list-heading"><strong>Сохранённые paytag</strong><span class="paytag-total" id="paytag-total">—</span></div>
+  <div id="paytag-list-status" class="status" role="status">Загрузка кеша…</div>
+  <div id="paytag-list" class="paytag-grid" hidden></div>
+  <div class="paytag-danger">
+   <div class="paytag-danger-copy"><strong>Полный сброс кеша</strong><span>Удалит записи paytag и их индивидуальные цены. Глобальная цена сохранится. История поездок, билеты, пользователи, балансы и начисления не затрагиваются.</span></div>
+   <button class="paytag-reset" id="paytag-reset" type="button">Очистить кеш</button>
+  </div>
+ </div>
 </section>
 </main>
 <script>
@@ -149,6 +204,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  const sort = document.getElementById('sort');
  const usersView = document.getElementById('users-view');
  const promosView = document.getElementById('promos-view');
+ const paytagsView = document.getElementById('paytags-view');
  const promoForm = document.getElementById('promo-create-form');
  const promoCodeInput = document.getElementById('promo-code');
   const promoDiscountInput = document.getElementById('promo-discount');
@@ -178,6 +234,139 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    return 'Осталось '+Math.max(1,minutes)+' мин.';
  };
  const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+ const paytagGlobalForm = document.getElementById('paytag-global-form');
+ const paytagGlobalPriceInput = document.getElementById('paytag-global-price');
+ const paytagGlobalStatus = document.getElementById('paytag-global-status');
+ const paytagSearch = document.getElementById('paytag-search');
+ const paytagSort = document.getElementById('paytag-sort');
+ const paytagOrder = document.getElementById('paytag-order');
+ const paytagListStatus = document.getElementById('paytag-list-status');
+ const paytagList = document.getElementById('paytag-list');
+ const paytagTotal = document.getElementById('paytag-total');
+ let paytags = [];
+ let paytagGlobalPrice = null;
+ const paytagMoney = value => value === null || value === undefined || !Number.isFinite(Number(value)) ? 'Не задана' : new Intl.NumberFormat('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:2}).format(Number(value))+' ₽';
+
+ function renderPaytags(){
+   const q=paytagSearch.value.trim().toLowerCase();
+   const filtered=paytags.filter(item=>[item.paytagId,item.transportType,item.routeNumber,item.vehicleNumber].join(' ').toLowerCase().includes(q));
+   const direction=paytagOrder.value==='asc'?1:-1;
+   const valueFor=item=>{
+     if(paytagSort.value==='id')return String(item.paytagId||'').toLowerCase();
+     if(paytagSort.value==='type')return String(item.transportType||'').toLowerCase();
+     if(paytagSort.value==='route')return String(item.routeNumber||'').toLowerCase();
+     if(paytagSort.value==='vehicle')return String(item.vehicleNumber||'').toLowerCase();
+     if(paytagSort.value==='price')return item.effectivePrice===null||item.effectivePrice===undefined?null:Number(item.effectivePrice);
+     return String(item.addedAt||'');
+   };
+   filtered.sort((a,b)=>{
+     const av=valueFor(a),bv=valueFor(b);
+     if(av===null&&bv!==null)return 1;
+     if(bv===null&&av!==null)return -1;
+     if(typeof av==='number'&&typeof bv==='number')return (av-bv)*direction;
+     return String(av??'').localeCompare(String(bv??''),'ru')*direction;
+   });
+   paytagTotal.textContent='Показано '+filtered.length+' из '+paytags.length;
+   const sourceLabels={individual:'индивидуальная',global:'глобальная',nspk:'НСПК'};
+   paytagList.innerHTML=filtered.map(item=>{
+     const customValue=item.customPrice===null||item.customPrice===undefined?'':String(item.customPrice);
+     return '<article class="paytag-card" data-paytag-card="'+esc(item.paytagId)+'">'+
+       '<div class="paytag-card-head"><div style="min-width:0"><div class="paytag-id">'+esc(item.paytagId)+'</div><div class="paytag-added">Добавлен: '+esc(date(item.addedAt))+'</div></div><div class="paytag-price">'+esc(paytagMoney(item.effectivePrice))+' · '+esc(sourceLabels[item.priceSource]||'—')+'</div></div>'+
+       '<div class="paytag-details">'+
+        '<div class="paytag-detail"><span>Тип транспорта</span><strong>'+esc(item.transportType||'—')+'</strong></div>'+
+        '<div class="paytag-detail"><span>Маршрут</span><strong>'+esc(item.routeNumber||'—')+'</strong></div>'+
+        '<div class="paytag-detail"><span>Номер Т/С</span><strong>'+esc(item.vehicleNumber||'—')+'</strong></div>'+
+        '<div class="paytag-detail"><span>Цена НСПК при добавлении</span><strong>'+esc(paytagMoney(item.nspkPrice))+'</strong></div>'+
+       '</div>'+
+       '<div class="paytag-price-meta">Источник текущей цены: '+esc(sourceLabels[item.priceSource]||'—')+'. Последнее изменение цены: '+esc(date(item.priceUpdatedAt))+'</div>'+
+       '<div class="paytag-price-editor"><label><span>Индивидуальная цена, ₽</span><input type="number" min="0" max="100000" step="0.01" inputmode="decimal" data-paytag-price value="'+esc(customValue)+'" placeholder="По умолчанию: '+esc(paytagMoney(paytagGlobalPrice!==null?paytagGlobalPrice:item.nspkPrice))+'"></label>'+
+        '<div class="paytag-price-actions"><button class="primary" type="button" data-save-paytag-price>Сохранить</button><button class="paytag-clear-price" type="button" data-clear-paytag-price>Снять</button></div></div>'+
+     '</article>';
+   }).join('');
+   paytagList.hidden=filtered.length===0;
+   paytagListStatus.hidden=filtered.length>0;
+   paytagListStatus.className='status';
+   paytagListStatus.textContent=paytags.length?'По вашему запросу ничего не найдено':'Сохранённых paytag пока нет.';
+ }
+
+ async function loadPaytags(){
+   if(!query){paytagListStatus.hidden=false;paytagListStatus.className='status error';paytagListStatus.textContent='Откройте эту страницу из VK Mini App, чтобы проверить подпись запуска.';return}
+   paytagListStatus.hidden=false;paytagListStatus.className='status';paytagListStatus.textContent='Загружаем кеш…';paytagList.hidden=true;
+   try{
+     const response=await fetch('../api/admin/paytags',{headers:{Authorization:auth},cache:'no-store'});
+     const data=await response.json();
+     if(!response.ok)throw new Error(response.status===403?'Доступ запрещён: этот аккаунт VK не является администратором.':data.error||'Не удалось загрузить кеш paytag.');
+     paytags=Array.isArray(data.paytags)?data.paytags:[];
+     paytagGlobalPrice=data.globalPrice===null||data.globalPrice===undefined?null:Number(data.globalPrice);
+     paytagGlobalPriceInput.value=paytagGlobalPrice===null?'':String(paytagGlobalPrice);
+     paytagGlobalStatus.className='paytag-global-status';
+     paytagGlobalStatus.textContent=paytagGlobalPrice===null
+       ?'Глобальная цена не задана. Пока используется цена НСПК, сохранённая при первом сканировании.'
+       :'Глобальная цена: '+paytagMoney(paytagGlobalPrice)+(data.globalPriceUpdatedAt?' · изменена '+date(data.globalPriceUpdatedAt):'');
+     count.textContent='Paytag: '+(data.total??paytags.length);
+     renderPaytags();
+   }catch(error){
+     paytagListStatus.hidden=false;paytagListStatus.className='status error';paytagListStatus.textContent=error.message;
+     paytagGlobalStatus.className='paytag-global-status error';paytagGlobalStatus.textContent=error.message;
+   }
+ }
+
+ async function savePaytagPrice(paytagId, price){
+   const response=await fetch('../api/admin/paytags/'+encodeURIComponent(paytagId)+'/price',{
+     method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},
+     body:JSON.stringify({price}),cache:'no-store'
+   });
+   const data=await response.json();if(!response.ok)throw new Error(data.error||'Не удалось изменить цену.');
+   await loadPaytags();
+ }
+
+ paytagGlobalForm.addEventListener('submit',async event=>{
+   event.preventDefault();
+   const raw=paytagGlobalPriceInput.value.trim();
+   const price=raw===''?null:Number(raw);
+   if(price!==null&&(!Number.isFinite(price)||price<0||price>100000)){paytagGlobalStatus.className='paytag-global-status error';paytagGlobalStatus.textContent='Введите цену от 0 до 100000 ₽.';return}
+   const button=document.getElementById('paytag-global-save');button.disabled=true;button.textContent='Сохраняем…';
+   try{
+     const response=await fetch('../api/admin/paytags/global-price',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify({price}),cache:'no-store'});
+     const data=await response.json();if(!response.ok)throw new Error(data.error||'Не удалось сохранить глобальную цену.');
+     await loadPaytags();
+     paytagGlobalStatus.textContent=price===null?'Глобальная цена сброшена. Для записей без индивидуальной цены используется сохранённая цена НСПК.':'Глобальная цена сохранена: '+paytagMoney(data.globalPrice)+'.';
+   }catch(error){paytagGlobalStatus.className='paytag-global-status error';paytagGlobalStatus.textContent=error.message;}
+   finally{button.disabled=false;button.textContent='Сохранить';}
+ });
+
+ paytagList.addEventListener('click',async event=>{
+   const saveButton=event.target.closest('[data-save-paytag-price]');
+   const clearButton=event.target.closest('[data-clear-paytag-price]');
+   const button=saveButton||clearButton;if(!button)return;
+   const card=button.closest('[data-paytag-card]');if(!card)return;
+   const paytagId=card.dataset.paytagCard;
+   const input=card.querySelector('[data-paytag-price]');
+   if(clearButton&&!window.confirm('Снять индивидуальную цену для '+paytagId+'? Будет применена глобальная цена.'))return;
+   const price=clearButton?null:Number(input.value);
+   if(!clearButton&&(input.value.trim()===''||!Number.isFinite(price)||price<0||price>100000)){input.focus();window.alert('Введите индивидуальную цену от 0 до 100000 ₽.');return}
+   button.disabled=true;button.textContent=clearButton?'Сбрасываем…':'Сохраняем…';
+   try{await savePaytagPrice(paytagId,price);}
+   catch(error){button.disabled=false;button.textContent=clearButton?'Снять':'Сохранить';window.alert(error.message);}
+ });
+
+ paytagSearch.addEventListener('input',renderPaytags);
+ paytagSort.addEventListener('change',renderPaytags);
+ paytagOrder.addEventListener('change',renderPaytags);
+ document.getElementById('paytag-refresh').addEventListener('click',loadPaytags);
+ document.getElementById('paytag-reset').addEventListener('click',async()=>{
+   const confirmed=window.confirm('Очистить весь кеш paytag?\n\nБудут удалены записи paytag и их индивидуальные цены. Глобальная цена сохранится. История поездок, билеты, пользователи, балансы и начисления не изменятся.');
+   if(!confirmed)return;
+   const button=document.getElementById('paytag-reset');button.disabled=true;button.textContent='Очищаем…';
+   try{
+     const response=await fetch('../api/admin/paytags/reset',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify({confirm:true}),cache:'no-store'});
+     const data=await response.json();if(!response.ok)throw new Error(data.error||'Не удалось очистить кеш.');
+     await loadPaytags();paytagListStatus.hidden=false;paytagListStatus.className='status';paytagListStatus.textContent='Кеш очищен. Удалено записей: '+Number(data.deletedCount||0)+'.';
+   }catch(error){window.alert(error.message);}
+   finally{button.disabled=false;button.textContent='Очистить кеш';}
+ });
+
  function render(){
    const q=search.value.trim().toLowerCase();
    const filtered=users.filter(u=>(u.first_name+' '+u.last_name+' '+u.vk_id+' '+(u.last_transport_number||'')).toLowerCase().includes(q));
@@ -391,17 +580,19 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    catch(error){button.disabled=false;button.textContent='Удалить';window.alert(error.message);}
  });
  document.querySelectorAll('[data-admin-view]').forEach(link=>link.addEventListener('click',event=>{
-   event.preventDefault();const view=link.dataset.adminView==='promos'?'promos':'users';
+   event.preventDefault();const view=link.dataset.adminView;
    document.querySelectorAll('[data-admin-view]').forEach(item=>item.classList.toggle('active',item===link));
-   usersView.hidden=view!=='users';promosView.hidden=view!=='promos';
-   document.querySelector('h1').textContent=view==='promos'?'Промокоды QRide':'Пользователи QRide';
-    document.querySelector('.top .sub').textContent=view==='promos'?'Коды скидок и пополнения баланса':'Нажми на карточку, чтобы открыть профиль VK';
-   count.textContent=view==='users'?(users.length?'Всего: '+users.length:'Загрузка…'):'Промокоды';
+   usersView.hidden=view!=='users';promosView.hidden=view!=='promos';paytagsView.hidden=view!=='paytags';
+   document.querySelector('h1').textContent=view==='promos'?'Промокоды QRide':view==='paytags'?'Paytag QRide':'Пользователи QRide';
+   document.querySelector('.top .sub').textContent=view==='promos'?'Коды скидок и пополнения баланса':view==='paytags'?'Кеш транспортных QR-кодов и управление ценами':'Нажми на карточку, чтобы открыть профиль VK';
+   count.textContent=view==='users'?(users.length?'Всего: '+users.length:'Загрузка…'):view==='paytags'?'Загрузка…':'Промокоды';
    if(view==='promos')loadPromos();
+   if(view==='paytags')loadPaytags();
    if(view==='users'&&!users.length)load();
-   if(history.replaceState)history.replaceState(null,'',window.location.pathname+window.location.search+(view==='promos'?'#promos':'#users'));
+   if(history.replaceState)history.replaceState(null,'',window.location.pathname+window.location.search+(view==='promos'?'#promos':view==='paytags'?'#paytags':'#users'));
  }));
  if(window.location.hash==='#promos')document.querySelector('[data-admin-view="promos"]').click();
+ else if(window.location.hash==='#paytags')document.querySelector('[data-admin-view="paytags"]').click();
  load();
 })();
 </script>
