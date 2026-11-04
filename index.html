@@ -2429,16 +2429,36 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         }
     }
 
+    function resetDocumentScrollToTop() {
+        const reset = () => {
+            const scrollingElement = document.scrollingElement || document.documentElement;
+            scrollingElement.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+            window.scrollTo(0, 0);
+        };
+        reset();
+        window.requestAnimationFrame(reset);
+    }
+
+    function resetStartOverlayScrollToTop() {
+        const reset = () => { startOverlayElement.scrollTop = 0; };
+        reset();
+        window.requestAnimationFrame(reset);
+    }
+
     function closeStartOverlay() {
         if (startOverlayElement.hidden) return;
         startOverlayElement.hidden = true;
         pageBody.classList.remove('start-overlay-open');
+        resetDocumentScrollToTop();
         window.history.pushState({ roadnoteScreen: 'ticket' }, '', window.location.href);
     }
 
     function showStartOverlay() {
         startOverlayElement.hidden = false;
         pageBody.classList.add('start-overlay-open');
+        resetStartOverlayScrollToTop();
         if (typeof window.refreshRoadnoteMoodMessage === 'function') window.refreshRoadnoteMoodMessage();
         refreshScanButton();
     }
