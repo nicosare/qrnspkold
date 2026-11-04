@@ -1703,6 +1703,57 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
 </section>
 
 
+
+<section class="scan-loading-overlay" id="scan-loading-overlay" role="status" aria-live="polite" aria-busy="true" hidden>
+    <div class="scan-loading-content">
+        <div class="scan-loading-brandline"><span class="scan-loading-brandline-mark"></span><span>QRIDE</span><span>·</span><span>КЬЮ ГОТОВИТ БИЛЕТ</span></div>
+        <div class="scan-loading-visual" id="scan-loading-visual" data-stage="0">
+            <div class="scan-loading-orbit" aria-hidden="true"></div>
+            <div class="scan-loading-mascot" id="scan-loading-mascot" aria-hidden="true"></div>
+            <div class="scan-loading-chip" id="scan-loading-transport-chip">QR-код распознан</div>
+            <div class="scan-loading-ticket" aria-hidden="true">
+                <span class="scan-loading-ticket-label">QR TICKET</span>
+                <svg viewBox="0 0 42 42" role="presentation">
+                    <rect x="1" y="1" width="13" height="13" rx="1" fill="none" stroke="#17345b" stroke-width="2"/>
+                    <rect x="4" y="4" width="7" height="7" fill="#17345b"/>
+                    <rect x="28" y="1" width="13" height="13" rx="1" fill="none" stroke="#17345b" stroke-width="2"/>
+                    <rect x="31" y="4" width="7" height="7" fill="#17345b"/>
+                    <rect x="1" y="28" width="13" height="13" rx="1" fill="none" stroke="#17345b" stroke-width="2"/>
+                    <rect x="4" y="31" width="7" height="7" fill="#17345b"/>
+                    <path d="M18 2h5v5h-5zM18 10h3v3h-3zM24 17h4v4h-4zM31 18h3v3h-3zM37 17h4v4h-4zM17 22h4v4h-4zM23 25h3v3h-3zM29 25h5v5h-5zM36 25h4v4h-4zM18 31h4v4h-4zM24 34h4v4h-4zM30 34h3v3h-3zM36 36h4v4h-4z" fill="#17345b"/>
+                </svg>
+            </div>
+            <span class="scan-loading-particle scan-loading-particle-a" aria-hidden="true"></span>
+            <span class="scan-loading-particle scan-loading-particle-b" aria-hidden="true"></span>
+        </div>
+        <div class="scan-loading-heading">
+            <h2 class="scan-loading-title" id="scan-loading-title">Кью считывает QR-код</h2>
+            <p class="scan-loading-subtitle" id="scan-loading-subtitle">Распознаём транспортный код…</p>
+        </div>
+        <div class="scan-loading-progress" aria-hidden="true"><div class="scan-loading-progress-fill" id="scan-loading-progress-fill"></div></div>
+        <ol class="scan-loading-steps" aria-label="Этапы подготовки билета">
+            <li class="scan-loading-step is-active" data-scan-step="0">
+                <span class="scan-loading-step-mark" aria-hidden="true"></span>
+                <span class="scan-loading-step-copy"><strong>Считываем QR-код</strong><small data-scan-detail>QR-код распознан</small></span>
+            </li>
+            <li class="scan-loading-step" data-scan-step="1">
+                <span class="scan-loading-step-mark" aria-hidden="true"></span>
+                <span class="scan-loading-step-copy"><strong>Получаем данные транспорта</strong><small data-scan-detail>Ищем маршрут и номер Т/С</small></span>
+            </li>
+            <li class="scan-loading-step" data-scan-step="2">
+                <span class="scan-loading-step-mark" aria-hidden="true"></span>
+                <span class="scan-loading-step-copy"><strong>Проверяем информацию</strong><small data-scan-detail>Сверяем тип, маршрут и Т/С</small></span>
+            </li>
+            <li class="scan-loading-step" data-scan-step="3">
+                <span class="scan-loading-step-mark" aria-hidden="true"></span>
+                <span class="scan-loading-step-copy"><strong>Формируем QR-билет</strong><small data-scan-detail>Собираем QR-код билета</small></span>
+            </li>
+        </ol>
+        <div class="scan-loading-footnote">Кью уже почти закончил</div>
+    </div>
+</section>
+
+
 <script>
     const timerElement = document.getElementById('timer-display');
     const dateElement = document.getElementById('datetime-display');
@@ -1714,6 +1765,13 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     const ticketNumberElement = document.getElementById('ticket-number');
     const priceElement = document.getElementById('price-value');
     const scannerStatusElement = document.getElementById('scan-status');
+    const scanLoadingOverlayElement = document.getElementById('scan-loading-overlay');
+    const scanLoadingMascotElement = document.getElementById('scan-loading-mascot');
+    const scanLoadingVisualElement = document.getElementById('scan-loading-visual');
+    const scanLoadingTitleElement = document.getElementById('scan-loading-title');
+    const scanLoadingSubtitleElement = document.getElementById('scan-loading-subtitle');
+    const scanLoadingProgressElement = document.getElementById('scan-loading-progress-fill');
+    const scanLoadingTransportChipElement = document.getElementById('scan-loading-transport-chip');
     const scanBalanceElement = document.getElementById('scan-balance-status');
     const scanBalanceExtraElement = document.getElementById('scan-balance-extra');
     const startOverlayElement = document.getElementById('start-overlay');
@@ -1727,6 +1785,59 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     const referralStatus = document.getElementById('start-referral-status');
     let currentReferralLink = '';
     const pageBody = document.body;
+
+    function ensureScanLoadingMascot() {
+        if (!scanLoadingMascotElement || scanLoadingMascotElement.querySelector('svg')) return;
+        const source = document.querySelector('.start-brand-icon svg');
+        if (!source) return;
+
+        const clone = source.cloneNode(true);
+        clone.setAttribute('aria-hidden', 'true');
+        const idMap = new Map();
+        clone.querySelectorAll('[id]').forEach((node) => {
+            const oldId = node.id;
+            const newId = 'scan-loader-' + oldId;
+            idMap.set(oldId, newId);
+            node.id = newId;
+            const partNames = {
+                qrideEyeLeft: 'eye-left',
+                qrideEyeRight: 'eye-right',
+                qrideScanBeam: 'scan-beam',
+                qridePongBall: 'pong-ball',
+                qridePulseRing: 'pulse-ring'
+            };
+            if (partNames[oldId]) node.setAttribute('data-qride-part', partNames[oldId]);
+        });
+        clone.querySelectorAll('*').forEach((node) => {
+            Array.from(node.attributes).forEach((attribute) => {
+                let value = attribute.value.replace(/url\(#([^)]+)\)/g, (match, id) => {
+                    return idMap.has(id) ? 'url(#' + idMap.get(id) + ')' : match;
+                });
+                if (value.charAt(0) === '#' && idMap.has(value.slice(1))) {
+                    value = '#' + idMap.get(value.slice(1));
+                }
+                if (value !== attribute.value) node.setAttribute(attribute.name, value);
+            });
+        });
+
+        const leftEye = clone.querySelector('[data-qride-part="eye-left"]');
+        const rightEye = clone.querySelector('[data-qride-part="eye-right"]');
+        if (leftEye) leftEye.setAttribute('d', 'M 151 256 C 151 204 219 204 219 256 C 219 308 151 308 151 256 Z');
+        if (rightEye) rightEye.setAttribute('d', 'M 293 256 C 293 204 361 204 361 256 C 361 308 293 308 293 256 Z');
+
+        const beam = clone.querySelector('[data-qride-part="scan-beam"]');
+        if (beam) {
+            beam.setAttribute('y', '252');
+            beam.setAttribute('height', '5');
+            beam.setAttribute('opacity', '0.8');
+        }
+        const beacon = clone.querySelector('circle');
+        if (beacon) beacon.setAttribute('data-qride-part', 'beacon');
+
+        scanLoadingMascotElement.appendChild(clone);
+    }
+    ensureScanLoadingMascot();
+
 
     let timerInterval = null;
     let startTime = null;
@@ -1934,6 +2045,104 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
     function setScannerStatus(message = '') {
         scannerStatusElement.textContent = message;
     }
+
+    const scanLoadingDefaultDetails = [
+        'QR-код распознан',
+        'Ищем маршрут и номер Т/С',
+        'Сверяем тип, маршрут и номер Т/С',
+        'Собираем QR-код билета'
+    ];
+    let scanLoadingStartedAt = 0;
+
+    function waitForScanLoading(milliseconds) {
+        return new Promise((resolve) => window.setTimeout(resolve, Math.max(0, milliseconds)));
+    }
+
+    function setScanLoadingStepDetail(index, text) {
+        const step = scanLoadingOverlayElement && scanLoadingOverlayElement.querySelector('[data-scan-step="' + index + '"] [data-scan-detail]');
+        if (step && text) step.textContent = text;
+    }
+
+    function updateScanLoadingStage(stage, detail) {
+        if (!scanLoadingOverlayElement) return;
+        const safeStage = Math.max(0, Math.min(3, Number(stage) || 0));
+        const steps = Array.from(scanLoadingOverlayElement.querySelectorAll('[data-scan-step]'));
+        const titles = [
+            'Кью считывает QR-код',
+            'Кью получает данные транспорта',
+            'Кью проверяет информацию',
+            'Кью формирует QR-билет'
+        ];
+        const subtitles = [
+            'Распознаём транспортный код…',
+            'Находим маршрут и номер транспортного средства…',
+            'Проверяем полученные сведения…',
+            'Собираем QR-код для отображения…'
+        ];
+        steps.forEach((step, index) => {
+            step.classList.toggle('is-complete', index < safeStage);
+            step.classList.toggle('is-active', index === safeStage);
+        });
+        if (detail) setScanLoadingStepDetail(safeStage, detail);
+        if (scanLoadingTitleElement) scanLoadingTitleElement.textContent = titles[safeStage];
+        if (scanLoadingSubtitleElement) scanLoadingSubtitleElement.textContent = subtitles[safeStage];
+        if (scanLoadingVisualElement) scanLoadingVisualElement.dataset.stage = String(safeStage);
+        if (scanLoadingOverlayElement) scanLoadingOverlayElement.dataset.stage = String(safeStage);
+        if (scanLoadingProgressElement) scanLoadingProgressElement.style.width = [12, 38, 65, 88][safeStage] + '%';
+    }
+
+    function beginScanLoading() {
+        if (!scanLoadingOverlayElement) return performance.now();
+        ensureScanLoadingMascot();
+        scanLoadingStartedAt = performance.now();
+        Array.from(scanLoadingOverlayElement.querySelectorAll('[data-scan-step]')).forEach((step, index) => {
+            step.classList.toggle('is-active', index === 0);
+            step.classList.remove('is-complete');
+        });
+        scanLoadingDefaultDetails.forEach((detail, index) => setScanLoadingStepDetail(index, detail));
+        if (scanLoadingTransportChipElement) scanLoadingTransportChipElement.textContent = 'QR-код распознан';
+        if (scanLoadingProgressElement) scanLoadingProgressElement.style.width = '9%';
+        if (scanLoadingTitleElement) scanLoadingTitleElement.textContent = 'Кью считывает QR-код';
+        if (scanLoadingSubtitleElement) scanLoadingSubtitleElement.textContent = 'Распознаём транспортный код…';
+        if (scanLoadingVisualElement) scanLoadingVisualElement.dataset.stage = '0';
+        scanLoadingOverlayElement.dataset.stage = '0';
+        scanLoadingOverlayElement.setAttribute('aria-busy', 'true');
+        scanLoadingOverlayElement.hidden = false;
+        scanLoadingOverlayElement.classList.remove('is-leaving');
+        pageBody.classList.add('scan-loading-open');
+        window.requestAnimationFrame(() => scanLoadingOverlayElement.classList.add('is-visible'));
+        return scanLoadingStartedAt;
+    }
+
+    function completeScanLoading(transportLabel) {
+        if (!scanLoadingOverlayElement) return;
+        Array.from(scanLoadingOverlayElement.querySelectorAll('[data-scan-step]')).forEach((step) => {
+            step.classList.remove('is-active');
+            step.classList.add('is-complete');
+        });
+        if (scanLoadingProgressElement) scanLoadingProgressElement.style.width = '100%';
+        if (scanLoadingVisualElement) scanLoadingVisualElement.dataset.stage = '4';
+        scanLoadingOverlayElement.dataset.stage = '4';
+        if (scanLoadingTitleElement) scanLoadingTitleElement.textContent = 'Билет готов!';
+        if (scanLoadingSubtitleElement) {
+            scanLoadingSubtitleElement.textContent = transportLabel
+                ? transportLabel + ' · QR-код можно предъявлять'
+                : 'QR-код готов к предъявлению';
+        }
+    }
+
+    async function hideScanLoading() {
+        if (!scanLoadingOverlayElement || scanLoadingOverlayElement.hidden) return;
+        scanLoadingOverlayElement.setAttribute('aria-busy', 'false');
+        scanLoadingOverlayElement.classList.remove('is-visible');
+        scanLoadingOverlayElement.classList.add('is-leaving');
+        await waitForScanLoading(210);
+        scanLoadingOverlayElement.hidden = true;
+        scanLoadingOverlayElement.classList.remove('is-leaving');
+        pageBody.classList.remove('scan-loading-open');
+        scanLoadingStartedAt = 0;
+    }
+
 
     function refreshScanButton() {
         const balanceIsEmpty = scanBalanceAssigned && currentScanBalance <= 0 && !scanAccessUnlimited;
@@ -2386,24 +2595,60 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             return false;
         }
 
+        let loadingStarted = false;
         try {
             const paytagid = new URL(scannedUrl).searchParams.get('paytagid') || '';
             if (!/^[0-9A-Za-z_-]{6,64}$/.test(paytagid)) {
                 throw new Error('В QR-коде отсутствует корректный paytagid.');
             }
 
-            setScannerStatus('QR распознан. Загружаем данные с сервера…');
-            const data = await fetchPaytagFromBackend(paytagid);
+            const loadingStartedAt = beginScanLoading();
+            loadingStarted = Boolean(scanLoadingOverlayElement);
+            const dataPromise = fetchPaytagFromBackend(paytagid).then(
+                (data) => ({ data }),
+                (error) => ({ error })
+            );
+
+            // Let Q acknowledge the scanned code while the real lookup runs in parallel.
+            await waitForScanLoading(250);
+            updateScanLoadingStage(1, 'Получаем сведения о транспорте…');
+
+            const result = await dataPromise;
+            if (result.error) throw result.error;
+            const data = result.data;
             if (!data.vehicleType || !data.routeNumber || !data.vehicleNumber) {
                 throw new Error('Сервер НСПК не вернул все данные транспорта: тип, маршрут и номер Т/С.');
             }
 
+            const route = String(data.routeNumber || '').replace(/^№\s*/, '').trim();
+            const transportLabel = (data.vehicleType || 'Транспорт') + (route ? ' №' + route : '');
+            const vehicleLabel = data.vehicleNumber ? ' · Т/С ' + data.vehicleNumber : '';
+            const transportDetails = transportLabel + vehicleLabel;
+            setScanLoadingStepDetail(1, transportDetails);
+            if (scanLoadingTransportChipElement) scanLoadingTransportChipElement.textContent = transportLabel;
+
+            updateScanLoadingStage(2, transportDetails + ' · данные получены');
+            await waitForScanLoading(235);
+
             updateScanBalance(data.scanBalance, data.subscriptionUntil, data.unlimited, data.subscriptionActive);
+            updateScanLoadingStage(3, 'Кью собирает QR-билет…');
             applyTransportData(data);
             updateContinueTicketButton(Math.max(currentScanCount, 1));
-            setScannerStatus('Данные загружены. Основная страница обновлена.');
+            setScanLoadingStepDetail(3, 'QR-код сформирован');
+
+            // A fast cache hit still gets a short, polished interstitial. Slow lookups
+            // use their real waiting time, so no extra fixed delay is added afterwards.
+            const minimumVisibleTime = 1450;
+            await waitForScanLoading(Math.max(0, minimumVisibleTime - (performance.now() - loadingStartedAt)));
+            completeScanLoading(transportDetails);
+            await waitForScanLoading(170);
+
+            closeStartOverlay();
+            await hideScanLoading();
+            setScannerStatus('');
             return true;
         } catch (error) {
+            if (loadingStarted) await hideScanLoading();
             console.warn('QR не удалось обработать; продолжаем сканирование:', error);
             setScannerStatus('');
             return false;
@@ -3714,7 +3959,345 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         const planeSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="130 100 590 300" width="590" height="300">
           <style>
              .plane-body{fill:#0052EE}.plane-body-dark{fill:#0052EE}.plane-body-light{fill:#69b5ff}.plane-glass{fill:#24364a}.plane-wing{fill:#0052EE}.plane-outline{stroke:#1e293b;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}.plane-strut{stroke:#1e293b;stroke-width:3.5;stroke-linecap:round;fill:none}.plane-tire{fill:#1e293b}
-          </style>
+          
+/* QRide scan interstitial: Q assembles the real transport result. */
+body.scan-loading-open { overflow: hidden !important; }
+.scan-loading-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 45000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: calc(14px + env(safe-area-inset-top)) 20px calc(14px + env(safe-area-inset-bottom));
+    background:
+        radial-gradient(ellipse at 50% 28%, rgba(0,82,238,.105) 0%, rgba(0,82,238,0) 42%),
+        linear-gradient(180deg, #fbfdff 0%, #f1f6ff 100%);
+    color: #20334d;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .22s ease, visibility .22s ease;
+    -webkit-font-smoothing: antialiased;
+}
+.scan-loading-overlay[hidden] { display: none !important; }
+.scan-loading-overlay.is-visible { opacity: 1; visibility: visible; pointer-events: auto; }
+.scan-loading-overlay.is-leaving { opacity: 0; visibility: visible; pointer-events: none; }
+.scan-loading-content {
+    width: 100%;
+    max-width: 420px;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    min-width: 0;
+}
+.scan-loading-brandline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 2px;
+    color: #0052EE;
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 900;
+    letter-spacing: 1.7px;
+}
+.scan-loading-brandline-mark {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 7px;
+    border-radius: 50%;
+    background: #ffbf45;
+    box-shadow: 0 0 0 4px rgba(255,191,69,.17);
+    animation: scanLoadingBeacon 1.25s ease-in-out infinite;
+}
+.scan-loading-visual {
+    position: relative;
+    width: 100%;
+    height: 190px;
+    flex: 0 0 190px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    isolation: isolate;
+}
+.scan-loading-orbit {
+    position: absolute;
+    width: 174px;
+    height: 174px;
+    border: 1px dashed rgba(0,82,238,.22);
+    border-radius: 50%;
+    animation: scanLoadingOrbit 15s linear infinite;
+}
+.scan-loading-orbit::before,
+.scan-loading-orbit::after {
+    position: absolute;
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #6aa4ff;
+    box-shadow: 0 0 0 5px rgba(106,164,255,.12);
+}
+.scan-loading-orbit::before { top: 19px; left: 20px; }
+.scan-loading-orbit::after { right: 8px; bottom: 39px; width: 6px; height: 6px; background: #ffbf45; }
+.scan-loading-mascot {
+    position: relative;
+    z-index: 2;
+    width: 151px;
+    height: 151px;
+    flex: 0 0 151px;
+    filter: drop-shadow(0 15px 20px rgba(0,82,238,.18));
+    animation: scanLoadingFloat 2.35s ease-in-out infinite;
+}
+.scan-loading-mascot svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.scan-loading-mascot [data-qride-part="eye-left"],
+.scan-loading-mascot [data-qride-part="eye-right"] {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: scanLoadingBlink 4.4s ease-in-out infinite;
+}
+.scan-loading-mascot [data-qride-part="eye-right"] { animation-delay: .06s; }
+.scan-loading-mascot [data-qride-part="beacon"] {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: scanLoadingBeacon 1.25s ease-in-out infinite;
+}
+.scan-loading-mascot [data-qride-part="scan-beam"] {
+    opacity: .76;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: scanLoadingBeam 1.65s ease-in-out infinite;
+}
+.scan-loading-chip {
+    position: absolute;
+    z-index: 4;
+    left: 3%;
+    bottom: 18px;
+    max-width: 142px;
+    overflow: hidden;
+    padding: 7px 10px;
+    border: 1px solid #d8e6fb;
+    border-radius: 11px;
+    background: rgba(255,255,255,.94);
+    box-shadow: 0 7px 18px rgba(33,75,130,.08);
+    color: #2863ae;
+    font-size: 10px;
+    line-height: 1.2;
+    font-weight: 850;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: .88;
+    transform: translateY(3px);
+    transition: opacity .28s ease, transform .28s ease;
+}
+.scan-loading-visual[data-stage="2"] .scan-loading-chip,
+.scan-loading-visual[data-stage="3"] .scan-loading-chip,
+.scan-loading-visual[data-stage="4"] .scan-loading-chip {
+    opacity: 1;
+    transform: translateY(0);
+}
+.scan-loading-ticket {
+    position: absolute;
+    z-index: 3;
+    right: 4%;
+    bottom: 3px;
+    width: 63px;
+    padding: 8px 7px 7px;
+    border: 1px solid #e4ebf5;
+    border-radius: 11px;
+    background: #fff;
+    box-shadow: 0 10px 22px rgba(29,65,112,.13);
+    opacity: 0;
+    transform: translate3d(12px,10px,0) rotate(9deg) scale(.78);
+    transition: opacity .32s ease, transform .42s cubic-bezier(.2,.75,.25,1);
+}
+.scan-loading-visual[data-stage="3"] .scan-loading-ticket,
+.scan-loading-visual[data-stage="4"] .scan-loading-ticket {
+    opacity: 1;
+    transform: translate3d(0,0,0) rotate(5deg) scale(1);
+}
+.scan-loading-ticket-label {
+    display: block;
+    margin-bottom: 5px;
+    color: #7b8ba1;
+    font-size: 6px;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: .8px;
+    text-align: center;
+}
+.scan-loading-ticket svg { display: block; width: 100%; height: auto; }
+.scan-loading-heading { margin-top: 1px; text-align: center; }
+.scan-loading-title {
+    margin: 0;
+    color: #1d304b;
+    font-size: 23px;
+    line-height: 1.18;
+    font-weight: 900;
+    letter-spacing: -.45px;
+}
+.scan-loading-subtitle {
+    min-height: 21px;
+    margin: 7px 0 0;
+    color: #718198;
+    font-size: 13px;
+    line-height: 1.4;
+    font-weight: 400;
+}
+.scan-loading-progress {
+    width: 100%;
+    height: 5px;
+    margin-top: 17px;
+    overflow: hidden;
+    border-radius: 99px;
+    background: #dfe9f7;
+}
+.scan-loading-progress-fill {
+    width: 9%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #4b94ff 0%, #0052EE 100%);
+    box-shadow: 0 0 10px rgba(0,82,238,.22);
+    transition: width .34s cubic-bezier(.2,.65,.3,1);
+}
+.scan-loading-steps {
+    display: grid;
+    gap: 7px;
+    margin: 15px 0 0;
+    padding: 0;
+    list-style: none;
+    text-align: left;
+}
+.scan-loading-step {
+    min-width: 0;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 2px 0;
+    color: #9aa9bc;
+    transition: color .2s ease, opacity .2s ease;
+}
+.scan-loading-step-mark {
+    position: relative;
+    width: 21px;
+    height: 21px;
+    flex: 0 0 21px;
+    border: 1.5px solid #ccd8e8;
+    border-radius: 50%;
+    background: #fff;
+    transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.scan-loading-step.is-active { color: #2b4565; }
+.scan-loading-step.is-active .scan-loading-step-mark {
+    border: 2px solid #0052EE;
+    border-right-color: #c4d9ff;
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(0,82,238,.08);
+    animation: scanLoadingSpin .9s linear infinite;
+}
+.scan-loading-step.is-complete { color: #526b88; }
+.scan-loading-step.is-complete .scan-loading-step-mark {
+    border-color: #0052EE;
+    background: #0052EE;
+    box-shadow: none;
+    animation: none;
+}
+.scan-loading-step.is-complete .scan-loading-step-mark::after {
+    position: absolute;
+    top: 4px;
+    left: 6px;
+    width: 6px;
+    height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    content: "";
+    transform: rotate(45deg);
+}
+.scan-loading-step-copy { min-width: 0; display: flex; flex: 1 1 auto; flex-direction: column; gap: 1px; }
+.scan-loading-step-copy strong {
+    overflow: hidden;
+    color: inherit;
+    font-size: 13px;
+    line-height: 1.24;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.scan-loading-step-copy small {
+    overflow: hidden;
+    color: #91a0b3;
+    font-size: 10px;
+    line-height: 1.25;
+    font-weight: 400;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.scan-loading-step.is-active .scan-loading-step-copy small { color: #6d84a2; }
+.scan-loading-step.is-complete .scan-loading-step-copy small { color: #8a9ab0; }
+.scan-loading-footnote {
+    margin-top: 12px;
+    color: #a0adbd;
+    font-size: 10px;
+    line-height: 1.2;
+    text-align: center;
+}
+@keyframes scanLoadingFloat {
+    0%,100% { transform: translateY(1px) rotate(-1deg); }
+    50% { transform: translateY(-6px) rotate(1deg); }
+}
+@keyframes scanLoadingBlink {
+    0%,43%,47%,100% { transform: scaleY(1); }
+    45% { transform: scaleY(.08); }
+}
+@keyframes scanLoadingBeacon {
+    0%,100% { opacity: .82; transform: scale(.94); }
+    50% { opacity: 1; transform: scale(1.12); }
+}
+@keyframes scanLoadingBeam {
+    0% { transform: translateY(-72px); opacity: .15; }
+    35% { opacity: .82; }
+    100% { transform: translateY(72px); opacity: .15; }
+}
+@keyframes scanLoadingOrbit { to { transform: rotate(360deg); } }
+@keyframes scanLoadingSpin { to { transform: rotate(360deg); } }
+@media(max-height:700px) {
+    .scan-loading-overlay { padding-top: calc(8px + env(safe-area-inset-top)); padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+    .scan-loading-brandline { margin-bottom: 0; }
+    .scan-loading-visual { height: 156px; flex-basis: 156px; }
+    .scan-loading-orbit { width: 142px; height: 142px; }
+    .scan-loading-mascot { width: 128px; height: 128px; flex-basis: 128px; }
+    .scan-loading-title { font-size: 21px; }
+    .scan-loading-progress { margin-top: 12px; }
+    .scan-loading-steps { gap: 4px; margin-top: 10px; }
+    .scan-loading-step { min-height: 33px; }
+    .scan-loading-footnote { margin-top: 7px; }
+}
+@media(max-width:360px) {
+    .scan-loading-overlay { padding-left: 17px; padding-right: 17px; }
+    .scan-loading-visual { height: 170px; flex-basis: 170px; }
+    .scan-loading-mascot { width: 138px; height: 138px; flex-basis: 138px; }
+    .scan-loading-ticket { right: 1%; }
+    .scan-loading-chip { left: 0; max-width: 125px; }
+}
+@media(prefers-reduced-motion:reduce) {
+    .scan-loading-overlay,
+    .scan-loading-progress-fill,
+    .scan-loading-chip,
+    .scan-loading-ticket { transition: none !important; }
+    .scan-loading-orbit,
+    .scan-loading-mascot,
+    .scan-loading-mascot [data-qride-part],
+    .scan-loading-brandline-mark,
+    .scan-loading-step.is-active .scan-loading-step-mark { animation: none !important; }
+}
+
+</style>
           <g transform="translate(40 20)">
             <path class="plane-body-dark plane-outline" d="M600 240L635 125Q655 115 670 130Q685 150 675 200L665 240Z"/>
             <path class="plane-body plane-outline" d="M590 240L625 130Q645 120 660 135Q670 150 660 240Z"/>
