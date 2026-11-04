@@ -1925,6 +1925,9 @@ app.post('/api/paytag', async (req, res) => {
     }
     const currentEntitlement = getUserEntitlements.get(userId);
     const scanBalance = getDisplayedScanBalance(currentEntitlement);
+    const subscriptionUntil = currentEntitlement?.subscription_until || null;
+    const subscriptionActive = Boolean(subscriptionUntil && Date.parse(subscriptionUntil) > Date.now());
+    const unlimited = Number(currentEntitlement?.unlimited || 0) === 1;
 
     const scannedAt = new Date().toISOString();
     db.prepare('UPDATE users SET last_scan_at = ?, last_transport_number = ?, game_attempts = COALESCE(game_attempts, 0) + 3 WHERE vk_id = ?')
@@ -1957,8 +1960,8 @@ app.post('/api/paytag', async (req, res) => {
       scannedAt: scannedAt,
       source: 'direct-api',
       scanBalance,
-      subscriptionUntil: balanceRow?.subscription_until || null,
-      unlimited: Number(balanceRow?.unlimited || 0) === 1,
+      subscriptionUntil,
+      unlimited,
       subscriptionActive
     });
   } catch (error) {
