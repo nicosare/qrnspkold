@@ -2980,7 +2980,7 @@ body.scan-loading-open { overflow: hidden !important; }
                 throw new Error('Сервер НСПК не вернул все данные транспорта: тип, маршрут и номер Т/С.');
             }
 
-            const route = String(data.routeNumber || '').replace(/^№\\s*/, '').trim();
+            const route = String(data.routeNumber || '').replace(/^№\s*/, '').trim();
             const transportLabel = (data.vehicleType || 'Транспорт') + (route ? ' №' + route : '');
             const vehicleLabel = data.vehicleNumber ? ' · Т/С ' + data.vehicleNumber : '';
             const transportDetails = transportLabel + vehicleLabel;
