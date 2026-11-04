@@ -2952,6 +2952,11 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
         if (panel) panel.hidden = true;
         if (frame) frame.src = 'about:blank';
         document.body.classList.remove('start-overlay-open');
+        const startScreen = document.getElementById('start-overlay');
+        if (startScreen) {
+          startScreen.scrollTop = 0;
+          window.requestAnimationFrame(() => { startScreen.scrollTop = 0; });
+        }
       });
     }
   }
