@@ -2372,7 +2372,10 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
             vehicleNumber: cleanCapturedValue(String(source.vehicleNumber || '')),
             price: Number.isFinite(source.price) ? source.price : null,
             scannedAt: payload.scannedAt || null,
-            scanBalance: Object.prototype.hasOwnProperty.call(payload, 'scanBalance') ? payload.scanBalance : null
+            scanBalance: Object.prototype.hasOwnProperty.call(payload, 'scanBalance') ? payload.scanBalance : null,
+            subscriptionUntil: payload.subscriptionUntil || null,
+            unlimited: payload.unlimited === true,
+            subscriptionActive: payload.subscriptionActive === true
         };
     }
 
