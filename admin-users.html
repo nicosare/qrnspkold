@@ -538,9 +538,13 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
          :'—';
        const summary=details.querySelector('summary');
        if(summary)summary.textContent='История сканов · '+Number(data.total||0);
-       details.dataset.loaded='0';
-       details.open=false;
-       details.open=true;
+       const deletedRow=Array.from(details.querySelectorAll('[data-scan-row]')).find(row=>String(row.dataset.scanRow)===scanId);
+       if(deletedRow)deletedRow.remove();
+       if(Number(data.total||0)===0){
+         const list=details.querySelector('.scan-history-list');
+         if(list)list.innerHTML='<div class="scan-history-empty">Сканов пока нет.</div>';
+       }
+       details.dataset.loaded='1';
      }catch(error){
        deleteScanButton.disabled=false;deleteScanButton.textContent='Удалить запись';
        window.alert(error.message);
