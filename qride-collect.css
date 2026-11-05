@@ -183,22 +183,22 @@
     pointer-events: none;
 }
 .qride-collect-route-board--tram {
-    left: 20%;
-    top: 28%;
-    width: 20%;
-    height: 10%;
+    left: 26%;
+    top: 31%;
+    width: 19%;
+    height: 8%;
 }
 .qride-collect-route-board--bus {
-    left: 23%;
-    top: 23%;
-    width: 21%;
-    height: 11%;
+    left: 22%;
+    top: 32%;
+    width: 22%;
+    height: 8%;
 }
 .qride-collect-route-board--trolley {
-    left: 39.5%;
-    top: 31%;
+    left: 24%;
+    top: 38%;
     width: 21%;
-    height: 11%;
+    height: 8%;
 }
 .qride-collect-route-board--long { font-size: 9px; letter-spacing: -.5px; }
 
