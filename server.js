@@ -102,6 +102,20 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_scan_history_user_time
     ON scan_history(vk_id, scanned_at DESC);
+  CREATE TABLE IF NOT EXISTS scan_energy_rewards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    scan_history_id INTEGER NOT NULL UNIQUE,
+    vk_id TEXT NOT NULL,
+    paytag_id TEXT NOT NULL,
+    rewarded_at TEXT NOT NULL,
+    day_key TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_scan_energy_rewards_user_day
+    ON scan_energy_rewards(vk_id, day_key);
+  CREATE INDEX IF NOT EXISTS idx_scan_energy_rewards_user_code_day
+    ON scan_energy_rewards(vk_id, paytag_id, day_key, rewarded_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_scan_energy_rewards_user_code_time
+    ON scan_energy_rewards(vk_id, paytag_id, rewarded_at DESC);
   CREATE TABLE IF NOT EXISTS scan_credit_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     vk_id TEXT NOT NULL,
@@ -341,6 +355,26 @@ db.prepare(`
 `).run(new Date().toISOString());
 db.prepare('UPDATE users SET welcome_bonus_granted = 1 WHERE welcome_bonus_granted = 0').run();
 
+// Before this policy existed, every successful scan granted +3 game attempts.
+ // Seed the reward ledger once from that history so scans made earlier today
+ // still count toward the new limits and cooldown.
+const scanEnergyMigrationMarker = 'scan_energy_rewards_migrated_v1';
+if (!db.prepare('SELECT 1 FROM app_settings WHERE setting_key = ?').get(scanEnergyMigrationMarker)) {
+  db.transaction(() => {
+    db.exec(`
+      INSERT OR IGNORE INTO scan_energy_rewards
+        (scan_history_id, vk_id, paytag_id, rewarded_at, day_key)
+      SELECT id, vk_id, paytag_id, scanned_at, date(scanned_at, '+5 hours')
+      FROM scan_history
+      WHERE paytag_id IS NOT NULL AND paytag_id <> '';
+    `);
+    db.prepare(`
+      INSERT OR IGNORE INTO app_settings (setting_key, setting_value, updated_at)
+      VALUES (?, ?, ?)
+    `).run(scanEnergyMigrationMarker, 'complete', new Date().toISOString());
+  })();
+}
+
 const upsertUser = db.prepare(`
   INSERT INTO users (vk_id, first_name, last_name, photo_url, first_seen, last_seen, visit_count, scan_balance, welcome_bonus_granted)
   VALUES (@vk_id, @first_name, @last_name, @photo_url, @now, @now, 1, 3, 1)
@@ -384,6 +418,34 @@ const recordScan = db.prepare(`
     (vk_id, scanned_at, paytag_id, transport_type, route_number, vehicle_number, price)
   VALUES (?, ?, ?, ?, ?, ?, ?)
 `);
+const countScanEnergyRewardsForCodeToday = db.prepare(`
+  SELECT COUNT(*) AS count
+  FROM scan_energy_rewards
+  WHERE vk_id = ? AND paytag_id = ? AND day_key = ?
+`);
+const countScanEnergyRewardsToday = db.prepare(`
+  SELECT COUNT(*) AS count
+  FROM scan_energy_rewards
+  WHERE vk_id = ? AND day_key = ?
+`);
+const getLastScanEnergyReward = db.prepare(`
+  SELECT rewarded_at
+  FROM scan_energy_rewards
+  WHERE vk_id = ? AND paytag_id = ?
+  ORDER BY rewarded_at DESC, id DESC
+  LIMIT 1
+`);
+const recordScanEnergyReward = db.prepare(`
+  INSERT INTO scan_energy_rewards
+    (scan_history_id, vk_id, paytag_id, rewarded_at, day_key)
+  VALUES (?, ?, ?, ?, ?)
+`);
+const grantScanEnergy = db.prepare(
+  'UPDATE users SET game_attempts = COALESCE(game_attempts, 0) + 3 WHERE vk_id = ?'
+);
+const updateUserAfterScan = db.prepare(
+  'UPDATE users SET last_scan_at = ?, last_transport_number = ? WHERE vk_id = ?'
+);
 const getReferralForInvitee = db.prepare(
   'SELECT inviter_vk_id, rewarded_at FROM referrals WHERE invitee_vk_id = ?'
 );
@@ -2032,8 +2094,6 @@ app.post('/api/paytag', async (req, res) => {
     : Number(balanceRow.scan_balance);
   const subscriptionActive = Boolean(balanceRow?.subscription_until && Date.parse(balanceRow.subscription_until) > Date.now());
   const hasUnlimited = Number(balanceRow?.unlimited || 0) === 1 || subscriptionActive;
-  const dayKey = yekaterinburgDayKey();
-
   if (!hasUnlimited && (!Number.isSafeInteger(balanceBefore) || balanceBefore <= 0)) {
     return res.status(402).json({
       ok: false,
@@ -2125,15 +2185,34 @@ app.post('/api/paytag', async (req, res) => {
     const unlimited = Number(currentEntitlement?.unlimited || 0) === 1;
 
     const scannedAt = new Date().toISOString();
-    db.prepare('UPDATE users SET last_scan_at = ?, last_transport_number = ?, game_attempts = COALESCE(game_attempts, 0) + 3 WHERE vk_id = ?')
-      .run(scannedAt, String(data.vehicleNumber || '').trim() || null, userId);
+    const rewardDayKey = yekaterinburgDayKey(new Date(scannedAt));
+    let energyRewardGranted = false;
     let referralRewarded = false;
-    db.transaction(() => {
-      recordScan.run(
+    db.transaction.immediate(() => {
+      const codeRewardCount = Number(countScanEnergyRewardsForCodeToday.get(userId, paytagid, rewardDayKey)?.count || 0);
+      const dayRewardCount = Number(countScanEnergyRewardsToday.get(userId, rewardDayKey)?.count || 0);
+      const lastReward = getLastScanEnergyReward.get(userId, paytagid);
+      const lastRewardAt = Date.parse(lastReward?.rewarded_at || '');
+      const cooldownPassed = !Number.isFinite(lastRewardAt) ||
+        Date.parse(scannedAt) - lastRewardAt >= 2 * 60 * 1000;
+
+      energyRewardGranted = codeRewardCount < 3 && dayRewardCount < 15 && cooldownPassed;
+
+      updateUserAfterScan.run(
+        scannedAt,
+        String(data.vehicleNumber || '').trim() || null,
+        userId
+      );
+      const recordedScan = recordScan.run(
         userId, scannedAt, paytagid, String(data.transportType || ''),
         String(data.routeNumber || ''), String(data.vehicleNumber || ''),
         Number.isFinite(data.price) ? data.price : null
       );
+
+      if (energyRewardGranted) {
+        recordScanEnergyReward.run(recordedScan.lastInsertRowid, userId, paytagid, scannedAt, rewardDayKey);
+        grantScanEnergy.run(userId);
+      }
 
       const referral = getReferralForInvitee.get(userId);
       if (referral && !referral.rewarded_at && getUserExists.get(referral.inviter_vk_id)) {
@@ -2158,6 +2237,7 @@ app.post('/api/paytag', async (req, res) => {
       scanBalance,
       subscriptionUntil,
       unlimited,
+      energyRewardGranted,
       subscriptionActive
     });
   } catch (error) {
