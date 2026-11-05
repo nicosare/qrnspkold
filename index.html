@@ -5405,11 +5405,33 @@ body.scan-loading-open { overflow: hidden !important; }
     }
     /* Keep quick actions below the balance and away from VK/Android system controls. */
     #qride-compact-header {
-        grid-template-columns: 40px 40px minmax(0, 1fr);
+        grid-template-columns: 40px max-content minmax(0, 1fr);
         width: min(250px, calc(100% - 32px));
         min-height: 0;
         padding: 10px 13px;
         gap: 7px;
+    }
+    #qride-compact-header .compact-ticket {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: auto;
+        min-width: 96px;
+        height: 36px;
+        min-height: 36px;
+        padding: 0 11px;
+        border: 1px solid #e2e8f0;
+        border-radius: 11px;
+        color: #52647a;
+        background: #fff;
+        font: 700 13px/1 'Circe', sans-serif;
+        white-space: nowrap;
+    }
+    #qride-compact-header .compact-ticket svg {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 16px;
     }
     #qride-compact-header .compact-balance {
         grid-column: 1 / -1;
@@ -5456,13 +5478,31 @@ body.scan-loading-open { overflow: hidden !important; }
 
     balanceBox.append(eyebrow, compactStatus, compactExtra);
 
-    function makeAction(source, className, label) {
+    function makeAction(source, className, label, visibleText) {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'compact-action ' + className;
         button.setAttribute('aria-label', label);
-        const icon = source.querySelector('svg');
-        if (icon) button.appendChild(icon.cloneNode(true));
+
+        if (visibleText) {
+            const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            icon.setAttribute('viewBox', '0 0 24 24');
+            icon.setAttribute('fill', 'none');
+            icon.setAttribute('stroke', 'currentColor');
+            icon.setAttribute('stroke-width', '2');
+            icon.setAttribute('stroke-linecap', 'round');
+            icon.setAttribute('stroke-linejoin', 'round');
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', 'M19 12H5m7 7-7-7 7-7');
+            icon.appendChild(path);
+            const text = document.createElement('span');
+            text.textContent = visibleText;
+            button.append(icon, text);
+        } else {
+            const icon = source.querySelector('svg');
+            if (icon) button.appendChild(icon.cloneNode(true));
+        }
+
         button.addEventListener('click', function () {
             if (!source.disabled) source.click();
         });
@@ -5470,7 +5510,7 @@ body.scan-loading-open { overflow: hidden !important; }
     }
 
     const compactNew = makeAction(newButton, 'compact-new', 'Сканировать новый QR-код');
-    const compactTicket = makeAction(ticketButton, 'compact-ticket', 'Перейти к текущему билету');
+    const compactTicket = makeAction(ticketButton, 'compact-ticket', 'Перейти к текущему билету', 'К билету');
     header.append(balanceBox, compactNew, compactTicket);
     overlay.insertBefore(header, overlay.firstChild);
 
