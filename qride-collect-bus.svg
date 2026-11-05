@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180" fill="none">
+<defs>
+  <linearGradient id="busFront" x1="48" y1="27" x2="160" y2="150" gradientUnits="userSpaceOnUse"><stop stop-color="#9CE5A5"/><stop offset=".42" stop-color="#45B96C"/><stop offset="1" stop-color="#168B4C"/></linearGradient>
+  <linearGradient id="busSide" x1="153" y1="44" x2="211" y2="145" gradientUnits="userSpaceOnUse"><stop stop-color="#65CD83"/><stop offset=".58" stop-color="#209C57"/><stop offset="1" stop-color="#0E6B42"/></linearGradient>
+  <linearGradient id="busGlass" x1="70" y1="49" x2="145" y2="106" gradientUnits="userSpaceOnUse"><stop stop-color="#3C6070"/><stop offset=".48" stop-color="#18394B"/><stop offset="1" stop-color="#10293C"/></linearGradient>
+  <linearGradient id="busRoof" x1="61" y1="25" x2="157" y2="47" gradientUnits="userSpaceOnUse"><stop stop-color="#E2F8E3"/><stop offset="1" stop-color="#78C98A"/></linearGradient>
+  <linearGradient id="busBumper" x1="64" y1="135" x2="64" y2="154" gradientUnits="userSpaceOnUse"><stop stop-color="#C9EFD0"/><stop offset="1" stop-color="#24734D"/></linearGradient>
+  <filter id="busShadow" x="21" y="13" width="207" height="168" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="5"/></filter>
+</defs>
+<ellipse cx="126" cy="158" rx="80" ry="9" fill="#26384B" opacity=".14" filter="url(#busShadow)"/>
+<path d="M151 44 192 57Q202 61 203 73L199 132Q198 143 184 146L148 139 145 49Z" fill="url(#busSide)" stroke="#16824B" stroke-width="2"/>
+<path d="M161 66 190 75 189 100 160 95Z" fill="#24475B" stroke="#9DE7AD" stroke-width="2"/>
+<path d="M160 105 188 110 187 129 158 124Z" fill="#31596A" stroke="#8AD99C" stroke-width="1.5"/>
+<path d="M51 42Q52 27 67 24L133 23Q151 24 157 41L157 131Q155 146 140 150L56 147Q42 145 42 131L43 54Q43 46 51 42Z" fill="url(#busFront)" stroke="#16834B" stroke-width="2"/>
+<path d="M60 34Q64 27 75 27L136 27Q146 28 151 38L153 49 57 49Z" fill="url(#busRoof)"/>
+<path d="M60 55Q62 48 73 48L139 48Q148 49 150 59L149 102 58 100Z" fill="url(#busGlass)" stroke="#D6F6DC" stroke-width="2"/>
+<path d="M105 50 107 101" stroke="#A9C9D5" stroke-width="2" opacity=".55"/>
+<path d="M66 57 94 52 92 96 63 97Z" fill="#B8DFF0" opacity=".13"/>
+<rect x="96" y="30" width="52" height="17" rx="4" fill="#112F3C" stroke="#C5F2CC" stroke-width="1.2"/>
+<path d="M100 34H144" stroke="#8EB5BE" stroke-width="1" opacity=".5"/>
+<path d="M55 107 150 110 149 130Q148 138 138 140L57 137Q50 136 50 128Z" fill="#259B58"/>
+<path d="M57 110 148 114" stroke="#C7F4CE" stroke-width="2" opacity=".75"/>
+<path d="M61 118Q67 113 75 117L83 124Q85 128 80 130L61 128Z" fill="#E8F8E9"/>
+<path d="M119 121 145 121" stroke="#0F7042" stroke-width="3" stroke-linecap="round" opacity=".6"/>
+<path d="M45 132 154 137 153 144Q151 151 141 152L56 148Q46 147 44 140Z" fill="url(#busBumper)"/>
+<path d="M46 139 153 144" stroke="#E1F7E4" stroke-width="2" opacity=".8"/>
+<path d="M164 49 194 61" stroke="#C7F4CE" stroke-width="2" opacity=".72"/>
+<path d="M69 145 73 157M139 149 143 159" stroke="#344454" stroke-width="5" stroke-linecap="round"/>
+<ellipse cx="73" cy="156" rx="9" ry="5" fill="#27394A"/><ellipse cx="144" cy="158" rx="9" ry="5" fill="#27394A"/>
+<path d="M54 44 57 35" stroke="#F0FFF0" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+<path d="M61 28Q82 20 111 22" stroke="#F5FFF4" stroke-width="2" stroke-linecap="round" opacity=".65"/>
+</svg>
