@@ -85,32 +85,26 @@
     const trips = Math.max(1, Math.trunc(Number(card.trips) || 0));
     const tripLabel = pluralizeTrips(trips);
     const label = typeKey + ' №' + route + ', ' + trips + ' ' + tripLabel;
-    const longRouteClass = route.length > 4 ? ' qride-collect-route-board--long' : '';
-    const longCaptionClass = route.length > 6 ? ' qride-collect-card-route--long' : '';
+    const longCaptionClass = route.length > 5 ? ' qride-collect-card-route--long' : '';
 
     return '<article class="qride-collect-card qride-collect-card--' + config.className + '" ' +
-      'aria-label="' + escapeHtml(label) + '" style="animation-delay:' + Math.min(index * 35, 210) + 'ms">' +
+      'aria-label="' + escapeHtml(label) + '" style="animation-delay:' + Math.min(index * 25, 150) + 'ms">' +
         '<div class="qride-collect-card-art">' +
           '<img class="qride-collect-vehicle" src="' + config.image + '" alt="" loading="lazy" decoding="async">' +
-          '<span class="qride-collect-route-board qride-collect-route-board--' + config.className + longRouteClass + '" aria-hidden="true">' +
-            escapeHtml(route) +
-          '</span>' +
         '</div>' +
         '<div class="qride-collect-card-footer">' +
-          '<div class="qride-collect-card-ident">' +
-            '<span class="qride-collect-card-type">' + config.label + '</span>' +
-            '<strong class="qride-collect-card-route' + longCaptionClass + '">№ ' + escapeHtml(route) + '</strong>' +
-          '</div>' +
-          '<div class="qride-collect-card-rides"><strong>' + trips + '</strong><span>' + tripLabel + '</span></div>' +
+          '<strong class="qride-collect-card-route' + longCaptionClass + '">№ ' + escapeHtml(route) + '</strong>' +
+          '<span class="qride-collect-card-rides">' + trips + ' ' + tripLabel + '</span>' +
         '</div>' +
       '</article>';
   }
 
-  function makeUnknownCard() {
-    return '<button class="qride-collect-unknown" id="qride-collect-unknown" type="button" ' +
-      'aria-label="Узнать, как собирать транспорт">' +
+  function makeUnknownCard(typeKey) {
+    const config = transportConfig[typeKey];
+    return '<button class="qride-collect-unknown" type="button" data-collect-unknown="' + typeKey + '" ' +
+      'aria-label="Как открыть карточки: ' + config.label.toLowerCase() + '">' +
         '<span class="qride-collect-unknown-mark" aria-hidden="true">?</span>' +
-        '<span class="qride-collect-unknown-label">Как собирать</span>' +
+        '<span class="qride-collect-unknown-label">Как открыть</span>' +
       '</button>';
   }
 
@@ -119,15 +113,41 @@
     const normalized = safeCards
       .filter(function (card) {
         return card && transportConfig[String(card.transportType || '').trim().toLowerCase()] && normalizeRoute(card.routeNumber);
-      })
-      .sort(function (a, b) {
-        return String(b.lastScannedAt || '').localeCompare(String(a.lastScannedAt || ''));
       });
 
-    const previousScrollLeft = track.scrollLeft;
-    const cardsHtml = normalized.map(makeVehicleCard).join('');
-    track.innerHTML = cardsHtml + makeUnknownCard();
-    track.scrollLeft = Math.min(previousScrollLeft, Math.max(0, track.scrollWidth - track.clientWidth));
+    const groups = Object.keys(transportConfig).map(function (typeKey) {
+      const items = normalized
+        .filter(function (card) {
+          return String(card.transportType || '').trim().toLowerCase() === typeKey;
+        })
+        .sort(function (a, b) {
+          const tripsDiff = (Number(b.trips) || 0) - (Number(a.trips) || 0);
+          return tripsDiff || String(b.lastScannedAt || '').localeCompare(String(a.lastScannedAt || ''));
+        });
+      const totalTrips = items.reduce(function (sum, card) {
+        return sum + Math.max(0, Math.trunc(Number(card.trips) || 0));
+      }, 0);
+      return { typeKey: typeKey, items: items, totalTrips: totalTrips };
+    }).sort(function (a, b) {
+      return b.totalTrips - a.totalTrips ||
+        Object.keys(transportConfig).indexOf(a.typeKey) - Object.keys(transportConfig).indexOf(b.typeKey);
+    });
+
+    track.innerHTML = groups.map(function (group) {
+      const config = transportConfig[group.typeKey];
+      const tripCount = group.totalTrips;
+      const tripText = tripCount + ' ' + pluralizeTrips(tripCount);
+      return '<section class="qride-collect-row qride-collect-row--' + config.className + '" aria-label="' + config.label + '">' +
+        '<div class="qride-collect-row-heading">' +
+          '<span class="qride-collect-row-title">' + config.label + '</span>' +
+          '<span class="qride-collect-row-total">' + tripText + '</span>' +
+        '</div>' +
+        '<div class="qride-collect-row-track" role="group" aria-label="Маршруты: ' + config.label.toLowerCase() + '">' +
+          group.items.map(makeVehicleCard).join('') + makeUnknownCard(group.typeKey) +
+        '</div>' +
+      '</section>';
+    }).join('');
+
     totalNode.textContent = String(normalized.length);
     if (totalLabelNode) totalLabelNode.textContent = pluralizeRoutes(normalized.length);
     root.dataset.loaded = 'true';
@@ -136,9 +156,11 @@
   }
 
   function bindUnknownCard() {
-    const button = document.getElementById('qride-collect-unknown');
-    infoTrigger = button;
-    if (button) button.addEventListener('click', openInfo);
+    const buttons = track.querySelectorAll('[data-collect-unknown]');
+    infoTrigger = buttons.length ? buttons[0] : null;
+    buttons.forEach(function (button) {
+      button.addEventListener('click', openInfo);
+    });
   }
 
   async function refreshCollection() {
