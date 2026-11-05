@@ -1189,6 +1189,10 @@
         .roadnote-game { width:100%; margin:0; padding:13px; border:1px solid #dfe7f1; border-radius:20px; background:linear-gradient(155deg,#fff 0%,#f4f8fd 100%); box-shadow:0 8px 22px rgba(31,65,105,.045); text-align:left; }
         .roadnote-game-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
         .roadnote-game-kicker { color:#0052EE; font-family:inherit; font-size:9px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; }
+        .roadnote-game-head { align-items:flex-start; }
+        .roadnote-game-heading { min-width:0; }
+        .arcade-section-title { margin:0; color:#232a33; font-size:22px; line-height:1.2; letter-spacing:-.35px; }
+        .arcade-section-lead { margin:4px 0 0; color:#737d89; font-size:13px; line-height:1.4; }
         .roadnote-game-energy { display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border:1px solid #dce8f8;border-radius:11px;background:#edf5ff;color:#0052EE;font-size:14px;font-weight:850;font-variant-numeric:tabular-nums; }
         .roadnote-game-energy svg,.game-streak-reward svg { width:16px;height:16px;display:block;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round; }
         .roadnote-game-record { position:absolute;z-index:2;right:9px;top:9px;padding:6px 9px;border:1px solid #dce8f8;border-radius:10px;background:rgba(255,255,255,.94);color:#0052EE;font-size:12px;font-weight:800; }
@@ -2037,49 +2041,13 @@ body.scan-loading-open { overflow: hidden !important; }
             <p class="start-offers-note" id="start-offers-note">Скидка действует только на первую покупку.</p><p id="start-tariff-status" class="start-tariff-status" role="status" aria-live="polite"></p>
         </section>
 
-        <section class="start-referral" aria-labelledby="start-referral-title">
-            <div class="start-referral-title" id="start-referral-title">Пригласи друга</div>
-            <p class="start-referral-description">Поделись QRide. Когда друг впервые успешно отсканирует QR-код, тебе начислим 3 скана.</p>
-            <input class="start-referral-link" id="start-referral-link" type="text" readonly aria-label="Твоя реферальная ссылка" value="Загружаем ссылку…">
-            <div class="start-referral-actions">
-                <button class="start-referral-button start-referral-button-secondary start-referral-qr-icon" id="start-referral-qr-toggle" type="button" aria-label="Показать QR-код ссылки" title="QR-код" aria-expanded="false" disabled><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-qr-code preview-icon"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg></button>
-                <button class="start-referral-button" id="start-referral-share" type="button" disabled>Поделиться</button>
-                <button class="start-referral-button start-referral-button-secondary" id="start-referral-copy" type="button" disabled>Копировать</button>
-            </div>
-            <div class="start-referral-qr" id="start-referral-qr" aria-label="QR-код реферальной ссылки" hidden></div>
-            <p id="start-referral-status" class="start-tariff-status" role="status" aria-live="polite"></p>
-        </section>
-
-        <section class="start-promo" aria-labelledby="start-promo-title">
-            <div class="start-promo-title" id="start-promo-title">Промокод</div>
-            <form class="start-promo-form" id="start-promo-form" autocomplete="off">
-                <input class="start-promo-input" id="start-promo-input" name="promoCode" type="text" inputmode="text" autocapitalize="characters" spellcheck="false" maxlength="32" placeholder="Введи промокод" aria-label="Промокод">
-                <button class="start-promo-button" id="start-promo-apply" type="submit">Применить</button>
-            </form>
-            <div class="start-promo-current" id="start-promo-current" hidden>
-                <div><strong id="start-promo-current-title"></strong><span id="start-promo-current-description"></span></div>
-                <button class="start-promo-remove" id="start-promo-remove" type="button">Отменить</button>
-            </div>
-            <p class="start-promo-status" id="start-promo-status" role="status" aria-live="polite"></p>
-        </section>
-
-        <div class="start-actions">
-            <button class="start-button start-button-secondary" id="start-faq-button" type="button">
-                Частые вопросы
-            </button>
-            <a class="start-button start-button-secondary" id="start-support-button" href="https://vk.me/club242494208" target="_blank" rel="noopener noreferrer">
-                Поддержка
-            </a>
-        </div>
-        <div class="start-admin-actions">
-            <button class="start-button start-button-secondary" id="start-admin-users-button" type="button" hidden>
-                Пользователи
-            </button>
-        </div>
-
         <section class="roadnote-game arcade-shell" id="roadnote-game" aria-labelledby="roadnote-game-title">
             <div class="roadnote-game-head">
-                <div class="roadnote-game-kicker" id="roadnote-game-title">QRide Arcade</div>
+                <div class="roadnote-game-heading">
+                    <div class="roadnote-game-kicker">QRIDE ARCADE</div>
+                    <h3 class="arcade-section-title" id="roadnote-game-title">Игры</h3>
+                    <p class="arcade-section-lead">Играй в Q Runner и Q Breaker, улучшай рекорды и получай дополнительные сканы.</p>
+                </div>
                 <div class="roadnote-game-energy" aria-label="Запас игровых попыток"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg><span id="roadnote-game-energy-count">—</span></div>
             </div>
             <div class="roadnote-game-stage">
@@ -2121,6 +2089,48 @@ body.scan-loading-open { overflow: hidden !important; }
             </div>
         </section>
         </section>
+
+        <section class="start-referral" aria-labelledby="start-referral-title">
+            <div class="start-referral-title" id="start-referral-title">Пригласи друга</div>
+            <p class="start-referral-description">Поделись QRide. Когда друг впервые успешно отсканирует QR-код, тебе начислим 3 скана.</p>
+            <input class="start-referral-link" id="start-referral-link" type="text" readonly aria-label="Твоя реферальная ссылка" value="Загружаем ссылку…">
+            <div class="start-referral-actions">
+                <button class="start-referral-button start-referral-button-secondary start-referral-qr-icon" id="start-referral-qr-toggle" type="button" aria-label="Показать QR-код ссылки" title="QR-код" aria-expanded="false" disabled><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-qr-code preview-icon"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg></button>
+                <button class="start-referral-button" id="start-referral-share" type="button" disabled>Поделиться</button>
+                <button class="start-referral-button start-referral-button-secondary" id="start-referral-copy" type="button" disabled>Копировать</button>
+            </div>
+            <div class="start-referral-qr" id="start-referral-qr" aria-label="QR-код реферальной ссылки" hidden></div>
+            <p id="start-referral-status" class="start-tariff-status" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="start-promo" aria-labelledby="start-promo-title">
+            <div class="start-promo-title" id="start-promo-title">Промокод</div>
+            <form class="start-promo-form" id="start-promo-form" autocomplete="off">
+                <input class="start-promo-input" id="start-promo-input" name="promoCode" type="text" inputmode="text" autocapitalize="characters" spellcheck="false" maxlength="32" placeholder="Введи промокод" aria-label="Промокод">
+                <button class="start-promo-button" id="start-promo-apply" type="submit">Применить</button>
+            </form>
+            <div class="start-promo-current" id="start-promo-current" hidden>
+                <div><strong id="start-promo-current-title"></strong><span id="start-promo-current-description"></span></div>
+                <button class="start-promo-remove" id="start-promo-remove" type="button">Отменить</button>
+            </div>
+            <p class="start-promo-status" id="start-promo-status" role="status" aria-live="polite"></p>
+        </section>
+
+        <div class="start-actions">
+            <button class="start-button start-button-secondary" id="start-faq-button" type="button">
+                Частые вопросы
+            </button>
+            <a class="start-button start-button-secondary" id="start-support-button" href="https://vk.me/club242494208" target="_blank" rel="noopener noreferrer">
+                Поддержка
+            </a>
+        </div>
+        <div class="start-admin-actions">
+            <button class="start-button start-button-secondary" id="start-admin-users-button" type="button" hidden>
+                Пользователи
+            </button>
+        </div>
+
+
 
     </div>
 </section>
