@@ -189,5 +189,6 @@
     if (document.visibilityState === 'visible') refreshCollection();
   });
 
+  bindUnknownCard();
   refreshCollection();
 })();
