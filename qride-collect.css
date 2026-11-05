@@ -1,4 +1,4 @@
-/* QRide Collect — compact, swipe-friendly transport collection */
+/* QRide Collect — compact grouped transport rows */
 .qride-collect {
     --collect-inline-padding: 16px;
     box-sizing: border-box;
@@ -15,7 +15,7 @@
     text-align: left;
 }
 @media (max-width: 360px) {
-    .qride-collect { --collect-inline-padding: 11px; }
+    .qride-collect { --collect-inline-padding: 11px; padding: 13px 11px; }
 }
 .qride-collect-heading {
     display: flex;
@@ -58,34 +58,58 @@
     font-weight: 900;
     font-variant-numeric: tabular-nums;
 }
-.qride-collect-total span {
-    font-size: 10px;
-    line-height: 1;
-    font-weight: 750;
-}
+.qride-collect-total span { font-size: 10px; line-height: 1; font-weight: 750; }
 .qride-collect-lead {
-    margin: 5px 0 10px;
+    margin: 5px 0 8px;
     color: #7a8491;
     font-size: 12px;
     line-height: 1.4;
 }
-
-/* The scroller reaches the card edges, with enough inset for shadows. */
 .qride-collect-track {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    width: 100%;
+    min-width: 0;
+}
+.qride-collect-row { min-width: 0; }
+.qride-collect-row-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    margin: 0 1px 6px;
+}
+.qride-collect-row-title {
+    color: #354458;
+    font-size: 10px;
+    line-height: 1.2;
+    font-weight: 900;
+    letter-spacing: .85px;
+}
+.qride-collect-row-total {
+    flex: 0 0 auto;
+    color: #8995a4;
+    font-size: 10px;
+    line-height: 1.2;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.qride-collect-row-track {
     box-sizing: border-box;
     display: flex;
     flex-flow: row nowrap;
     align-items: stretch;
-    gap: 11px;
+    gap: 8px;
     width: calc(100% + var(--collect-inline-padding) + var(--collect-inline-padding));
     min-width: 0;
     margin: 0 calc(0px - var(--collect-inline-padding));
-    padding: 5px var(--collect-inline-padding) 12px;
-    overflow-x: scroll;
+    padding: 3px var(--collect-inline-padding) 6px;
+    overflow-x: auto;
     overflow-y: hidden;
     overscroll-behavior-x: contain;
     scroll-snap-type: x proximity;
-    scroll-padding-inline: var(--collect-inline-padding);
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x pan-y;
@@ -93,205 +117,103 @@
     user-select: none;
     -webkit-user-select: none;
 }
-.qride-collect-track::-webkit-scrollbar { display: none; }
-
+.qride-collect-row-track::-webkit-scrollbar { display: none; }
 .qride-collect-card {
     position: relative;
     box-sizing: border-box;
     display: flex;
-    flex: 0 0 160px;
+    flex: 0 0 116px;
     flex-direction: column;
     align-items: stretch;
-    width: 160px;
-    min-width: 160px;
-    height: 194px;
+    width: 116px;
+    min-width: 116px;
+    height: 132px;
     overflow: hidden;
     border: 1px solid #e1e8f1;
-    border-radius: 18px;
+    border-radius: 14px;
     background: #fff;
-    box-shadow: 0 4px 13px rgba(37, 65, 100, .075);
+    box-shadow: 0 3px 9px rgba(37, 65, 100, .065);
     scroll-snap-align: start;
-    animation: qride-collect-card-in .24s ease both;
+    animation: qride-collect-card-in .2s ease both;
 }
 @keyframes qride-collect-card-in {
-    from { opacity: 0; transform: translateY(5px); }
+    from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
 }
-.qride-collect-card--tram {
-    --collect-accent: #E47726;
-    border-color: #f0d7bf;
-    background: linear-gradient(155deg, #fff8f0 0%, #fff 72%);
-}
-.qride-collect-card--bus {
-    --collect-accent: #269956;
-    border-color: #cfe8d5;
-    background: linear-gradient(155deg, #f2fff5 0%, #fff 72%);
-}
-.qride-collect-card--trolley {
-    --collect-accent: #258FBE;
-    border-color: #cce8f3;
-    background: linear-gradient(155deg, #f0faff 0%, #fff 72%);
-}
+.qride-collect-card--tram { --collect-accent: #E47726; border-color: #f0d7bf; background: #fffaf5; }
+.qride-collect-card--bus { --collect-accent: #269956; border-color: #cfe8d5; background: #f7fff8; }
+.qride-collect-card--trolley { --collect-accent: #258FBE; border-color: #cce8f3; background: #f5fcff; }
 .qride-collect-card-art {
     position: relative;
     display: grid;
     flex: 1 1 auto;
     place-items: center;
     min-height: 0;
-    height: 134px;
+    height: 91px;
     overflow: hidden;
-    padding: 0 3px;
-    background:
-        radial-gradient(ellipse at 50% 75%, rgba(255,255,255,.92), transparent 62%);
+    padding: 2px 3px 0;
 }
-.qride-collect-card--tram .qride-collect-card-art {
-    background: linear-gradient(180deg, rgba(255,238,218,.48), rgba(255,255,255,.2));
-}
-.qride-collect-card--bus .qride-collect-card-art {
-    background: linear-gradient(180deg, rgba(222,248,228,.56), rgba(255,255,255,.2));
-}
-.qride-collect-card--trolley .qride-collect-card-art {
-    background: linear-gradient(180deg, rgba(220,244,253,.65), rgba(255,255,255,.2));
-}
+.qride-collect-card--tram .qride-collect-card-art { background: linear-gradient(180deg, #fff0df, rgba(255,255,255,.2)); }
+.qride-collect-card--bus .qride-collect-card-art { background: linear-gradient(180deg, #e4f8e8, rgba(255,255,255,.2)); }
+.qride-collect-card--trolley .qride-collect-card-art { background: linear-gradient(180deg, #e4f6fc, rgba(255,255,255,.2)); }
 .qride-collect-vehicle {
-    position: relative;
-    z-index: 1;
     display: block;
     width: 100%;
-    height: 132px;
+    height: 88px;
     object-fit: contain;
     user-select: none;
     -webkit-user-drag: none;
     pointer-events: none;
 }
-.qride-collect-route-board {
-    position: absolute;
-    z-index: 2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    color: #fff;
-    font-family: Arial, sans-serif;
-    font-size: clamp(10px, 3.3vw, 14px);
-    line-height: 1;
-    font-weight: 900;
-    letter-spacing: -.35px;
-    text-align: center;
-    text-shadow: 0 1px 2px rgba(0,0,0,.78);
-    white-space: nowrap;
-    pointer-events: none;
-}
-.qride-collect-route-board--tram {
-    left: 26%;
-    top: 31%;
-    width: 19%;
-    height: 8%;
-}
-.qride-collect-route-board--bus {
-    left: 22%;
-    top: 32%;
-    width: 22%;
-    height: 8%;
-}
-.qride-collect-route-board--trolley {
-    left: 24%;
-    top: 38%;
-    width: 21%;
-    height: 8%;
-}
-.qride-collect-route-board--long { font-size: 9px; letter-spacing: -.5px; }
-
 .qride-collect-card-footer {
     box-sizing: border-box;
-    position: relative;
-    z-index: 2;
     display: flex;
-    flex: 0 0 58px;
-    align-items: center;
-    justify-content: space-between;
-    gap: 7px;
-    min-width: 0;
-    padding: 4px 10px 7px;
-    border-top: 1px solid rgba(225, 232, 241, .85);
-    background: rgba(255,255,255,.94);
-}
-.qride-collect-card-ident {
-    display: flex;
-    flex: 1 1 auto;
+    flex: 0 0 39px;
     flex-direction: column;
     align-items: flex-start;
     justify-content: center;
-    min-width: 0;
-    gap: 4px;
-}
-.qride-collect-card-type {
-    max-width: 100%;
-    overflow: hidden;
-    color: var(--collect-accent, #60738b);
-    font-size: 8px;
-    line-height: 1;
-    font-weight: 900;
-    letter-spacing: .65px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.qride-collect-card-route {
-    max-width: 100%;
-    overflow: hidden;
-    color: #233448;
-    font-size: 19px;
-    line-height: 1;
-    font-weight: 900;
-    letter-spacing: -.55px;
-    font-variant-numeric: tabular-nums;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.qride-collect-card-route--long { font-size: 14px; letter-spacing: -.35px; }
-.qride-collect-card-rides {
-    display: flex;
-    flex: 0 0 auto;
-    flex-direction: column;
-    align-items: flex-end;
-    justify-content: center;
     gap: 3px;
     min-width: 0;
-    white-space: nowrap;
+    padding: 4px 8px 5px;
+    border-top: 1px solid rgba(225, 232, 241, .85);
+    background: rgba(255,255,255,.96);
 }
-.qride-collect-card-rides strong {
-    color: #263649;
-    font-size: 17px;
+.qride-collect-card-route {
+    display: block;
+    max-width: 100%;
+    color: #233448;
+    font-size: 15px;
     line-height: 1;
     font-weight: 900;
-    letter-spacing: -.4px;
+    letter-spacing: -.35px;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
-.qride-collect-card-rides span {
+.qride-collect-card-route--long { font-size: 12px; letter-spacing: -.2px; }
+.qride-collect-card-rides {
+    display: block;
+    max-width: 100%;
     color: #8290a0;
     font-size: 9px;
-    line-height: 1;
+    line-height: 1.1;
     font-weight: 750;
+    white-space: nowrap;
 }
-
 .qride-collect-unknown {
     box-sizing: border-box;
-    position: relative;
     display: flex;
-    flex: 0 0 112px;
+    flex: 0 0 72px;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    width: 112px;
-    min-width: 112px;
-    height: 194px;
-    padding: 10px 7px;
+    gap: 6px;
+    width: 72px;
+    min-width: 72px;
+    height: 132px;
+    padding: 7px 4px;
     border: 1.5px dashed #b9cce4;
-    border-radius: 18px;
-    background:
-        radial-gradient(circle at 50% 42%, rgba(0, 82, 238, .08), transparent 56%),
-        linear-gradient(155deg, #f5f9ff, #fff);
+    border-radius: 14px;
+    background: linear-gradient(155deg, #f5f9ff, #fff);
     color: #7fa4d6;
     scroll-snap-align: start;
     -webkit-tap-highlight-color: transparent;
@@ -301,23 +223,24 @@
 .qride-collect-unknown-mark {
     display: grid;
     place-items: center;
-    width: 48px;
-    height: 48px;
+    width: 34px;
+    height: 34px;
     border: 1px solid #d7e5f7;
-    border-radius: 16px;
+    border-radius: 11px;
     background: linear-gradient(145deg, #fff, #eaf2ff);
     color: #397be6;
-    font-size: 32px;
+    font-size: 23px;
     line-height: 1;
     font-weight: 750;
-    box-shadow: 0 7px 17px rgba(39, 91, 158, .1);
+    box-shadow: 0 4px 10px rgba(39, 91, 158, .08);
 }
 .qride-collect-unknown-label {
     color: #6d8db7;
-    font-size: 10px;
-    line-height: 1.25;
+    font-size: 8px;
+    line-height: 1.15;
     font-weight: 800;
     text-align: center;
+    white-space: normal;
 }
 .qride-collect-status {
     min-height: 0;
