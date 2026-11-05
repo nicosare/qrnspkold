@@ -5325,7 +5325,7 @@ body.scan-loading-open { overflow: hidden !important; }
         gap: 8px;
         width: min(428px, calc(100% - 32px));
         min-height: 62px;
-        padding: 7px 8px 7px 13px;
+        padding: 7px 32px 7px 13px;
         border: 1px solid rgba(220, 231, 244, .96);
         border-radius: 18px;
         background: rgba(255, 255, 255, .97);
@@ -5406,7 +5406,7 @@ body.scan-loading-open { overflow: hidden !important; }
     @media (prefers-reduced-motion: reduce) {
         #qride-compact-header { transition: none; }
     }
-</style>
+
 
 <script id="qride-scroll-header-script">
 (function () {
@@ -5482,6 +5482,7 @@ body.scan-loading-open { overflow: hidden !important; }
     }
 
     function setVisible(visible) {
+        if (header.classList.contains('is-visible') === visible) return;
         header.classList.toggle('is-visible', visible);
         header.setAttribute('aria-hidden', visible ? 'false' : 'true');
     }
@@ -5489,26 +5490,27 @@ body.scan-loading-open { overflow: hidden !important; }
     function checkPosition() {
         const barRect = quickbar.getBoundingClientRect();
         const overlayRect = overlay.getBoundingClientRect();
-        const topEdge = overlayRect.top + 1;
-        setVisible(barRect.bottom <= topEdge);
+        // Show only after the complete original balance/actions block has left the scroll viewport.
+        setVisible(barRect.bottom <= overlayRect.top + 2);
     }
 
-    if ('IntersectionObserver' in window) {
-        const observer = new IntersectionObserver(function () {
+    let scheduled = false;
+    function scheduleCheck() {
+        if (scheduled) return;
+        scheduled = true;
+        requestAnimationFrame(function () {
+            scheduled = false;
             checkPosition();
-        }, { root: overlay, threshold: 0 });
-        observer.observe(quickbar);
-    } else {
-        let scheduled = false;
-        overlay.addEventListener('scroll', function () {
-            if (scheduled) return;
-            scheduled = true;
-            requestAnimationFrame(function () {
-                scheduled = false;
-                checkPosition();
-            });
-        }, { passive: true });
-        window.addEventListener('resize', checkPosition, { passive: true });
+        });
+    }
+
+    // The start screen itself is the scroll container in the VK Mini App.
+    overlay.addEventListener('scroll', scheduleCheck, { passive: true });
+    window.addEventListener('scroll', scheduleCheck, { passive: true });
+    window.addEventListener('resize', scheduleCheck, { passive: true });
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', scheduleCheck, { passive: true });
+        window.visualViewport.addEventListener('scroll', scheduleCheck, { passive: true });
     }
 
     checkPosition();
