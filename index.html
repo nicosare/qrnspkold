@@ -5292,257 +5292,258 @@ body.scan-loading-open { overflow: hidden !important; }
 <script src="qride-collect.js?v=20261105-5"></script>
 
 <style id="qride-scroll-header-styles">
-    /* The balance and scan actions morph together into the sticky app header. */
-    .start-quickbar {
-        position: sticky;
-        top: calc(env(safe-area-inset-top, 0px) + 6px);
-        z-index: 120;
+    /* The original balance/actions stay untouched; a separate compact header appears after they leave view. */
+    #start-quickbar {
+        position: relative !important;
+        top: auto !important;
+        z-index: auto !important;
         display: flex;
         flex-direction: column;
         gap: 12px;
         align-self: stretch;
         width: 100%;
         min-width: 0;
-        box-sizing: border-box;
-        isolation: isolate;
+        height: auto !important;
+        padding: 0 !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+        isolation: auto;
     }
     #start-quickbar .start-balance-card,
-    #start-quickbar .start-scan-actions {
-        box-sizing: border-box;
-        min-width: 0;
+    #start-quickbar .start-scan-actions,
+    #start-quickbar .start-button,
+    #start-quickbar .quickbar-button-label,
+    #start-quickbar .quickbar-button-icon,
+    #start-quickbar .start-card-eyebrow,
+    #start-quickbar .daily-free-scan-note {
+        position: static !important;
+        width: auto !important;
+        height: auto !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        max-width: none !important;
+        max-height: none !important;
+        padding: revert !important;
+        margin: revert !important;
+        border-radius: revert !important;
+        border-width: revert !important;
+        border-color: revert !important;
+        background-color: revert !important;
+        box-shadow: revert !important;
+        opacity: 1 !important;
+        transform: none !important;
+        overflow: visible !important;
+        flex: initial !important;
+        gap: revert !important;
+        color: revert;
+        font-size: revert;
+        letter-spacing: revert;
+        line-height: revert;
+        white-space: normal !important;
     }
-    #start-quickbar .quickbar-button-label {
-        display: inline-block;
-        min-width: 0;
-        overflow: hidden;
-        text-align: center;
-    }
-    #start-quickbar .quickbar-button-icon {
+    #start-quickbar .quickbar-button-icon { display: none !important; }
+    #start-quickbar .quickbar-button-label { display: inline !important; }
+    #qride-compact-header {
+        position: fixed;
+        z-index: 900;
+        top: calc(env(safe-area-inset-top, 0px) + 8px);
+        left: 50%;
         display: grid;
-        flex: 0 0 0;
-        place-items: center;
-        width: 0;
-        height: 20px;
-        overflow: hidden;
+        grid-template-columns: minmax(0, 1fr) 40px 40px;
+        align-items: center;
+        gap: 8px;
+        width: min(428px, calc(100% - 32px));
+        min-height: 62px;
+        padding: 7px 8px 7px 13px;
+        border: 1px solid rgba(220, 231, 244, .96);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, .97);
+        box-shadow: 0 8px 24px rgba(30, 58, 92, .13);
+        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(12px);
         opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transform: translate3d(-50%, -8px, 0);
+        transition: opacity 180ms ease, transform 180ms ease, visibility 180ms;
+        will-change: opacity, transform;
     }
-    #start-quickbar .quickbar-button-icon svg {
+    #qride-compact-header.is-visible {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transform: translate3d(-50%, 0, 0);
+    }
+    #qride-compact-header .compact-balance {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 1px;
+        overflow: hidden;
+    }
+    #qride-compact-header .compact-eyebrow {
+        color: #7b8797;
+        font: 800 9px/1.1 'Circe', sans-serif;
+        letter-spacing: .7px;
+    }
+    #qride-compact-header .compact-status {
+        max-width: 100%;
+        overflow: hidden;
+        color: #0052ee;
+        font: 800 18px/1.15 'Circe', sans-serif;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    #qride-compact-header .compact-extra {
+        max-width: 100%;
+        overflow: hidden;
+        color: #687789;
+        font: 700 10px/1.1 'Circe', sans-serif;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    #qride-compact-header .compact-action {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        min-height: 40px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: transform 120ms ease, opacity 120ms ease;
+    }
+    #qride-compact-header .compact-action:active { transform: scale(.94); }
+    #qride-compact-header .compact-action:disabled { opacity: .4; cursor: default; }
+    #qride-compact-header .compact-action svg {
         display: block;
         width: 20px;
         height: 20px;
     }
-    #start-quickbar .start-balance-card,
-    #start-quickbar .start-button {
-        transition: none !important;
+    #qride-compact-header .compact-new { color: #fff; background: #0052ee; }
+    #qride-compact-header .compact-ticket {
+        color: #a45b00;
+        border: 1px solid #f1c56a;
+        background: #fff3db;
     }
     @media (prefers-reduced-motion: reduce) {
-        #start-quickbar { scroll-behavior: auto; }
+        #qride-compact-header { transition: none; }
     }
 </style>
-
 
 <script id="qride-scroll-header-script">
 (function () {
     const quickbar = document.getElementById('start-quickbar');
     const overlay = document.getElementById('start-overlay');
-    if (!quickbar || !overlay || quickbar.dataset.morphReady === '1') return;
+    if (!quickbar || !overlay || quickbar.dataset.compactHeaderReady === '1') return;
 
-    const card = quickbar.querySelector('.start-balance-card');
-    const actions = quickbar.querySelector('.start-scan-actions');
-    const newButton = document.getElementById('start-scan-new');
-    const ticketButton = document.getElementById('continue-current-scan');
-    const eyebrow = quickbar.querySelector('.start-card-eyebrow');
     const balance = document.getElementById('scan-balance-status');
     const extra = document.getElementById('scan-balance-extra');
-    const dailyNote = quickbar.querySelector('.daily-free-scan-note');
-    const newLabel = newButton && newButton.querySelector('.quickbar-button-label');
-    const ticketLabel = ticketButton && ticketButton.querySelector('.quickbar-button-label');
-    const ticketIcon = ticketButton && ticketButton.querySelector('.quickbar-button-icon');
-    if (!card || !actions || !newButton || !ticketButton || !eyebrow || !balance || !dailyNote || !newLabel || !ticketLabel || !ticketIcon) return;
+    const newButton = document.getElementById('start-scan-new');
+    const ticketButton = document.getElementById('continue-current-scan');
+    if (!balance || !newButton || !ticketButton) return;
 
-    quickbar.dataset.morphReady = '1';
+    quickbar.dataset.compactHeaderReady = '1';
 
-    const clamp = function (value, min, max) { return Math.min(max, Math.max(min, value)); };
-    const lerp = function (from, to, amount) { return from + (to - from) * amount; };
-    const parseColor = function (hex) {
-        const value = hex.replace('#', '');
-        return [parseInt(value.slice(0, 2), 16), parseInt(value.slice(2, 4), 16), parseInt(value.slice(4, 6), 16)];
-    };
-    const mixColor = function (from, to, amount) {
-        const a = parseColor(from);
-        const b = parseColor(to);
-        return 'rgb(' + a.map(function (channel, index) {
-            return Math.round(lerp(channel, b[index], amount));
-        }).join(',') + ')';
-    };
+    const header = document.createElement('div');
+    header.id = 'qride-compact-header';
+    header.setAttribute('role', 'group');
+    header.setAttribute('aria-label', 'Быстрые действия');
+    header.setAttribute('aria-hidden', 'true');
 
-    let metrics = null;
-    let animationFrame = 0;
-    let currentProgress = 0;
-    const collapseDistance = 112;
-    const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const balanceBox = document.createElement('div');
+    balanceBox.className = 'compact-balance';
 
-    function measure() {
-        const cardHeight = card.getBoundingClientRect().height;
-        const actionsHeight = actions.getBoundingClientRect().height;
-        const computed = window.getComputedStyle(quickbar);
-        const gap = parseFloat(computed.rowGap || computed.gap) || 12;
-        const topOffset = parseFloat(computed.top) || 6;
-        const quickbarRect = quickbar.getBoundingClientRect();
-        const overlayRect = overlay.getBoundingClientRect();
-        const contentTop = quickbarRect.top - overlayRect.top + overlay.scrollTop;
-        const statusFontSize = parseFloat(window.getComputedStyle(balance).fontSize) || 28;
+    const eyebrow = document.createElement('span');
+    eyebrow.className = 'compact-eyebrow';
+    eyebrow.textContent = 'ТВОЙ БАЛАНС';
 
-        metrics = {
-            cardHeight: cardHeight,
-            actionsHeight: actionsHeight,
-            gap: gap,
-            expandedHeight: cardHeight + gap + actionsHeight,
-            collapseStart: contentTop - topOffset,
-            statusFontSize: statusFontSize,
-            noteHeight: dailyNote.getBoundingClientRect().height
-        };
-    }
+    const compactStatus = document.createElement('span');
+    compactStatus.className = 'compact-status';
+    compactStatus.setAttribute('aria-hidden', 'true');
 
-    function apply(progress) {
-        if (!metrics) return;
-        const p = clamp(progress, 0, 1);
-        currentProgress = p;
-        const width = quickbar.clientWidth;
-        const border = p;
-        const pad = 6 * p;
-        const innerWidth = Math.max(0, width - 2 * border - 2 * pad);
-        const buttonGap = 8;
-        const compactActionsWidth = 88;
+    const compactExtra = document.createElement('span');
+    compactExtra.className = 'compact-extra';
+    compactExtra.setAttribute('aria-hidden', 'true');
 
-        quickbar.style.height = lerp(metrics.expandedHeight, 64, p) + 'px';
-        quickbar.style.padding = pad + 'px';
-        quickbar.style.borderStyle = 'solid';
-        quickbar.style.borderWidth = border + 'px';
-        quickbar.style.borderColor = 'rgba(220,231,244,' + p + ')';
-        quickbar.style.borderRadius = lerp(20, 17, p) + 'px';
-        quickbar.style.backgroundColor = 'rgba(255,255,255,' + (0.97 * p) + ')';
-        quickbar.style.boxShadow = '0 9px 24px rgba(30,58,92,' + (0.11 * p) + ')';
+    balanceBox.append(eyebrow, compactStatus, compactExtra);
 
-        card.style.position = 'absolute';
-        card.style.zIndex = '1';
-        card.style.top = pad + 'px';
-        card.style.left = pad + 'px';
-        card.style.width = Math.max(0, innerWidth - 96 * p) + 'px';
-        card.style.height = lerp(metrics.cardHeight, 50, p) + 'px';
-        card.style.margin = '0';
-        card.style.padding = lerp(18, 5, p) + 'px ' + lerp(20, 8, p) + 'px';
-        card.style.borderRadius = lerp(20, 13, p) + 'px';
-        card.style.backgroundColor = 'rgba(0,82,238,' + (1 - p) + ')';
-        card.style.boxShadow = '0 14px 30px rgba(0,82,238,' + (0.16 * (1 - p)) + ')';
-        card.style.overflow = 'hidden';
-
-        eyebrow.style.marginBottom = lerp(9, 2, p) + 'px';
-        eyebrow.style.fontSize = lerp(11, 8, p) + 'px';
-        eyebrow.style.letterSpacing = lerp(1.5, 0.5, p) + 'px';
-        eyebrow.style.color = mixColor('#dcecff', '#7b8797', p);
-
-        balance.style.fontSize = lerp(metrics.statusFontSize, 18, p) + 'px';
-        balance.style.color = mixColor('#ffffff', '#0052ee', p);
-        balance.style.lineHeight = '1.15';
-
-        dailyNote.style.maxHeight = metrics.noteHeight * (1 - p) + 'px';
-        dailyNote.style.marginTop = 12 * (1 - p) + 'px';
-        dailyNote.style.paddingTop = 11 * (1 - p) + 'px';
-        dailyNote.style.borderTopColor = 'rgba(255,255,255,' + (0.21 * (1 - p)) + ')';
-        dailyNote.style.opacity = 1 - p;
-        dailyNote.style.overflow = 'hidden';
-
-        if (extra) {
-            extra.style.opacity = 1 - p;
-            extra.style.transform = 'translateY(' + (-4 * p) + 'px)';
-        }
-
-        actions.style.position = 'absolute';
-        actions.style.zIndex = '2';
-        actions.style.top = lerp(metrics.cardHeight + metrics.gap, 11, p) + 'px';
-        actions.style.left = (pad + (innerWidth - compactActionsWidth) * p) + 'px';
-        actions.style.width = lerp(innerWidth, compactActionsWidth, p) + 'px';
-        actions.style.height = lerp(metrics.actionsHeight, 40, p) + 'px';
-        actions.style.margin = '0';
-        actions.style.padding = '0';
-        actions.style.gap = buttonGap + 'px';
-        actions.style.alignItems = 'center';
-        actions.style.justifyContent = 'space-between';
-        actions.style.flexWrap = 'nowrap';
-
-        const expandedButtonWidth = Math.max(0, (innerWidth - buttonGap) / 2);
-        const buttonWidth = lerp(expandedButtonWidth, 40, p);
-        const buttonHeight = lerp(metrics.actionsHeight, 40, p);
-        [newButton, ticketButton].forEach(function (button, index) {
-            button.style.flex = '0 0 ' + buttonWidth + 'px';
-            button.style.width = buttonWidth + 'px';
-            button.style.minWidth = buttonWidth + 'px';
-            button.style.height = buttonHeight + 'px';
-            button.style.minHeight = buttonHeight + 'px';
-            button.style.padding = lerp(14, 0, p) + 'px ' + lerp(8, 0, p) + 'px';
-            button.style.borderRadius = lerp(12, 50, p) + 'px';
-            button.style.gap = lerp(10, 0, p) + 'px';
-            button.style.justifyContent = 'center';
-            button.style.overflow = 'hidden';
-            if (index === 1) {
-                button.style.backgroundColor = mixColor('#ffffff', '#fff3db', p);
-                button.style.color = mixColor('#30343a', '#a45b00', p);
-                button.style.borderColor = mixColor('#d9e0e8', '#f1c56a', p);
-                button.style.borderWidth = '1px';
-                button.style.boxShadow = 'none';
-            }
+    function makeAction(source, className, label) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'compact-action ' + className;
+        button.setAttribute('aria-label', label);
+        const icon = source.querySelector('svg');
+        if (icon) button.appendChild(icon.cloneNode(true));
+        button.addEventListener('click', function () {
+            if (!source.disabled) source.click();
         });
-
-        newLabel.style.opacity = 1 - p;
-        ticketLabel.style.opacity = 1 - p;
-        newLabel.style.maxWidth = lerp(Math.max(0, expandedButtonWidth - 31), 0, p) + 'px';
-        ticketLabel.style.maxWidth = lerp(Math.max(0, expandedButtonWidth - 10), 0, p) + 'px';
-        if (p > 0.55) {
-            newLabel.style.whiteSpace = 'nowrap';
-            ticketLabel.style.whiteSpace = 'nowrap';
-        } else {
-            newLabel.style.whiteSpace = 'normal';
-            ticketLabel.style.whiteSpace = 'normal';
-        }
-
-        ticketIcon.style.width = 20 * p + 'px';
-        ticketIcon.style.flexBasis = 20 * p + 'px';
-        ticketIcon.style.opacity = p;
+        return button;
     }
 
-    const balanceClassObserver = window.MutationObserver ? new MutationObserver(function () {
-        if (!metrics) return;
-        const previousFontSize = balance.style.fontSize;
-        balance.style.removeProperty('font-size');
-        metrics.statusFontSize = parseFloat(window.getComputedStyle(balance).fontSize) || metrics.statusFontSize;
-        if (previousFontSize) balance.style.fontSize = previousFontSize;
-        apply(currentProgress);
-    }) : null;
-    if (balanceClassObserver) {
-        balanceClassObserver.observe(balance, { attributes: true, attributeFilter: ['class'] });
+    const compactNew = makeAction(newButton, 'compact-new', 'Сканировать новый QR-код');
+    const compactTicket = makeAction(ticketButton, 'compact-ticket', 'Перейти к текущему билету');
+    header.append(balanceBox, compactNew, compactTicket);
+    overlay.insertBefore(header, overlay.firstChild);
+
+    function syncState() {
+        compactStatus.textContent = balance.textContent.trim();
+        compactStatus.className = 'compact-status ' + balance.className;
+        compactExtra.textContent = extra && !extra.hidden ? extra.textContent.trim() : '';
+        compactExtra.hidden = !compactExtra.textContent;
+        compactNew.disabled = newButton.disabled;
+        compactTicket.disabled = ticketButton.disabled;
+    }
+    syncState();
+
+    if (window.MutationObserver) {
+        const stateObserver = new MutationObserver(syncState);
+        stateObserver.observe(balance, { subtree: true, childList: true, characterData: true, attributes: true });
+        if (extra) stateObserver.observe(extra, { subtree: true, childList: true, characterData: true, attributes: true });
+        stateObserver.observe(newButton, { attributes: true, attributeFilter: ['disabled'] });
+        stateObserver.observe(ticketButton, { attributes: true, attributeFilter: ['disabled'] });
     }
 
-    function updateFromScroll() {
-        animationFrame = 0;
-        if (!metrics) return;
-        const distance = overlay.scrollTop - (metrics.collapseStart - collapseDistance);
-        const rawProgress = clamp(distance / collapseDistance, 0, 1);
-        const progress = reducedMotion ? (rawProgress >= 1 ? 1 : 0) : rawProgress;
-        apply(progress);
+    function setVisible(visible) {
+        header.classList.toggle('is-visible', visible);
+        header.setAttribute('aria-hidden', visible ? 'false' : 'true');
     }
 
-    function scheduleUpdate() {
-        if (animationFrame) return;
-        animationFrame = window.requestAnimationFrame(updateFromScroll);
+    function checkPosition() {
+        const barRect = quickbar.getBoundingClientRect();
+        const overlayRect = overlay.getBoundingClientRect();
+        const topEdge = overlayRect.top + 1;
+        setVisible(barRect.bottom <= topEdge);
     }
 
-    measure();
-    apply(0);
-    scheduleUpdate();
+    if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver(function () {
+            checkPosition();
+        }, { root: overlay, threshold: 0 });
+        observer.observe(quickbar);
+    } else {
+        let scheduled = false;
+        overlay.addEventListener('scroll', function () {
+            if (scheduled) return;
+            scheduled = true;
+            requestAnimationFrame(function () {
+                scheduled = false;
+                checkPosition();
+            });
+        }, { passive: true });
+        window.addEventListener('resize', checkPosition, { passive: true });
+    }
 
-    overlay.addEventListener('scroll', scheduleUpdate, { passive: true });
-    window.addEventListener('resize', scheduleUpdate, { passive: true });
+    checkPosition();
 })();
 </script>
 
