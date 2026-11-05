@@ -1,22 +1,28 @@
-/* QRide Collect — compact horizontal transport collection */
+/* QRide Collect — compact, swipe-friendly transport collection */
 .qride-collect {
-    margin: 14px 0 16px;
-    padding: 17px 15px 14px;
-    overflow: hidden;
-    border: 1px solid #e3eaf3;
-    border-radius: 22px;
+    --collect-inline-padding: 16px;
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+    padding: 16px;
+    overflow: visible;
+    border: 1px solid #e3e8ef;
+    border-radius: 18px;
     background:
         radial-gradient(circle at 94% 5%, rgba(0, 82, 238, .055), transparent 34%),
-        linear-gradient(155deg, #fff 0%, #f8fbff 100%);
+        linear-gradient(155deg, #fff 0%, #f9fbfe 100%);
     box-shadow: 0 8px 24px rgba(31, 65, 105, .045);
     text-align: left;
+}
+@media (max-width: 360px) {
+    .qride-collect { --collect-inline-padding: 11px; }
 }
 .qride-collect-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 3px;
+    margin-bottom: 4px;
 }
 .qride-collect-kicker {
     margin-bottom: 3px;
@@ -26,9 +32,10 @@
     letter-spacing: 1.55px;
 }
 .qride-collect-heading h3 {
+    margin: 0;
     color: #232a33;
-    font-size: 21px;
-    line-height: 1.18;
+    font-size: 22px;
+    line-height: 1.2;
     letter-spacing: -.35px;
     font-weight: 850;
 }
@@ -57,56 +64,73 @@
     font-weight: 750;
 }
 .qride-collect-lead {
-    margin: 5px 0 12px;
+    margin: 5px 0 10px;
     color: #7a8491;
     font-size: 12px;
     line-height: 1.4;
 }
+
+/* The scroller reaches the card edges, with enough inset for shadows. */
 .qride-collect-track {
+    box-sizing: border-box;
     display: flex;
+    flex-flow: row nowrap;
     align-items: stretch;
-    gap: 10px;
-    width: 100%;
+    gap: 11px;
+    width: calc(100% + var(--collect-inline-padding) + var(--collect-inline-padding));
     min-width: 0;
-    margin: 0;
-    padding: 2px 1px 5px;
-    overflow-x: auto;
+    margin: 0 calc(0px - var(--collect-inline-padding));
+    padding: 5px var(--collect-inline-padding) 12px;
+    overflow-x: scroll;
     overflow-y: hidden;
     overscroll-behavior-x: contain;
-    scroll-snap-type: x mandatory;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: var(--collect-inline-padding);
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
 }
 .qride-collect-track::-webkit-scrollbar { display: none; }
+
 .qride-collect-card {
     position: relative;
+    box-sizing: border-box;
     display: flex;
-    flex: 0 0 142px;
+    flex: 0 0 160px;
     flex-direction: column;
     align-items: stretch;
-    width: 142px;
-    min-width: 142px;
-    height: 169px;
+    width: 160px;
+    min-width: 160px;
+    height: 194px;
     overflow: hidden;
-    border: 1px solid rgba(223, 231, 241, .95);
-    border-radius: 17px;
+    border: 1px solid #e1e8f1;
+    border-radius: 18px;
     background: #fff;
-    box-shadow: 0 4px 12px rgba(37, 65, 100, .075);
+    box-shadow: 0 4px 13px rgba(37, 65, 100, .075);
     scroll-snap-align: start;
-    animation: qride-collect-card-in .28s ease both;
+    animation: qride-collect-card-in .24s ease both;
 }
 @keyframes qride-collect-card-in {
-    from { opacity: 0; transform: translateY(5px) scale(.985); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 .qride-collect-card--tram {
-    background: linear-gradient(155deg, #fffaf3 0%, #fff 72%);
+    --collect-accent: #E47726;
+    border-color: #f0d7bf;
+    background: linear-gradient(155deg, #fff8f0 0%, #fff 72%);
 }
 .qride-collect-card--bus {
+    --collect-accent: #269956;
+    border-color: #cfe8d5;
     background: linear-gradient(155deg, #f2fff5 0%, #fff 72%);
 }
 .qride-collect-card--trolley {
-    background: linear-gradient(155deg, #f1faff 0%, #fff 72%);
+    --collect-accent: #258FBE;
+    border-color: #cce8f3;
+    background: linear-gradient(155deg, #f0faff 0%, #fff 72%);
 }
 .qride-collect-card-art {
     position: relative;
@@ -114,30 +138,27 @@
     flex: 1 1 auto;
     place-items: center;
     min-height: 0;
-    padding: 5px 3px 0;
+    height: 134px;
     overflow: hidden;
+    padding: 0 3px;
+    background:
+        radial-gradient(ellipse at 50% 75%, rgba(255,255,255,.92), transparent 62%);
 }
-.qride-collect-card-art::before {
-    position: absolute;
-    top: 12px;
-    left: 50%;
-    width: 98px;
-    height: 84px;
-    border-radius: 50%;
-    background: rgba(255,255,255,.68);
-    content: "";
-    transform: translateX(-50%);
-    filter: blur(5px);
+.qride-collect-card--tram .qride-collect-card-art {
+    background: linear-gradient(180deg, rgba(255,238,218,.48), rgba(255,255,255,.2));
 }
-.qride-collect-card--tram .qride-collect-card-art::before { background: rgba(255, 197, 125, .14); }
-.qride-collect-card--bus .qride-collect-card-art::before { background: rgba(117, 214, 143, .15); }
-.qride-collect-card--trolley .qride-collect-card-art::before { background: rgba(110, 199, 239, .16); }
+.qride-collect-card--bus .qride-collect-card-art {
+    background: linear-gradient(180deg, rgba(222,248,228,.56), rgba(255,255,255,.2));
+}
+.qride-collect-card--trolley .qride-collect-card-art {
+    background: linear-gradient(180deg, rgba(220,244,253,.65), rgba(255,255,255,.2));
+}
 .qride-collect-vehicle {
     position: relative;
     z-index: 1;
     display: block;
     width: 100%;
-    height: 120px;
+    height: 132px;
     object-fit: contain;
     user-select: none;
     -webkit-user-drag: none;
@@ -146,66 +167,130 @@
 .qride-collect-route-board {
     position: absolute;
     z-index: 2;
-    top: 30px;
-    left: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 31px;
-    height: 10px;
     overflow: hidden;
-    color: #e8f6ff;
+    color: #fff;
     font-family: Arial, sans-serif;
-    font-size: 8px;
+    font-size: clamp(10px, 3.3vw, 14px);
     line-height: 1;
     font-weight: 900;
-    letter-spacing: -.2px;
+    letter-spacing: -.35px;
     text-align: center;
-    text-shadow: 0 0 4px rgba(151, 232, 255, .55);
+    text-shadow: 0 1px 2px rgba(0,0,0,.78);
     white-space: nowrap;
-    transform: translateX(-50%);
+    pointer-events: none;
 }
-.qride-collect-card--tram .qride-collect-route-board { left: 50%; }
-.qride-collect-card--bus .qride-collect-route-board { left: 50%; }
-.qride-collect-card--trolley .qride-collect-route-board { left: 50%; }
-.qride-collect-card-rides {
+.qride-collect-route-board--tram {
+    left: 20%;
+    top: 28%;
+    width: 20%;
+    height: 10%;
+}
+.qride-collect-route-board--bus {
+    left: 23%;
+    top: 23%;
+    width: 21%;
+    height: 11%;
+}
+.qride-collect-route-board--trolley {
+    left: 39.5%;
+    top: 31%;
+    width: 21%;
+    height: 11%;
+}
+.qride-collect-route-board--long { font-size: 9px; letter-spacing: -.5px; }
+
+.qride-collect-card-footer {
+    box-sizing: border-box;
     position: relative;
     z-index: 2;
     display: flex;
-    align-items: baseline;
-    gap: 5px;
-    min-height: 41px;
-    padding: 5px 11px 8px;
-    border-top: 1px solid rgba(225, 232, 241, .72);
-    background: rgba(255,255,255,.84);
+    flex: 0 0 58px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 7px;
+    min-width: 0;
+    padding: 4px 10px 7px;
+    border-top: 1px solid rgba(225, 232, 241, .85);
+    background: rgba(255,255,255,.94);
 }
-.qride-collect-card-rides strong {
-    color: #263649;
+.qride-collect-card-ident {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    min-width: 0;
+    gap: 4px;
+}
+.qride-collect-card-type {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--collect-accent, #60738b);
+    font-size: 8px;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: .65px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.qride-collect-card-route {
+    max-width: 100%;
+    overflow: hidden;
+    color: #233448;
     font-size: 19px;
     line-height: 1;
     font-weight: 900;
-    letter-spacing: -.5px;
+    letter-spacing: -.55px;
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.qride-collect-card-route--long { font-size: 14px; letter-spacing: -.35px; }
+.qride-collect-card-rides {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    white-space: nowrap;
+}
+.qride-collect-card-rides strong {
+    color: #263649;
+    font-size: 17px;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: -.4px;
     font-variant-numeric: tabular-nums;
 }
 .qride-collect-card-rides span {
     color: #8290a0;
-    font-size: 10px;
+    font-size: 9px;
     line-height: 1;
     font-weight: 750;
 }
+
 .qride-collect-unknown {
+    box-sizing: border-box;
     position: relative;
-    display: grid;
-    flex: 0 0 142px;
-    place-items: center;
-    width: 142px;
-    min-width: 142px;
-    height: 169px;
-    padding: 0;
+    display: flex;
+    flex: 0 0 112px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 112px;
+    min-width: 112px;
+    height: 194px;
+    padding: 10px 7px;
     border: 1.5px dashed #b9cce4;
-    border-radius: 17px;
+    border-radius: 18px;
     background:
-        radial-gradient(circle at 50% 38%, rgba(0, 82, 238, .075), transparent 54%),
+        radial-gradient(circle at 50% 42%, rgba(0, 82, 238, .08), transparent 56%),
         linear-gradient(155deg, #f5f9ff, #fff);
     color: #7fa4d6;
     scroll-snap-align: start;
@@ -216,16 +301,23 @@
 .qride-collect-unknown-mark {
     display: grid;
     place-items: center;
-    width: 55px;
-    height: 55px;
+    width: 48px;
+    height: 48px;
     border: 1px solid #d7e5f7;
-    border-radius: 19px;
+    border-radius: 16px;
     background: linear-gradient(145deg, #fff, #eaf2ff);
     color: #397be6;
-    font-size: 37px;
+    font-size: 32px;
     line-height: 1;
     font-weight: 750;
     box-shadow: 0 7px 17px rgba(39, 91, 158, .1);
+}
+.qride-collect-unknown-label {
+    color: #6d8db7;
+    font-size: 10px;
+    line-height: 1.25;
+    font-weight: 800;
+    text-align: center;
 }
 .qride-collect-status {
     min-height: 0;
@@ -235,6 +327,7 @@
     line-height: 1.3;
 }
 .qride-collect-status:empty { display: none; }
+
 .qride-collect-info {
     position: fixed;
     z-index: 10020;
