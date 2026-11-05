@@ -5378,6 +5378,7 @@ body.scan-loading-open { overflow: hidden !important; }
 
     let metrics = null;
     let animationFrame = 0;
+    let currentProgress = 0;
     const collapseDistance = 112;
     const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -5406,6 +5407,7 @@ body.scan-loading-open { overflow: hidden !important; }
     function apply(progress) {
         if (!metrics) return;
         const p = clamp(progress, 0, 1);
+        currentProgress = p;
         const width = quickbar.clientWidth;
         const border = p;
         const pad = 6 * p;
@@ -5507,6 +5509,18 @@ body.scan-loading-open { overflow: hidden !important; }
         ticketIcon.style.width = 20 * p + 'px';
         ticketIcon.style.flexBasis = 20 * p + 'px';
         ticketIcon.style.opacity = p;
+    }
+
+    const balanceClassObserver = window.MutationObserver ? new MutationObserver(function () {
+        if (!metrics) return;
+        const previousFontSize = balance.style.fontSize;
+        balance.style.removeProperty('font-size');
+        metrics.statusFontSize = parseFloat(window.getComputedStyle(balance).fontSize) || metrics.statusFontSize;
+        if (previousFontSize) balance.style.fontSize = previousFontSize;
+        apply(currentProgress);
+    }) : null;
+    if (balanceClassObserver) {
+        balanceClassObserver.observe(balance, { attributes: true, attributeFilter: ['class'] });
     }
 
     function updateFromScroll() {
