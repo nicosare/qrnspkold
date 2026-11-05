@@ -22,6 +22,12 @@
   let activeController = null;
   let requestSequence = 0;
   let previousBodyOverflow = '';
+  let previousBodyPosition = '';
+  let previousBodyTop = '';
+  let previousBodyLeft = '';
+  let previousBodyRight = '';
+  let previousBodyWidth = '';
+  let pageScrollY = 0;
 
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, function (char) {
@@ -197,8 +203,19 @@
 
   function openInfo() {
     if (!infoLayer || infoLayer.hidden === false) return;
+    pageScrollY = window.scrollY || window.pageYOffset || 0;
     previousBodyOverflow = document.body.style.overflow;
+    previousBodyPosition = document.body.style.position;
+    previousBodyTop = document.body.style.top;
+    previousBodyLeft = document.body.style.left;
+    previousBodyRight = document.body.style.right;
+    previousBodyWidth = document.body.style.width;
     document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = '-' + pageScrollY + 'px';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
     infoLayer.hidden = false;
     const closeButton = infoLayer.querySelector('.qride-collect-info-close');
     if (closeButton) closeButton.focus({ preventScroll: true });
@@ -208,19 +225,58 @@
     if (!infoLayer || infoLayer.hidden) return;
     infoLayer.hidden = true;
     document.body.style.overflow = previousBodyOverflow;
+    document.body.style.position = previousBodyPosition;
+    document.body.style.top = previousBodyTop;
+    document.body.style.left = previousBodyLeft;
+    document.body.style.right = previousBodyRight;
+    document.body.style.width = previousBodyWidth;
+    window.scrollTo(0, pageScrollY);
     if (infoTrigger && infoTrigger.isConnected) infoTrigger.focus({ preventScroll: true });
   }
 
   if (infoLayer) {
+    // Keep the fixed sheet outside the scrollable start-screen overlay so it
+    // is anchored to the viewport rather than to that scrolling container.
+    document.body.appendChild(infoLayer);
+
     closeButtons.forEach(function (button) {
       button.addEventListener('click', closeInfo);
     });
     infoLayer.addEventListener('click', function (event) {
-      if (event.target === infoLayer) closeInfo();
+      if (event.target === infoLayer || event.target.closest('[data-collect-close]')) closeInfo();
     });
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape' && !infoLayer.hidden) closeInfo();
     });
+
+    const sheet = infoLayer.querySelector('.qride-collect-info-sheet');
+    if (sheet) {
+      let startX = 0;
+      let startY = 0;
+      let trackingTouch = false;
+      sheet.addEventListener('touchstart', function (event) {
+        if (infoLayer.hidden || !event.touches || event.touches.length !== 1) {
+          trackingTouch = false;
+          return;
+        }
+        const target = event.target;
+        if (target && target.closest && target.closest('button')) {
+          trackingTouch = false;
+          return;
+        }
+        startX = event.touches[0].clientX;
+        startY = event.touches[0].clientY;
+        trackingTouch = true;
+      }, { passive: true });
+      sheet.addEventListener('touchend', function (event) {
+        if (!trackingTouch || !event.changedTouches || !event.changedTouches.length) return;
+        const dx = event.changedTouches[0].clientX - startX;
+        const dy = event.changedTouches[0].clientY - startY;
+        trackingTouch = false;
+        if (dy > 65 && dy > Math.abs(dx) * 1.2) closeInfo();
+      }, { passive: true });
+      sheet.addEventListener('touchcancel', function () { trackingTouch = false; }, { passive: true });
+    }
   }
 
   window.addEventListener('roadnote:scan-success', refreshCollection);
