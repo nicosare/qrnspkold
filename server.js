@@ -356,8 +356,8 @@ db.prepare(`
 db.prepare('UPDATE users SET welcome_bonus_granted = 1 WHERE welcome_bonus_granted = 0').run();
 
 // Before this policy existed, every successful scan granted +3 game attempts.
- // Seed the reward ledger once from that history so scans made earlier today
- // still count toward the new limits and cooldown.
+// Seed the reward ledger once from that history so scans made earlier today
+// still count toward the new limits and cooldown.
 const scanEnergyMigrationMarker = 'scan_energy_rewards_migrated_v1';
 if (!db.prepare('SELECT 1 FROM app_settings WHERE setting_key = ?').get(scanEnergyMigrationMarker)) {
   db.transaction(() => {
@@ -2188,7 +2188,7 @@ app.post('/api/paytag', async (req, res) => {
     const rewardDayKey = yekaterinburgDayKey(new Date(scannedAt));
     let energyRewardGranted = false;
     let referralRewarded = false;
-    db.transaction.immediate(() => {
+    db.transaction(() => {
       const codeRewardCount = Number(countScanEnergyRewardsForCodeToday.get(userId, paytagid, rewardDayKey)?.count || 0);
       const dayRewardCount = Number(countScanEnergyRewardsToday.get(userId, rewardDayKey)?.count || 0);
       const lastReward = getLastScanEnergyReward.get(userId, paytagid);
@@ -2225,7 +2225,7 @@ app.post('/api/paytag', async (req, res) => {
           }
         }
       }
-    })();
+    }).immediate();
     if (referralRewarded) sendLiveEntitlement(getReferralForInvitee.get(userId)?.inviter_vk_id);
 
     return res.json({
