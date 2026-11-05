@@ -231,7 +231,7 @@
     border-radius: 14px;
     background: linear-gradient(155deg, #f5f9ff, #fff);
     color: #7fa4d6;
-    scroll-snap-align: start;
+    scroll-snap-align: none;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
 }
