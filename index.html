@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QRide — Транспортные данные</title>
+    <link rel="stylesheet" href="qride-collect.css?v=20261105-1">
     <script>
     (function () {
         var params = new URLSearchParams(window.location.search);
@@ -1979,7 +1980,45 @@ body.scan-loading-open { overflow: hidden !important; }
             <div class="game-streak-days" id="game-streak-days" aria-label="Награды по дням серии"></div>
         </section>
 
+        <section class="qride-collect" id="qride-collect" aria-labelledby="qride-collect-title">
+            <div class="qride-collect-heading">
+                <div>
+                    <div class="qride-collect-kicker">QRIDE COLLECT</div>
+                    <h3 id="qride-collect-title">Коллекция</h3>
+                </div>
+                <div class="qride-collect-total" aria-label="Открытых карточек">
+                    <strong id="qride-collect-total">0</strong>
+                    <span>открыто</span>
+                </div>
+            </div>
+            <p class="qride-collect-lead">Собирай транспорт по маршрутам города.</p>
+            <div class="qride-collect-track" id="qride-collect-track" aria-label="Карточки транспорта" aria-live="polite">
+                <button class="qride-collect-unknown" id="qride-collect-unknown" type="button" aria-label="Узнать, как собирать транспорт">
+                    <span class="qride-collect-unknown-mark" aria-hidden="true">?</span>
+                </button>
+            </div>
+            <p class="qride-collect-status" id="qride-collect-status" role="status" aria-live="polite"></p>
+        </section>
 
+        <div class="qride-collect-info" id="qride-collect-info" hidden>
+            <button class="qride-collect-info-backdrop" type="button" data-collect-close aria-label="Закрыть"></button>
+            <section class="qride-collect-info-sheet" role="dialog" aria-modal="true" aria-labelledby="qride-collect-info-title">
+                <div class="qride-collect-info-grabber" aria-hidden="true"></div>
+                <div class="qride-collect-info-top">
+                    <div>
+                        <div class="qride-collect-kicker">QRIDE COLLECT</div>
+                        <h4 id="qride-collect-info-title">Собери их всех!</h4>
+                    </div>
+                    <button class="qride-collect-info-close" type="button" data-collect-close aria-label="Закрыть">×</button>
+                </div>
+                <p class="qride-collect-info-copy">
+                    Сканируй QR-коды в автобусах, трамваях и троллейбусах, чтобы открывать новые карточки и пополнять коллекцию.
+                    Каждый новый маршрут — новая карточка. Повторные поездки увеличивают счётчик на уже открытой карточке.
+                    <br><br><strong>Каждый успешный скан учитывается в счётчике поездок.</strong>
+                </p>
+                <button class="qride-collect-info-action" type="button" data-collect-close>Понятно</button>
+            </section>
+        </div>
 
         <section class="start-offers-section" aria-labelledby="start-offers-title">
             <div class="start-offers-section-heading"><div><div class="start-section-kicker">QRIDE PLUS</div><h3 id="start-offers-title">Тарифы</h3></div></div>
@@ -5233,5 +5272,6 @@ body.scan-loading-open { overflow: hidden !important; }
 })();
 </script>
 <script src="qride-mascot.js"></script>
+<script src="qride-collect.js?v=20261105-1"></script>
 </body>
 </html>
