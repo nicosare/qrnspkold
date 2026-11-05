@@ -8,7 +8,7 @@
   const totalNode = document.getElementById('qride-collect-total');
   const statusNode = document.getElementById('qride-collect-status');
   const infoLayer = document.getElementById('qride-collect-info');
-  const infoTrigger = document.getElementById('qride-collect-unknown');
+  let infoTrigger = document.getElementById('qride-collect-unknown');
   const closeButtons = infoLayer ? infoLayer.querySelectorAll('[data-collect-close]') : [];
   if (!track || !totalNode) return;
 
@@ -120,6 +120,7 @@
 
   function bindUnknownCard() {
     const button = document.getElementById('qride-collect-unknown');
+    infoTrigger = button;
     if (button) button.addEventListener('click', openInfo);
   }
 
