@@ -1967,8 +1967,8 @@ app.get('/api/collect', (req, res) => {
       if (!supportedTypes.has(typeKey)) continue;
 
       const routeNumber = String(row.route_number || '')
-        .replace(/^\\s*№\\s*/i, '')
-        .replace(/[\\s\\u00a0]+/g, '')
+        .replace(/^\s*№\s*/i, '')
+        .replace(/[\s\u00a0]+/g, '')
         .trim()
         .slice(0, 12);
       if (!routeNumber) continue;
