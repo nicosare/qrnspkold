@@ -2440,6 +2440,40 @@ app.get('/api/admin/users/:vkId/scans', requireAdmin, (req, res) => {
   return res.json({ scans, total: scans.length });
 });
 
+
+app.delete('/api/admin/users/:vkId/scans/:scanId', requireAdmin, (req, res) => {
+  const vkId = String(req.params.vkId || '');
+  const scanId = Number(req.params.scanId);
+  if (!/^[0-9]+$/.test(vkId)) return res.status(400).json({ error: 'Некорректный VK ID.' });
+  if (vkId !== req.vkUserId) {
+    return res.status(403).json({ error: 'Можно удалять записи истории только собственного аккаунта администратора.' });
+  }
+  if (!Number.isSafeInteger(scanId) || scanId < 1) {
+    return res.status(400).json({ error: 'Некорректный ID записи истории.' });
+  }
+  const existing = db.prepare('SELECT id FROM scan_history WHERE id = ? AND vk_id = ?').get(scanId, vkId);
+  if (!existing) return res.status(404).json({ error: 'Запись истории не найдена.' });
+
+  try {
+    const result = db.transaction(() => {
+      const deleted = db.prepare('DELETE FROM scan_history WHERE id = ? AND vk_id = ?').run(scanId, vkId);
+      if (deleted.changes !== 1) return null;
+      const latest = db.prepare(
+        'SELECT scanned_at, vehicle_number, transport_type, route_number FROM scan_history WHERE vk_id = ? ORDER BY scanned_at DESC, id DESC LIMIT 1'
+      ).get(vkId) || null;
+      db.prepare('UPDATE users SET last_scan_at = ?, last_transport_number = ? WHERE vk_id = ?')
+        .run(latest?.scanned_at || null, latest?.vehicle_number || null, vkId);
+      const total = Number(db.prepare('SELECT COUNT(*) AS count FROM scan_history WHERE vk_id = ?').get(vkId)?.count || 0);
+      return { total, latest };
+    })();
+    if (!result) return res.status(404).json({ error: 'Запись истории уже удалена.' });
+    return res.json({ ok: true, deletedId: scanId, total: result.total, latestScan: result.latest });
+  } catch (error) {
+    console.error('[admin scan history delete]', error?.message || error);
+    return res.status(500).json({ error: 'Не удалось удалить запись истории.' });
+  }
+});
+
 app.get('/api/admin/users/:vkId/credits', requireAdmin, (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const vkId = String(req.params.vkId || '');
