@@ -269,12 +269,15 @@
 
 .qride-collect-info {
     position: fixed;
-    z-index: 10020;
+    z-index: 16000;
     inset: 0;
     display: flex;
     align-items: flex-end;
     justify-content: center;
     padding: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: pan-y;
 }
 .qride-collect-info[hidden] { display: none !important; }
 .qride-collect-info-backdrop {
@@ -294,6 +297,8 @@
     max-height: min(80vh, 620px);
     padding: 10px 21px calc(22px + env(safe-area-inset-bottom));
     overflow-y: auto;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
     border: 1px solid rgba(255,255,255,.82);
     border-bottom: 0;
     border-radius: 25px 25px 0 0;
