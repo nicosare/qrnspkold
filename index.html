@@ -1986,9 +1986,9 @@ body.scan-loading-open { overflow: hidden !important; }
                     <div class="qride-collect-kicker">QRIDE COLLECT</div>
                     <h3 id="qride-collect-title">Коллекция</h3>
                 </div>
-                <div class="qride-collect-total" aria-label="Открытых карточек">
+                <div class="qride-collect-total" aria-label="Количество собранных маршрутов">
                     <strong id="qride-collect-total">0</strong>
-                    <span>открыто</span>
+                    <span id="qride-collect-total-label">маршрутов</span>
                 </div>
             </div>
             <p class="qride-collect-lead">Собирай транспорт по маршрутам города.</p>
@@ -2012,8 +2012,9 @@ body.scan-loading-open { overflow: hidden !important; }
                     <button class="qride-collect-info-close" type="button" data-collect-close aria-label="Закрыть">×</button>
                 </div>
                 <p class="qride-collect-info-copy">
-                    Сканируй QR-коды в автобусах, трамваях и троллейбусах, чтобы открывать новые карточки и пополнять коллекцию.
-                    Каждый новый маршрут — новая карточка. Повторные поездки увеличивают счётчик на уже открытой карточке.
+                    Сканируй QR-коды в автобусах, трамваях и троллейбусах, чтобы открывать новые карточки.
+                    Каждая комбинация транспорта и маршрута — отдельная карточка: трамвай №15 и автобус №15 будут разными.
+                    Повторные поездки увеличивают счётчик уже открытой карточки.
                     <br><br><strong>Каждый успешный скан учитывается в счётчике поездок.</strong>
                 </p>
                 <button class="qride-collect-info-action" type="button" data-collect-close>Понятно</button>
