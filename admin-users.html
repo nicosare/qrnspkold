@@ -43,6 +43,9 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 .scan-row-main{font-size:13px;font-weight:750}
 .scan-row-meta{font-size:12px;color:var(--muted);margin-top:3px}
 .scan-history-empty{font-size:12px;color:var(--muted);padding:6px 0}
+.scan-row-actions{display:flex;justify-content:flex-end;margin-top:7px}
+.scan-delete{min-height:32px;padding:5px 9px;border:1px solid #ffd4d1;border-radius:8px;background:#fff5f4;color:#b42318;font-size:11px;font-weight:750}
+.scan-delete:disabled{opacity:.6;cursor:wait}
 .credit-history{margin-top:4px;border-top:1px solid var(--line);padding-top:4px}
 .credit-history summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;color:#16804a;font-size:12px;font-weight:750;list-style:none}
 .credit-history summary::-webkit-details-marker{display:none}
@@ -471,7 +474,10 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
          const type=[scan.transport_type,scan.route_number?'№ '+scan.route_number:''].filter(Boolean).join(' ');
          const vehicle=scan.vehicle_number?'Т/С № '+scan.vehicle_number:'Номер Т/С не указан';
          const price=scan.price===null?'':' · '+Number(scan.price).toLocaleString('ru-RU',{maximumFractionDigits:2})+' ₽';
-         return '<div class="scan-row"><div class="scan-row-main">'+esc(type||'Скан QR-кода')+' · '+esc(vehicle)+'</div><div class="scan-row-meta">'+esc(date(scan.scanned_at)+price)+'</div></div>';
+         const deleteAction=String(details.dataset.scanHistory)===String(adminUserId)
+           ?'<div class="scan-row-actions"><button type="button" class="scan-delete" data-delete-scan="'+esc(scan.id)+'">Удалить запись</button></div>'
+           :'';
+         return '<div class="scan-row" data-scan-row="'+esc(scan.id)+'"><div class="scan-row-main">'+esc(type||'Скан QR-кода')+' · '+esc(vehicle)+'</div><div class="scan-row-meta">'+esc(date(scan.scanned_at)+price)+'</div>'+deleteAction+'</div>';
        }).join('');
      })
      .catch(error=>{list.innerHTML='<div class="scan-history-empty error">'+esc(error.message)+' <button type="button" data-action="retry-scans">Повторить</button></div>';})
@@ -499,7 +505,48 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
      .catch(error=>{list.innerHTML='<div class="scan-history-empty error">'+esc(error.message)+' <button type="button" data-action="retry-credits">Повторить</button></div>';})
      .finally(()=>{delete details.dataset.loading;});
  },true);
- cards.addEventListener('click',event=>{
+ cards.addEventListener('click',async event=>{
+   const deleteScanButton=event.target.closest('button[data-delete-scan]');
+   if(deleteScanButton){
+     const details=deleteScanButton.closest('details[data-scan-history]');
+     const card=deleteScanButton.closest('[data-user-card]');
+     if(!details||!card||String(card.dataset.userCard)!==String(adminUserId)||String(details.dataset.scanHistory)!==String(adminUserId))return;
+     const scanId=String(deleteScanButton.dataset.deleteScan||'');
+     if(!/^\d+$/.test(scanId))return;
+     if(!window.confirm('Удалить эту запись из истории сканирований?\n\nЗапись исчезнет из истории и коллекции маршрутов. Баланс сканов не изменится. Это действие нельзя отменить.'))return;
+     deleteScanButton.disabled=true;deleteScanButton.textContent='Удаляем…';
+     try{
+       const response=await fetch('../api/admin/users/'+encodeURIComponent(adminUserId)+'/scans/'+encodeURIComponent(scanId),{
+         method:'DELETE',headers:{Authorization:auth},cache:'no-store'
+       });
+       const data=await response.json();
+       if(!response.ok)throw new Error(data.error||'Не удалось удалить запись.');
+       const user=users.find(item=>String(item.vk_id)===String(adminUserId));
+       if(user){
+         user.scan_count=Number(data.total||0);
+         user.last_scan_at=data.latestScan?.scanned_at||null;
+         user.last_transport_number=data.latestScan?.vehicle_number||null;
+         user.last_transport_type=data.latestScan?.transport_type||'';
+         user.last_route_number=data.latestScan?.route_number||'';
+       }
+       const meta=card.querySelector('.vk-id');
+       if(meta&&user)meta.textContent='VK ID: '+user.vk_id+' · '+user.visit_count+' посещ. · '+user.scan_count+' сканов';
+       const statValues=card.querySelectorAll('.stat-value');
+       if(statValues[2])statValues[2].textContent=data.latestScan?.scanned_at?date(data.latestScan.scanned_at):'Ещё не сканировал';
+       if(statValues[3])statValues[3].textContent=data.latestScan
+         ?[data.latestScan.transport_type,data.latestScan.route_number?'№ '+data.latestScan.route_number:''].filter(Boolean).join(' ')||'—'
+         :'—';
+       const summary=details.querySelector('summary');
+       if(summary)summary.textContent='История сканов · '+Number(data.total||0);
+       details.dataset.loaded='0';
+       details.open=false;
+       details.open=true;
+     }catch(error){
+       deleteScanButton.disabled=false;deleteScanButton.textContent='Удалить запись';
+       window.alert(error.message);
+     }
+     return;
+   }
    const retry=event.target.closest('button[data-action="retry-scans"]');
    if(retry){const details=retry.closest('details[data-scan-history]');if(details){details.dataset.loaded='0';details.open=false;details.open=true;}return;}
    const retryCredits=event.target.closest('button[data-action="retry-credits"]');
