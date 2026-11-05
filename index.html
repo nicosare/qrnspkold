@@ -5403,6 +5403,17 @@ body.scan-loading-open { overflow: hidden !important; }
         border: 1px solid #f1c56a;
         background: #fff3db;
     }
+    /* Keep quick actions below the balance and away from VK/Android system controls. */
+    #qride-compact-header {
+        grid-template-columns: 40px 40px minmax(0, 1fr);
+        width: min(250px, calc(100% - 32px));
+        min-height: 0;
+        padding: 10px 13px;
+        gap: 7px;
+    }
+    #qride-compact-header .compact-balance {
+        grid-column: 1 / -1;
+    }
     @media (prefers-reduced-motion: reduce) {
         #qride-compact-header { transition: none; }
     }
