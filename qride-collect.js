@@ -6,6 +6,7 @@
 
   const track = document.getElementById('qride-collect-track');
   const totalNode = document.getElementById('qride-collect-total');
+  const totalLabelNode = document.getElementById('qride-collect-total-label');
   const statusNode = document.getElementById('qride-collect-status');
   const infoLayer = document.getElementById('qride-collect-info');
   let infoTrigger = document.getElementById('qride-collect-unknown');
@@ -113,6 +114,7 @@
     const cardsHtml = normalized.map(makeVehicleCard).join('');
     track.innerHTML = cardsHtml + makeUnknownCard();
     totalNode.textContent = String(normalized.length);
+    if (totalLabelNode) totalLabelNode.textContent = pluralizeRoutes(normalized.length);
     root.dataset.loaded = 'true';
     if (statusNode) statusNode.textContent = '';
     bindUnknownCard();
