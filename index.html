@@ -5299,7 +5299,7 @@ body.scan-loading-open { overflow: hidden !important; }
         z-index: 120;
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 12px;
         align-self: stretch;
         width: 100%;
         min-width: 0;
@@ -5385,7 +5385,7 @@ body.scan-loading-open { overflow: hidden !important; }
         const cardHeight = card.getBoundingClientRect().height;
         const actionsHeight = actions.getBoundingClientRect().height;
         const computed = window.getComputedStyle(quickbar);
-        const gap = parseFloat(computed.rowGap || computed.gap) || 10;
+        const gap = parseFloat(computed.rowGap || computed.gap) || 12;
         const topOffset = parseFloat(computed.top) || 6;
         const quickbarRect = quickbar.getBoundingClientRect();
         const overlayRect = overlay.getBoundingClientRect();
@@ -5469,7 +5469,8 @@ body.scan-loading-open { overflow: hidden !important; }
         actions.style.justifyContent = 'space-between';
         actions.style.flexWrap = 'nowrap';
 
-        const buttonWidth = lerp(Math.max(0, (innerWidth - buttonGap) / 2), 40, p);
+        const expandedButtonWidth = Math.max(0, (innerWidth - buttonGap) / 2);
+        const buttonWidth = lerp(expandedButtonWidth, 40, p);
         const buttonHeight = lerp(metrics.actionsHeight, 40, p);
         [newButton, ticketButton].forEach(function (button, index) {
             button.style.flex = '0 0 ' + buttonWidth + 'px';
@@ -5493,8 +5494,8 @@ body.scan-loading-open { overflow: hidden !important; }
 
         newLabel.style.opacity = 1 - p;
         ticketLabel.style.opacity = 1 - p;
-        newLabel.style.maxWidth = Math.max(0, buttonWidth - 31 * (1 - p)) + 'px';
-        ticketLabel.style.maxWidth = Math.max(0, buttonWidth - 20 * p - 10 * (1 - p)) + 'px';
+        newLabel.style.maxWidth = lerp(Math.max(0, expandedButtonWidth - 31), 0, p) + 'px';
+        ticketLabel.style.maxWidth = lerp(Math.max(0, expandedButtonWidth - 10), 0, p) + 'px';
         if (p > 0.55) {
             newLabel.style.whiteSpace = 'nowrap';
             ticketLabel.style.whiteSpace = 'nowrap';
@@ -5511,7 +5512,7 @@ body.scan-loading-open { overflow: hidden !important; }
     function updateFromScroll() {
         animationFrame = 0;
         if (!metrics) return;
-        const distance = overlay.scrollTop - metrics.collapseStart;
+        const distance = overlay.scrollTop - (metrics.collapseStart - collapseDistance);
         const rawProgress = clamp(distance / collapseDistance, 0, 1);
         const progress = reducedMotion ? (rawProgress >= 1 ? 1 : 0) : rawProgress;
         apply(progress);
