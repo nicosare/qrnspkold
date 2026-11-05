@@ -1933,6 +1933,76 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true, database: 'connected' });
 });
 
+// QRide Collect is derived from the successful scan history. It does not maintain
+// a second counter, so cards remain consistent across devices and app sessions.
+app.get('/api/collect', (req, res) => {
+  let userId;
+  try {
+    ({ userId } = launchParamsFromRequest(req));
+  } catch {
+    return res.status(401).json({
+      ok: false,
+      code: 'VK_AUTH_REQUIRED',
+      error: 'Откройте QRide внутри VK, чтобы загрузить коллекцию.'
+    });
+  }
+
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    const rows = db.prepare(`
+      SELECT transport_type, route_number, COUNT(*) AS ride_count,
+             MAX(scanned_at) AS last_scanned_at
+      FROM scan_history
+      WHERE vk_id = ?
+      GROUP BY lower(trim(transport_type)), trim(route_number)
+      ORDER BY MAX(scanned_at) DESC
+    `).all(userId);
+
+    const byRoute = new Map();
+    const supportedTypes = new Set(['трамвай', 'автобус', 'троллейбус']);
+
+    for (const row of rows) {
+      const transportType = normalizeTransportType(String(row.transport_type || ''));
+      const typeKey = transportType.toLowerCase();
+      if (!supportedTypes.has(typeKey)) continue;
+
+      const routeNumber = String(row.route_number || '')
+        .replace(/^\\s*№\\s*/i, '')
+        .replace(/[\\s\\u00a0]+/g, '')
+        .trim()
+        .slice(0, 12);
+      if (!routeNumber) continue;
+
+      const key = typeKey + '|' + routeNumber.toLowerCase();
+      const existing = byRoute.get(key);
+      const rideCount = Math.max(0, Number(row.ride_count) || 0);
+      const lastScannedAt = String(row.last_scanned_at || '');
+
+      if (existing) {
+        existing.trips += rideCount;
+        if (lastScannedAt > existing.lastScannedAt) existing.lastScannedAt = lastScannedAt;
+      } else {
+        byRoute.set(key, {
+          transportType,
+          routeNumber,
+          trips: rideCount,
+          lastScannedAt
+        });
+      }
+    }
+
+    const cards = Array.from(byRoute.values())
+      .sort((a, b) => b.lastScannedAt.localeCompare(a.lastScannedAt));
+
+    return res.json({ ok: true, cards });
+  } catch (error) {
+    console.warn('[QRide Collect] Could not build collection:', error?.message || error);
+    return res.status(500).json({
+      ok: false,
+      error: 'Не удалось загрузить коллекцию транспорта.'
+    });
+  }
+});
 
 app.post('/api/paytag', async (req, res) => {
   const paytagid = String(req.body?.paytagid || '').trim();
