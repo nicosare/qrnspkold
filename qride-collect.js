@@ -14,9 +14,9 @@
   if (!track || !totalNode) return;
 
   const transportConfig = {
-    'трамвай': { className: 'tram', image: 'qride-collect-tram.svg' },
-    'автобус': { className: 'bus', image: 'qride-collect-bus.svg' },
-    'троллейбус': { className: 'trolley', image: 'qride-collect-trolleybus.svg' }
+    'трамвай': { className: 'tram', label: 'ТРАМВАЙ', image: 'qride-collect-tram.svg?v=20261105-2' },
+    'автобус': { className: 'bus', label: 'АВТОБУС', image: 'qride-collect-bus.svg?v=20261105-2' },
+    'троллейбус': { className: 'trolley', label: 'ТРОЛЛЕЙБУС', image: 'qride-collect-trolleybus.svg?v=20261105-2' }
   };
 
   let activeController = null;
@@ -83,14 +83,26 @@
     if (!config || !route) return '';
 
     const trips = Math.max(1, Math.trunc(Number(card.trips) || 0));
-    const label = typeKey + ' №' + route + ', ' + trips + ' ' + pluralizeTrips(trips);
+    const tripLabel = pluralizeTrips(trips);
+    const label = typeKey + ' №' + route + ', ' + trips + ' ' + tripLabel;
+    const longRouteClass = route.length > 4 ? ' qride-collect-route-board--long' : '';
+    const longCaptionClass = route.length > 6 ? ' qride-collect-card-route--long' : '';
+
     return '<article class="qride-collect-card qride-collect-card--' + config.className + '" ' +
       'aria-label="' + escapeHtml(label) + '" style="animation-delay:' + Math.min(index * 35, 210) + 'ms">' +
         '<div class="qride-collect-card-art">' +
           '<img class="qride-collect-vehicle" src="' + config.image + '" alt="" loading="lazy" decoding="async">' +
-          '<span class="qride-collect-route-board">' + escapeHtml(route) + '</span>' +
+          '<span class="qride-collect-route-board qride-collect-route-board--' + config.className + longRouteClass + '" aria-hidden="true">' +
+            escapeHtml(route) +
+          '</span>' +
         '</div>' +
-        '<div class="qride-collect-card-rides"><strong>' + trips + '</strong><span>' + pluralizeTrips(trips) + '</span></div>' +
+        '<div class="qride-collect-card-footer">' +
+          '<div class="qride-collect-card-ident">' +
+            '<span class="qride-collect-card-type">' + config.label + '</span>' +
+            '<strong class="qride-collect-card-route' + longCaptionClass + '">№ ' + escapeHtml(route) + '</strong>' +
+          '</div>' +
+          '<div class="qride-collect-card-rides"><strong>' + trips + '</strong><span>' + tripLabel + '</span></div>' +
+        '</div>' +
       '</article>';
   }
 
@@ -98,6 +110,7 @@
     return '<button class="qride-collect-unknown" id="qride-collect-unknown" type="button" ' +
       'aria-label="Узнать, как собирать транспорт">' +
         '<span class="qride-collect-unknown-mark" aria-hidden="true">?</span>' +
+        '<span class="qride-collect-unknown-label">Как собирать</span>' +
       '</button>';
   }
 
@@ -111,8 +124,10 @@
         return String(b.lastScannedAt || '').localeCompare(String(a.lastScannedAt || ''));
       });
 
+    const previousScrollLeft = track.scrollLeft;
     const cardsHtml = normalized.map(makeVehicleCard).join('');
     track.innerHTML = cardsHtml + makeUnknownCard();
+    track.scrollLeft = Math.min(previousScrollLeft, Math.max(0, track.scrollWidth - track.clientWidth));
     totalNode.textContent = String(normalized.length);
     if (totalLabelNode) totalLabelNode.textContent = pluralizeRoutes(normalized.length);
     root.dataset.loaded = 'true';
