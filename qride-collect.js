@@ -14,9 +14,9 @@
   if (!track || !totalNode) return;
 
   const transportConfig = {
-    'трамвай': { className: 'tram', label: 'ТРАМВАЙ', image: '/assets/collect/8953-cutout.png?v=20261105-4' },
-    'автобус': { className: 'bus', label: 'АВТОБУС', image: '/assets/collect/8949-cutout.png?v=20261105-4' },
-    'троллейбус': { className: 'trolley', label: 'ТРОЛЛЕЙБУС', image: '/assets/collect/8954-cutout.png?v=20261105-4' }
+    'трамвай': { className: 'tram', label: 'ТРАМВАЙ', image: '/roadnote/assets/collect/8953-cutout.png?v=20261105-5' },
+    'автобус': { className: 'bus', label: 'АВТОБУС', image: '/roadnote/assets/collect/8949-cutout.png?v=20261105-5' },
+    'троллейбус': { className: 'trolley', label: 'ТРОЛЛЕЙБУС', image: '/roadnote/assets/collect/8954-cutout.png?v=20261105-5' }
   };
 
   let activeController = null;
