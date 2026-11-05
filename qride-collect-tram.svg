@@ -1,33 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180" fill="none">
 <defs>
-  <linearGradient id="tramFront" x1="48" y1="24" x2="158" y2="151" gradientUnits="userSpaceOnUse"><stop stop-color="#FFC06A"/><stop offset=".42" stop-color="#F58A24"/><stop offset="1" stop-color="#D85F13"/></linearGradient>
-  <linearGradient id="tramSide" x1="150" y1="43" x2="211" y2="143" gradientUnits="userSpaceOnUse"><stop stop-color="#F9A64B"/><stop offset=".55" stop-color="#E8791C"/><stop offset="1" stop-color="#B84D12"/></linearGradient>
-  <linearGradient id="tramGlass" x1="72" y1="48" x2="145" y2="101" gradientUnits="userSpaceOnUse"><stop stop-color="#34566C"/><stop offset=".45" stop-color="#152F43"/><stop offset="1" stop-color="#0C2032"/></linearGradient>
-  <linearGradient id="tramRoof" x1="61" y1="22" x2="155" y2="42" gradientUnits="userSpaceOnUse"><stop stop-color="#FFF0D8"/><stop offset="1" stop-color="#E7A65C"/></linearGradient>
-  <linearGradient id="tramMetal" x1="70" y1="137" x2="70" y2="153" gradientUnits="userSpaceOnUse"><stop stop-color="#F6D1A3"/><stop offset="1" stop-color="#A84A19"/></linearGradient>
-  <filter id="tramShadow" x="22" y="13" width="204" height="166" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="5"/></filter>
+  <linearGradient id="tramFront" x1="48" y1="23" x2="155" y2="151" gradientUnits="userSpaceOnUse"><stop stop-color="#FFD08B"/><stop offset=".42" stop-color="#F58B2C"/><stop offset="1" stop-color="#C95716"/></linearGradient>
+  <linearGradient id="tramSide" x1="151" y1="43" x2="211" y2="143" gradientUnits="userSpaceOnUse"><stop stop-color="#F9AA58"/><stop offset=".6" stop-color="#E57520"/><stop offset="1" stop-color="#AE4715"/></linearGradient>
+  <linearGradient id="tramGlass" x1="69" y1="42" x2="143" y2="116" gradientUnits="userSpaceOnUse"><stop stop-color="#4C7184"/><stop offset=".42" stop-color="#18384D"/><stop offset="1" stop-color="#0B2032"/></linearGradient>
+  <linearGradient id="tramRoof" x1="64" y1="22" x2="153" y2="47" gradientUnits="userSpaceOnUse"><stop stop-color="#FFF2DE"/><stop offset="1" stop-color="#E6A75F"/></linearGradient>
+  <linearGradient id="tramLower" x1="70" y1="111" x2="72" y2="145" gradientUnits="userSpaceOnUse"><stop stop-color="#FFB35E"/><stop offset="1" stop-color="#D75F18"/></linearGradient>
+  <filter id="tramShadow" x="22" y="13" width="205" height="166" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="5"/></filter>
 </defs>
 <ellipse cx="126" cy="158" rx="80" ry="9" fill="#26384B" opacity=".14" filter="url(#tramShadow)"/>
-<path d="M151 43 190 54Q201 58 202 70L198 132Q197 143 184 146L148 139 145 47Z" fill="url(#tramSide)" stroke="#B95B1A" stroke-width="1.5"/>
-<path d="M160 63 188 71 187 98 159 94Z" fill="#29475B" stroke="#F9BD78" stroke-width="2"/>
-<path d="M160 103 187 108 186 126 159 123Z" fill="#315468" stroke="#F5B66A" stroke-width="1.5"/>
-<path d="M49 42Q51 27 67 25L133 24Q151 25 157 42L156 133Q154 148 139 151L55 146Q42 144 42 130L43 54Q43 46 49 42Z" fill="url(#tramFront)" stroke="#C45B18" stroke-width="2"/>
-<path d="M59 35Q62 28 73 28L136 28Q146 29 151 38L153 47 56 47Z" fill="url(#tramRoof)" opacity=".95"/>
-<path d="M61 53Q63 47 72 47L139 47Q147 48 149 56L148 99 59 97Z" fill="url(#tramGlass)" stroke="#FFE0B5" stroke-width="2"/>
-<path d="M105 49 107 98" stroke="#9AB4C2" stroke-width="2" opacity=".48"/>
-<path d="M67 56 92 51 91 94 63 94Z" fill="#A9D4E7" opacity=".13"/>
-<rect x="96" y="31" width="52" height="16" rx="4" fill="#122B3C" stroke="#F9D5A7" stroke-width="1.2"/>
-<path d="M99 35H145" stroke="#83A2B2" stroke-width="1" opacity=".45"/>
-<path d="M55 105 149 108 147 127Q145 137 135 138L57 134Q51 133 51 125Z" fill="#E56C19" opacity=".85"/>
-<path d="M56 109 147 112" stroke="#FFD19D" stroke-width="2" opacity=".7"/>
-<rect x="54" y="116" width="12" height="8" rx="3" fill="#FFF3D8"/>
-<rect x="132" y="119" width="12" height="8" rx="3" fill="#FFF3D8"/>
-<path d="M46 132 154 137 153 143Q151 149 143 150L55 146Q46 145 44 139Z" fill="url(#tramMetal)"/>
-<path d="M45 139 153 144" stroke="#FFE1BC" stroke-width="2" opacity=".8"/>
-<path d="M165 48 193 58" stroke="#FFD49E" stroke-width="2" opacity=".7"/>
-<path d="M166 131 195 135" stroke="#9A4110" stroke-width="2" opacity=".4"/>
-<path d="M71 143 75 156M139 147 143 158" stroke="#344454" stroke-width="5" stroke-linecap="round"/>
-<ellipse cx="75" cy="155" rx="9" ry="5" fill="#27394A"/><ellipse cx="144" cy="157" rx="9" ry="5" fill="#27394A"/>
-<path d="M54 43 57 35" stroke="#FFF1DA" stroke-width="3" stroke-linecap="round" opacity=".8"/>
-<path d="M61 29Q81 21 111 23" stroke="#FFF5E6" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+<!-- Long low-floor car body and visible right side -->
+<path d="M151 43 191 54Q201 58 202 71L198 130Q197 141 184 144L146 136 144 48Z" fill="url(#tramSide)" stroke="#B95A1D" stroke-width="1.6"/>
+<path d="M160 61 190 69 188 93 158 87Z" fill="#18384B" stroke="#F9C184" stroke-width="1.8"/>
+<path d="M158 96 188 101 187 121 157 116Z" fill="#23475B" stroke="#F3B36D" stroke-width="1.5"/>
+<path d="M173 58 171 126" stroke="#FFD09A" stroke-width="1.2" opacity=".48"/>
+<path d="M49 43Q53 27 70 24L130 23Q150 25 157 43L153 127Q151 142 136 147L56 141Q43 138 42 124L44 56Q44 48 49 43Z" fill="url(#tramFront)" stroke="#C45B1B" stroke-width="2"/>
+<path d="M60 35Q65 26 78 26L133 26Q146 28 151 39L153 49 55 49Z" fill="url(#tramRoof)"/>
+<!-- Sloped panoramic front glazing -->
+<path d="M57 51Q64 43 77 42L135 42Q147 44 150 56L144 105Q142 116 130 117L60 110Q53 108 54 96L55 59Q55 54 57 51Z" fill="url(#tramGlass)" stroke="#FFE5C5" stroke-width="2"/>
+<path d="M104 43 101 114" stroke="#A9C4D1" stroke-width="1.8" opacity=".58"/>
+<path d="M64 54 91 47 86 105 59 102Z" fill="#B6DDEA" opacity=".15"/>
+<path d="M128 47 144 53 139 93 122 103Z" fill="#A4C7D8" opacity=".11"/>
+<!-- Blank destination display; the route number is overlaid by the app -->
+<rect x="96" y="30" width="52" height="16" rx="4" fill="#102A3D" stroke="#F7D4AE" stroke-width="1.2"/>
+<path d="M100 34H144" stroke="#8EAAB8" stroke-width="1" opacity=".42"/>
+<path d="M54 111 147 118 145 133Q143 142 132 143L57 137Q49 136 49 126Z" fill="url(#tramLower)"/>
+<path d="M54 115 146 122" stroke="#FFD4A2" stroke-width="2" opacity=".72"/>
+<path d="M49 119Q54 115 59 119L63 129Q59 134 50 130Z" fill="#F9F3DA" stroke="#D9A46B" stroke-width="1"/>
+<path d="M139 124 150 125 148 135 138 134Z" fill="#F9F3DA" stroke="#D9A46B" stroke-width="1"/>
+<path d="M45 132 151 139 149 146Q147 151 137 151L56 145Q46 144 44 138Z" fill="#B84F16"/>
+<path d="M47 138 149 145" stroke="#FFE0BA" stroke-width="2" opacity=".72"/>
+<!-- Side doors and sill -->
+<path d="M165 96 193 101 191 126 163 121Z" fill="#D66A1D" stroke="#F8BD7A" stroke-width="1.3"/>
+<path d="M177 98 175 124" stroke="#FFD7AD" stroke-width="1.5" opacity=".7"/>
+<path d="M70 143 74 156M139 148 143 159" stroke="#344454" stroke-width="5" stroke-linecap="round"/>
+<ellipse cx="74" cy="155" rx="9" ry="5" fill="#27394A"/><ellipse cx="144" cy="157" rx="9" ry="5" fill="#27394A"/>
+<path d="M55 43 59 34" stroke="#FFF3DF" stroke-width="3" stroke-linecap="round" opacity=".78"/>
+<path d="M65 29Q85 21 113 23" stroke="#FFF7EA" stroke-width="2" stroke-linecap="round" opacity=".55"/>
 </svg>
