@@ -5318,7 +5318,7 @@ body.scan-loading-open { overflow: hidden !important; }
         position: fixed;
         z-index: 900;
         top: calc(env(safe-area-inset-top, 0px) + 8px);
-        left: 50%;
+        left: 16px;
         display: grid;
         grid-template-columns: minmax(0, 1fr) 40px 40px;
         align-items: center;
@@ -5335,7 +5335,7 @@ body.scan-loading-open { overflow: hidden !important; }
         opacity: 0;
         visibility: hidden;
         pointer-events: none;
-        transform: translate3d(-50%, -8px, 0);
+        transform: translate3d(0, -8px, 0);
         transition: opacity 180ms ease, transform 180ms ease, visibility 180ms;
         will-change: opacity, transform;
     }
@@ -5343,7 +5343,7 @@ body.scan-loading-open { overflow: hidden !important; }
         opacity: 1;
         visibility: visible;
         pointer-events: auto;
-        transform: translate3d(-50%, 0, 0);
+        transform: translate3d(0, 0, 0);
     }
     #qride-compact-header .compact-balance {
         min-width: 0;
