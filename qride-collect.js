@@ -206,8 +206,10 @@
           '</div>' +
           '<button class="qride-collect-info-close" type="button" data-collect-history-close aria-label="Закрыть">×</button>' +
         '</div>' +
-        '<p class="qride-collect-history-status" id="qride-collect-history-status" role="status" aria-live="polite"></p>' +
-        '<div class="qride-collect-history-list" id="qride-collect-history-list"></div>' +
+        '<div class="qride-collect-history-scroll">' +
+          '<p class="qride-collect-history-status" id="qride-collect-history-status" role="status" aria-live="polite"></p>' +
+          '<div class="qride-collect-history-list" id="qride-collect-history-list"></div>' +
+        '</div>' +
       '</section>';
 
     document.body.appendChild(historyLayer);
@@ -245,27 +247,43 @@
     if (sheet) {
       let startX = 0;
       let startY = 0;
+      let startScrollTop = 0;
+      let startInList = false;
       let trackingTouch = false;
+
+      // Match the FAQ drawer: normal list scrolling never dismisses the modal.
+      // Only a deliberate long pull from the very top of the list may close it.
       sheet.addEventListener('touchstart', function (event) {
         if (historyLayer.hidden || !event.touches || event.touches.length !== 1) {
           trackingTouch = false;
           return;
         }
-        if (event.target && event.target.closest && event.target.closest('button')) {
+        const target = event.target;
+        if (target && target.closest && target.closest('[data-collect-history-close], [data-collect-ticket]')) {
           trackingTouch = false;
           return;
         }
-        startX = event.touches[0].clientX;
-        startY = event.touches[0].clientY;
+        const touch = event.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+        const scrollArea = target && target.closest ? target.closest('.qride-collect-history-scroll') : null;
+        startInList = Boolean(scrollArea);
+        startScrollTop = scrollArea ? scrollArea.scrollTop : -1;
         trackingTouch = true;
       }, { passive: true });
+
       sheet.addEventListener('touchend', function (event) {
         if (!trackingTouch || !event.changedTouches || !event.changedTouches.length) return;
-        const dx = event.changedTouches[0].clientX - startX;
-        const dy = event.changedTouches[0].clientY - startY;
+        const touch = event.changedTouches[0];
+        const dx = touch.clientX - startX;
+        const dy = touch.clientY - startY;
         trackingTouch = false;
-        if (dy > 65 && dy > Math.abs(dx) * 1.2) closeHistory();
+
+        const threshold = startInList ? 150 : 65;
+        const canClose = !startInList || startScrollTop <= 1;
+        if (canClose && dy >= threshold && dy > Math.abs(dx) * 1.25) closeHistory();
       }, { passive: true });
+
       sheet.addEventListener('touchcancel', function () {
         trackingTouch = false;
       }, { passive: true });
