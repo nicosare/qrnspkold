@@ -2495,10 +2495,10 @@ body.scan-loading-open { overflow: hidden !important; }
         latestHistoryTicketRestored = true;
 
         // Do not replace a historical ticket that the user has already opened.
-        if (!historyTicketPreviewActive) restoreTicketFromHistory(scan);
-        historyTicketPreviewActive = false === historyTicketPreviewActive && !historyTicketPreviewActive
-            ? false
-            : historyTicketPreviewActive;
+        if (!historyTicketPreviewActive) {
+            restoreTicketFromHistory(scan);
+            historyTicketPreviewActive = false;
+        }
     }
 
     function showCurrentTicket() {
