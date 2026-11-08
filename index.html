@@ -2440,37 +2440,27 @@ body.scan-loading-open { overflow: hidden !important; }
         const historyStart = new Date(scan.scanned_at);
         if (!Number.isFinite(historyStart.getTime())) return false;
 
+        // Historical tickets are a temporary view: never overwrite the active ticket in localStorage.
         startTime = historyStart;
         dateElement.textContent = getCurrentDateTimeString(historyStart);
         ticketNumber = generateTicketNumber(historyStart);
         ticketNumberElement.textContent = ticketNumber;
-        localStorage.setItem('timerStartTime', String(historyStart.getTime()));
-        localStorage.setItem('ticketNumber', ticketNumber);
 
         const vehicleType = String(scan.transport_type || scan.vehicleType || '').trim();
-        if (vehicleType) {
-            vehicleTypeElement.textContent = vehicleType;
-            localStorage.setItem('vehicleType', vehicleType);
-        }
+        if (vehicleType) vehicleTypeElement.textContent = vehicleType;
 
         const rawRoute = String(scan.route_number || scan.routeNumber || '').trim();
         const route = rawRoute.replace(/^\s*№\s*/i, '').trim();
         if (route) {
             const normalizedRoute = '№' + route;
             routeNumberElement.innerHTML = formatRouteNumber(normalizedRoute);
-            localStorage.setItem('routeNumber', normalizedRoute);
         }
 
         const vehicleNumber = String(scan.vehicle_number || scan.vehicleNumber || '').trim();
-        if (vehicleNumber) {
-            vehicleNumberElement.textContent = vehicleNumber;
-            localStorage.setItem('vehicleNumber', vehicleNumber);
-        }
+        if (vehicleNumber) vehicleNumberElement.textContent = vehicleNumber;
 
         const hasPrice = scan.price !== null && scan.price !== undefined && Number.isFinite(Number(scan.price));
-        const price = hasPrice ? String(scan.price) : '—';
-        priceElement.textContent = price;
-        localStorage.setItem('ticketPrice', price);
+        priceElement.textContent = hasPrice ? String(scan.price) : '—';
 
         updateTimer();
         if (timerInterval) clearInterval(timerInterval);
@@ -2480,8 +2470,25 @@ body.scan-loading-open { overflow: hidden !important; }
     }
 
     function restoreLatestTicketFromHistory(scan) {
-        if (latestHistoryTicketRestored) return;
-        latestHistoryTicketRestored = restoreTicketFromHistory(scan);
+        if (latestHistoryTicketRestored || !restoreTicketFromHistory(scan)) return;
+
+        // The session's lastScan is the current ticket, so persist it as the active ticket.
+        localStorage.setItem('timerStartTime', String(startTime.getTime()));
+        localStorage.setItem('ticketNumber', ticketNumber);
+        localStorage.setItem('vehicleType', vehicleTypeElement.textContent.trim());
+        localStorage.setItem('routeNumber', routeNumberElement.textContent.trim());
+        localStorage.setItem('vehicleNumber', vehicleNumberElement.textContent.trim());
+        localStorage.setItem('ticketPrice', priceElement.textContent.trim());
+        latestHistoryTicketRestored = true;
+    }
+
+    function showCurrentTicket() {
+        // The button below the balance always returns to the last scanned ticket,
+        // even after a historical ticket was opened from QRide Collect.
+        loadFromLocalStorage();
+        loadTimer();
+        generateQR();
+        closeStartOverlay();
     }
 
     function updateContinueTicketButton(scanCount) {
@@ -3602,7 +3609,7 @@ body.scan-loading-open { overflow: hidden !important; }
         loadTimer();
 
         startScanButton.addEventListener('click', scanWithVkBridge);
-        continueCurrentScanButton.addEventListener('click', closeStartOverlay);
+        continueCurrentScanButton.addEventListener('click', showCurrentTicket);
         refreshScanButton();
 
         // The start overlay is shown on launch. Returning to the ticket puts
