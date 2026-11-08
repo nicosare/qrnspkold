@@ -388,7 +388,28 @@
 
 
 /* QRide Collect — route history */
-.qride-collect-history-sheet { padding-top: 10px; }
+.qride-collect-history-sheet {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    min-height: 0;
+    padding-top: 10px;
+    overflow: hidden;
+}
+.qride-collect-history-sheet > .qride-collect-info-grabber,
+.qride-collect-history-heading {
+    flex: 0 0 auto;
+}
+.qride-collect-history-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-top: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+}
 .qride-collect-history-heading {
     display: flex;
     align-items: flex-start;
@@ -408,6 +429,7 @@
     margin: 5px 0 0; color: #8290a0; font-size: 12px; line-height: 1.35; font-weight: 700;
 }
 .qride-collect-history-status {
+    flex: 0 0 auto;
     margin: 16px 0 0; color: #8290a0; font-size: 12px; line-height: 1.4;
 }
 .qride-collect-history-status:empty { display: none; }
