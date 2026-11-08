@@ -2434,6 +2434,7 @@ body.scan-loading-open { overflow: hidden !important; }
     let scanSessionReady = false;
     let currentScanCount = 0;
     let latestHistoryTicketRestored = false;
+    let historyTicketPreviewActive = false;
 
     function restoreTicketFromHistory(scan) {
         if (!scan || !scan.scanned_at) return false;
@@ -2441,6 +2442,7 @@ body.scan-loading-open { overflow: hidden !important; }
         if (!Number.isFinite(historyStart.getTime())) return false;
 
         // Historical tickets are a temporary view: never overwrite the active ticket in localStorage.
+        historyTicketPreviewActive = true;
         startTime = historyStart;
         dateElement.textContent = getCurrentDateTimeString(historyStart);
         ticketNumber = generateTicketNumber(historyStart);
@@ -2470,21 +2472,39 @@ body.scan-loading-open { overflow: hidden !important; }
     }
 
     function restoreLatestTicketFromHistory(scan) {
-        if (latestHistoryTicketRestored || !restoreTicketFromHistory(scan)) return;
+        if (latestHistoryTicketRestored || !scan || !scan.scanned_at) return;
+        const activeStart = new Date(scan.scanned_at);
+        if (!Number.isFinite(activeStart.getTime())) return;
 
-        // The session's lastScan is the current ticket, so persist it as the active ticket.
-        localStorage.setItem('timerStartTime', String(startTime.getTime()));
-        localStorage.setItem('ticketNumber', ticketNumber);
-        localStorage.setItem('vehicleType', vehicleTypeElement.textContent.trim());
-        localStorage.setItem('routeNumber', routeNumberElement.textContent.trim());
-        localStorage.setItem('vehicleNumber', vehicleNumberElement.textContent.trim());
-        localStorage.setItem('ticketPrice', priceElement.textContent.trim());
+        const activeTicketNumber = generateTicketNumber(activeStart);
+        localStorage.setItem('timerStartTime', String(activeStart.getTime()));
+        localStorage.setItem('ticketNumber', activeTicketNumber);
+
+        const vehicleType = String(scan.transport_type || scan.vehicleType || '').trim();
+        if (vehicleType) localStorage.setItem('vehicleType', vehicleType);
+
+        const rawRoute = String(scan.route_number || scan.routeNumber || '').trim();
+        const route = rawRoute.replace(/^\s*№\s*/i, '').trim();
+        if (route) localStorage.setItem('routeNumber', '№' + route);
+
+        const vehicleNumber = String(scan.vehicle_number || scan.vehicleNumber || '').trim();
+        if (vehicleNumber) localStorage.setItem('vehicleNumber', vehicleNumber);
+
+        const hasPrice = scan.price !== null && scan.price !== undefined && Number.isFinite(Number(scan.price));
+        localStorage.setItem('ticketPrice', hasPrice ? String(scan.price) : '—');
         latestHistoryTicketRestored = true;
+
+        // Do not replace a historical ticket that the user has already opened.
+        if (!historyTicketPreviewActive) restoreTicketFromHistory(scan);
+        historyTicketPreviewActive = false === historyTicketPreviewActive && !historyTicketPreviewActive
+            ? false
+            : historyTicketPreviewActive;
     }
 
     function showCurrentTicket() {
         // The button below the balance always returns to the last scanned ticket,
         // even after a historical ticket was opened from QRide Collect.
+        historyTicketPreviewActive = false;
         loadFromLocalStorage();
         loadTimer();
         generateQR();
@@ -2729,6 +2749,7 @@ body.scan-loading-open { overflow: hidden !important; }
     }
 
     function applyTransportData(data) {
+        historyTicketPreviewActive = false;
         if (data.vehicleType) {
             vehicleTypeElement.textContent = data.vehicleType;
             localStorage.setItem('vehicleType', data.vehicleType);
