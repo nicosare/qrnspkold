@@ -2066,6 +2066,63 @@ app.get('/api/collect', (req, res) => {
   }
 });
 
+
+app.get('/api/collect/history', (req, res) => {
+  let userId;
+  try {
+    ({ userId } = launchParamsFromRequest(req));
+  } catch {
+    return res.status(401).json({
+      ok: false,
+      code: 'VK_AUTH_REQUIRED',
+      error: 'Откройте QRide внутри VK, чтобы загрузить историю поездок.'
+    });
+  }
+
+  const transportType = normalizeTransportType(String(req.query?.transportType || ''));
+  const typeKey = transportType.toLowerCase();
+  if (!['трамвай', 'автобус', 'троллейбус'].includes(typeKey)) {
+    return res.status(400).json({ ok: false, error: 'Некорректный тип транспорта.' });
+  }
+
+  const normalizeRouteNumber = value => String(value || '')
+    .replace(/^\s*№\s*/i, '')
+    .replace(/[\s\u00a0]+/g, '')
+    .trim()
+    .slice(0, 12)
+    .toLowerCase();
+  const routeNumber = normalizeRouteNumber(req.query?.routeNumber);
+  if (!routeNumber) {
+    return res.status(400).json({ ok: false, error: 'Не указан номер маршрута.' });
+  }
+
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    const rows = db.prepare(
+      'SELECT id, scanned_at, transport_type, route_number, vehicle_number, price ' +
+      'FROM scan_history ' +
+      'WHERE vk_id = ? AND lower(trim(transport_type)) = ? ' +
+      'ORDER BY scanned_at DESC, id DESC'
+    ).all(userId, typeKey);
+
+    const rides = rows
+      .filter(row => normalizeRouteNumber(row.route_number) === routeNumber)
+      .map(row => ({
+        id: Number(row.id),
+        scanned_at: row.scanned_at,
+        transport_type: row.transport_type,
+        route_number: row.route_number,
+        vehicle_number: row.vehicle_number,
+        price: row.price === null || row.price === undefined ? null : Number(row.price)
+      }));
+
+    return res.json({ ok: true, transportType, routeNumber, total: rides.length, rides });
+  } catch (error) {
+    console.warn('[QRide Collect] Could not load route history:', error?.message || error);
+    return res.status(500).json({ ok: false, error: 'Не удалось загрузить историю поездок.' });
+  }
+});
+
 app.post('/api/paytag', async (req, res) => {
   const paytagid = String(req.body?.paytagid || '').trim();
   if (!/^[0-9A-Za-z_-]{6,64}$/.test(paytagid)) {

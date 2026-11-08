@@ -29,20 +29,36 @@
   let previousBodyWidth = '';
   let pageScrollY = 0;
 
+  let historyLayer = null;
+  let historySubtitle = null;
+  let historyList = null;
+  let historyStatus = null;
+  let historyTrigger = null;
+  let historyRides = [];
+  let historyController = null;
+  let historyRequestSequence = 0;
+  let historyPageScrollY = 0;
+  let historyPreviousBodyOverflow = '';
+  let historyPreviousBodyPosition = '';
+  let historyPreviousBodyTop = '';
+  let historyPreviousBodyLeft = '';
+  let historyPreviousBodyRight = '';
+  let historyPreviousBodyWidth = '';
+
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, function (char) {
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char];
     });
   }
 
-  function getApiUrl() {
+  function getApiUrl(endpoint = 'api/collect') {
     const pathname = window.location.pathname;
     const appBase = pathname.endsWith('/')
       ? pathname
       : (pathname.slice(pathname.lastIndexOf('/') + 1).includes('.')
         ? pathname.slice(0, pathname.lastIndexOf('/') + 1)
         : pathname + '/');
-    return new URL(appBase + 'api/collect', window.location.origin);
+    return new URL(appBase + endpoint, window.location.origin);
   }
 
   function getVkAuthorizationHeader() {
@@ -93,16 +109,18 @@
     const label = typeKey + ' №' + route + ', ' + trips + ' ' + tripLabel;
     const longCaptionClass = route.length > 5 ? ' qride-collect-card-route--long' : '';
 
-    return '<article class="qride-collect-card qride-collect-card--' + config.className + '" ' +
+    return '<button type="button" class="qride-collect-card qride-collect-card--' + config.className + '" ' +
+      'data-collect-history="true" data-transport-type="' + escapeHtml(typeKey) + '" ' +
+      'data-route-number="' + escapeHtml(route) + '" ' +
       'aria-label="' + escapeHtml(label) + '" style="animation-delay:' + Math.min(index * 25, 150) + 'ms">' +
-        '<div class="qride-collect-card-art">' +
+        '<span class="qride-collect-card-art">' +
           '<img class="qride-collect-vehicle" src="' + config.image + '" alt="" loading="lazy" decoding="async">' +
-        '</div>' +
-        '<div class="qride-collect-card-footer">' +
+        '</span>' +
+        '<span class="qride-collect-card-footer">' +
           '<strong class="qride-collect-card-route' + longCaptionClass + '">№ ' + escapeHtml(route) + '</strong>' +
           '<span class="qride-collect-card-rides">' + trips + ' ' + tripLabel + '</span>' +
-        '</div>' +
-      '</article>';
+        '</span>' +
+      '</button>';
   }
 
   function makeUnknownCard(typeKey) {
@@ -167,6 +185,211 @@
     buttons.forEach(function (button) {
       button.addEventListener('click', openInfo);
     });
+  }
+
+  function initializeHistoryModal() {
+    if (historyLayer) return;
+
+    historyLayer = document.createElement('div');
+    historyLayer.className = 'qride-collect-info qride-collect-history';
+    historyLayer.id = 'qride-collect-history';
+    historyLayer.hidden = true;
+    historyLayer.innerHTML =
+      '<button class="qride-collect-info-backdrop" type="button" data-collect-history-close aria-label="Закрыть историю"></button>' +
+      '<section class="qride-collect-info-sheet qride-collect-history-sheet" role="dialog" aria-modal="true" aria-labelledby="qride-collect-history-title">' +
+        '<div class="qride-collect-info-grabber"></div>' +
+        '<div class="qride-collect-history-heading">' +
+          '<div class="qride-collect-history-heading-copy">' +
+            '<span class="qride-collect-history-kicker">QRIDE COLLECT</span>' +
+            '<h4 id="qride-collect-history-title">История поездок</h4>' +
+            '<p class="qride-collect-history-subtitle" id="qride-collect-history-subtitle"></p>' +
+          '</div>' +
+          '<button class="qride-collect-info-close" type="button" data-collect-history-close aria-label="Закрыть">×</button>' +
+        '</div>' +
+        '<p class="qride-collect-history-status" id="qride-collect-history-status" role="status" aria-live="polite"></p>' +
+        '<div class="qride-collect-history-list" id="qride-collect-history-list"></div>' +
+      '</section>';
+
+    document.body.appendChild(historyLayer);
+    historySubtitle = historyLayer.querySelector('#qride-collect-history-subtitle');
+    historyList = historyLayer.querySelector('#qride-collect-history-list');
+    historyStatus = historyLayer.querySelector('#qride-collect-history-status');
+
+    historyLayer.addEventListener('click', function (event) {
+      const ticketButton = event.target.closest('[data-collect-ticket]');
+      if (ticketButton) {
+        event.preventDefault();
+        const selectedRide = historyRides.find(function (ride) {
+          return String(ride.id) === String(ticketButton.getAttribute('data-collect-ticket'));
+        });
+        if (!selectedRide) return;
+        if (typeof window.restoreRoadnoteTicketFromHistory !== 'function') {
+          historyStatus.textContent = 'Не удалось открыть билет. Перезапусти QRide и попробуй ещё раз.';
+          return;
+        }
+        closeHistory();
+        window.restoreRoadnoteTicketFromHistory(selectedRide);
+        return;
+      }
+
+      if (event.target === historyLayer || event.target.closest('[data-collect-history-close]')) {
+        closeHistory();
+      }
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && historyLayer && !historyLayer.hidden) closeHistory();
+    });
+
+    const sheet = historyLayer.querySelector('.qride-collect-history-sheet');
+    if (sheet) {
+      let startX = 0;
+      let startY = 0;
+      let trackingTouch = false;
+      sheet.addEventListener('touchstart', function (event) {
+        if (historyLayer.hidden || !event.touches || event.touches.length !== 1) {
+          trackingTouch = false;
+          return;
+        }
+        if (event.target && event.target.closest && event.target.closest('button')) {
+          trackingTouch = false;
+          return;
+        }
+        startX = event.touches[0].clientX;
+        startY = event.touches[0].clientY;
+        trackingTouch = true;
+      }, { passive: true });
+      sheet.addEventListener('touchend', function (event) {
+        if (!trackingTouch || !event.changedTouches || !event.changedTouches.length) return;
+        const dx = event.changedTouches[0].clientX - startX;
+        const dy = event.changedTouches[0].clientY - startY;
+        trackingTouch = false;
+        if (dy > 65 && dy > Math.abs(dx) * 1.2) closeHistory();
+      }, { passive: true });
+      sheet.addEventListener('touchcancel', function () {
+        trackingTouch = false;
+      }, { passive: true });
+    }
+  }
+
+  function formatRideDate(value) {
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return 'Дата неизвестна';
+    const dateText = new Intl.DateTimeFormat('ru-RU', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }).format(date);
+    const timeText = new Intl.DateTimeFormat('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+    return dateText + ', ' + timeText;
+  }
+
+  function formatRidePrice(value) {
+    if (value === null || value === undefined || value === '') return 'Стоимость не указана';
+    const amount = Number(value);
+    if (!Number.isFinite(amount)) return 'Стоимость не указана';
+    return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(amount) + ' ₽';
+  }
+
+  function renderHistory(rides, typeLabel, routeNumber) {
+    historyRides = Array.isArray(rides) ? rides : [];
+    historySubtitle.textContent = typeLabel + ' №' + routeNumber + ' · ' +
+      historyRides.length + ' ' + pluralizeTrips(historyRides.length);
+
+    historyList.innerHTML = historyRides.map(function (ride) {
+      const rideId = Number(ride.id);
+      if (!Number.isSafeInteger(rideId) || rideId < 1) return '';
+      const vehicleNumber = String(ride.vehicle_number || '').trim() || '—';
+      return '<article class="qride-collect-history-item">' +
+        '<div class="qride-collect-history-details">' +
+          '<strong class="qride-collect-history-date">' + escapeHtml(formatRideDate(ride.scanned_at)) + '</strong>' +
+          '<span class="qride-collect-history-vehicle">Т/С ' + escapeHtml(vehicleNumber) + '</span>' +
+          '<small class="qride-collect-history-price">' + escapeHtml(formatRidePrice(ride.price)) + '</small>' +
+        '</div>' +
+        '<button class="qride-collect-history-ticket" type="button" data-collect-ticket="' + rideId + '">К билету</button>' +
+      '</article>';
+    }).join('');
+
+    historyStatus.textContent = historyRides.length ? '' : 'Пока нет поездок на этом маршруте.';
+  }
+
+  async function openHistory(card) {
+    initializeHistoryModal();
+    if (historyController) historyController.abort();
+
+    historyTrigger = card;
+    historyPageScrollY = window.scrollY || window.pageYOffset || 0;
+    historyPreviousBodyOverflow = document.body.style.overflow;
+    historyPreviousBodyPosition = document.body.style.position;
+    historyPreviousBodyTop = document.body.style.top;
+    historyPreviousBodyLeft = document.body.style.left;
+    historyPreviousBodyRight = document.body.style.right;
+    historyPreviousBodyWidth = document.body.style.width;
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = '-' + historyPageScrollY + 'px';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+
+    const typeKey = String(card.getAttribute('data-transport-type') || '').trim().toLowerCase();
+    const routeNumber = normalizeRoute(card.getAttribute('data-route-number'));
+    const typeLabel = typeKey.charAt(0).toUpperCase() + typeKey.slice(1);
+    historyLayer.hidden = false;
+    historySubtitle.textContent = typeLabel + ' №' + routeNumber;
+    historyList.innerHTML = '';
+    historyStatus.textContent = 'Загружаем историю поездок…';
+
+    const controller = new AbortController();
+    historyController = controller;
+    const currentSequence = ++historyRequestSequence;
+
+    try {
+      const url = getApiUrl('api/collect/history');
+      url.searchParams.set('transportType', typeKey);
+      url.searchParams.set('routeNumber', routeNumber);
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: { 'Authorization': getVkAuthorizationHeader() },
+        cache: 'no-store',
+        credentials: 'omit',
+        signal: controller.signal
+      });
+      const payload = await response.json().catch(function () { return {}; });
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(payload.error || 'Не удалось загрузить историю поездок');
+      }
+      if (currentSequence !== historyRequestSequence || historyLayer.hidden) return;
+      renderHistory(payload.rides, typeLabel, routeNumber);
+    } catch (error) {
+      if (error && error.name === 'AbortError') return;
+      if (currentSequence !== historyRequestSequence || historyLayer.hidden) return;
+      historyStatus.textContent = error && error.message
+        ? error.message
+        : 'Не удалось загрузить историю поездок.';
+    } finally {
+      if (currentSequence === historyRequestSequence) historyController = null;
+    }
+  }
+
+  function closeHistory() {
+    if (!historyLayer || historyLayer.hidden) return;
+    historyLayer.hidden = true;
+    if (historyController) {
+      historyController.abort();
+      historyController = null;
+    }
+    document.body.style.overflow = historyPreviousBodyOverflow;
+    document.body.style.position = historyPreviousBodyPosition;
+    document.body.style.top = historyPreviousBodyTop;
+    document.body.style.left = historyPreviousBodyLeft;
+    document.body.style.right = historyPreviousBodyRight;
+    document.body.style.width = historyPreviousBodyWidth;
+    window.scrollTo(0, historyPageScrollY);
+    if (historyTrigger && historyTrigger.isConnected) historyTrigger.focus({ preventScroll: true });
   }
 
   async function refreshCollection() {
@@ -284,6 +507,11 @@
     if (document.visibilityState === 'visible') refreshCollection();
   });
 
+  initializeHistoryModal();
+  track.addEventListener('click', function (event) {
+    const card = event.target.closest('[data-collect-history]');
+    if (card && track.contains(card)) openHistory(card);
+  });
   bindUnknownCard();
   refreshCollection();
 })();

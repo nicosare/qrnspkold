@@ -135,7 +135,18 @@
     box-shadow: 0 3px 9px rgba(37, 65, 100, .065);
     scroll-snap-align: none;
     animation: qride-collect-card-in .2s ease both;
+    appearance: none;
+    margin: 0;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
+.qride-collect-card:active { transform: scale(.985); }
+.qride-collect-card:focus-visible { outline: 2px solid #0052EE; outline-offset: 3px; }
 @keyframes qride-collect-card-in {
     from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
@@ -373,4 +384,63 @@
 @media (prefers-reduced-motion: reduce) {
     .qride-collect-card, .qride-collect-info-sheet { animation: none !important; }
     .qride-collect-unknown:active { transform: none; }
+}
+
+
+/* QRide Collect — route history */
+.qride-collect-history-sheet { padding-top: 10px; }
+.qride-collect-history-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+.qride-collect-history-heading-copy { min-width: 0; }
+.qride-collect-history-kicker {
+    display: block; margin-bottom: 5px; color: #0052EE;
+    font-size: 9px; line-height: 1.2; font-weight: 900; letter-spacing: 1.35px;
+}
+.qride-collect-history-heading h4 {
+    margin: 0; color: #202a36; font-size: 22px; line-height: 1.2;
+    font-weight: 850; letter-spacing: -.4px;
+}
+.qride-collect-history-subtitle {
+    margin: 5px 0 0; color: #8290a0; font-size: 12px; line-height: 1.35; font-weight: 700;
+}
+.qride-collect-history-status {
+    margin: 16px 0 0; color: #8290a0; font-size: 12px; line-height: 1.4;
+}
+.qride-collect-history-status:empty { display: none; }
+.qride-collect-history-list {
+    display: flex; flex-direction: column; gap: 9px; margin-top: 15px;
+}
+.qride-collect-history-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    min-width: 0; padding: 11px 10px 11px 13px;
+    border: 1px solid #e6ebf2; border-radius: 14px; background: #fff;
+}
+.qride-collect-history-details {
+    display: flex; flex: 1 1 auto; flex-direction: column; gap: 3px; min-width: 0;
+}
+.qride-collect-history-date {
+    color: #29384a; font-size: 12px; line-height: 1.25; font-weight: 850;
+    font-variant-numeric: tabular-nums;
+}
+.qride-collect-history-vehicle {
+    color: #647386; font-size: 11px; line-height: 1.25; font-weight: 700;
+}
+.qride-collect-history-price {
+    color: #8a96a5; font-size: 10px; line-height: 1.25; font-weight: 650;
+}
+.qride-collect-history-ticket {
+    display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center;
+    min-height: 36px; padding: 0 12px; border: 0; border-radius: 11px;
+    background: #edf4ff; color: #0052EE; font-family: inherit; font-size: 11px;
+    line-height: 1; font-weight: 850; white-space: nowrap; -webkit-tap-highlight-color: transparent;
+}
+.qride-collect-history-ticket:active { transform: scale(.98); }
+@media (max-width: 360px) {
+    .qride-collect-history-sheet { padding-left: 15px; padding-right: 15px; }
+    .qride-collect-history-item { gap: 7px; padding-left: 10px; }
+    .qride-collect-history-ticket { min-height: 34px; padding: 0 9px; }
 }
