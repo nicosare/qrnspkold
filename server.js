@@ -2101,12 +2101,15 @@ app.get('/api/collect/history', (req, res) => {
     const rows = db.prepare(
       'SELECT id, scanned_at, transport_type, route_number, vehicle_number, price ' +
       'FROM scan_history ' +
-      'WHERE vk_id = ? AND lower(trim(transport_type)) = ? ' +
+      'WHERE vk_id = ? ' +
       'ORDER BY scanned_at DESC, id DESC'
-    ).all(userId, typeKey);
+    ).all(userId);
 
     const rides = rows
-      .filter(row => normalizeRouteNumber(row.route_number) === routeNumber)
+      .filter(row =>
+        normalizeTransportType(String(row.transport_type || '')).toLowerCase() === typeKey &&
+        normalizeRouteNumber(row.route_number) === routeNumber
+      )
       .map(row => ({
         id: Number(row.id),
         scanned_at: row.scanned_at,
