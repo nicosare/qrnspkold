@@ -443,6 +443,9 @@ const getScanByIdempotencyKey = db.prepare(`
   WHERE idempotency_key = ?
   LIMIT 1
 `);
+const getScanEnergyRewardForScan = db.prepare(
+  'SELECT 1 FROM scan_energy_rewards WHERE scan_history_id = ? LIMIT 1'
+);
 const clearDailyScanAfterSuccessfulScan = db.prepare(
   'UPDATE users SET daily_scan_available = 0 WHERE vk_id = ? AND daily_scan_date = ?'
 );
@@ -2238,7 +2241,7 @@ app.post('/api/paytag', async (req, res) => {
       subscriptionUntil: entitlement?.subscription_until || null,
       unlimited: Number(entitlement?.unlimited || 0) === 1,
       subscriptionActive,
-      energyRewardGranted: false,
+      energyRewardGranted: Boolean(getScanEnergyRewardForScan.get(existingScan.id)),
       duplicate: true
     });
   }
@@ -2401,7 +2404,7 @@ app.post('/api/paytag', async (req, res) => {
         subscriptionUntil: entitlement?.subscription_until || null,
         unlimited: Number(entitlement?.unlimited || 0) === 1,
         subscriptionActive: replaySubscriptionActive,
-        energyRewardGranted: false,
+        energyRewardGranted: Boolean(getScanEnergyRewardForScan.get(duplicateScan.id)),
         duplicate: true
       });
     }
@@ -2415,6 +2418,7 @@ app.post('/api/paytag', async (req, res) => {
       });
     }
 
+    sendLiveEntitlement(userId);
     if (referralRewarded && referralInviterId) sendLiveEntitlement(referralInviterId);
 
     const finalEntitlement = getUserScanBalance.get(userId);
