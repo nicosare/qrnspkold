@@ -3031,9 +3031,31 @@ body.scan-loading-open { overflow: hidden !important; }
 
     const pendingPaytagRequests = new Map();
 
+    function paytagScanRequestStorageKey(paytagid) {
+        return 'qride:pending-scan:' + paytagid;
+    }
+
+    function clearPaytagScanRequestId(paytagid) {
+        pendingPaytagRequests.delete(paytagid);
+        try {
+            window.sessionStorage.removeItem(paytagScanRequestStorageKey(paytagid));
+        } catch (error) {
+            // Session storage may be unavailable in restricted webviews.
+        }
+    }
+
     function getPaytagScanRequestId(paytagid) {
         const existing = pendingPaytagRequests.get(paytagid);
         if (existing) return existing;
+        try {
+            const persisted = window.sessionStorage.getItem(paytagScanRequestStorageKey(paytagid));
+            if (persisted && /^[0-9A-Za-z_-]{16,100}$/.test(persisted)) {
+                pendingPaytagRequests.set(paytagid, persisted);
+                return persisted;
+            }
+        } catch (error) {
+            // Session storage may be unavailable in restricted webviews.
+        }
         let requestId;
         try {
             requestId = window.crypto && typeof window.crypto.randomUUID === 'function'
@@ -3048,6 +3070,11 @@ body.scan-loading-open { overflow: hidden !important; }
                 Math.random().toString(36).slice(2);
         }
         pendingPaytagRequests.set(paytagid, requestId);
+        try {
+            window.sessionStorage.setItem(paytagScanRequestStorageKey(paytagid), requestId);
+        } catch (error) {
+            // The in-memory id still protects retries during this page session.
+        }
         return requestId;
     }
 
@@ -3080,12 +3107,12 @@ body.scan-loading-open { overflow: hidden !important; }
             // A definite 4xx response did not complete a scan. Keep the same
             // id only for network/5xx uncertainty, where the server may have committed it.
             if (response.status >= 400 && response.status < 500) {
-                pendingPaytagRequests.delete(paytagid);
+                clearPaytagScanRequestId(paytagid);
             }
             throw new Error(payload.error || `Сервер QRide вернул HTTP ${response.status}`);
         }
 
-        pendingPaytagRequests.delete(paytagid);
+        clearPaytagScanRequestId(paytagid);
         if (payload.energyRewardGranted === true) {
             window.dispatchEvent(new CustomEvent('roadnote:scan-success'));
         }
