@@ -98,7 +98,8 @@ db.exec(`
     transport_type TEXT NOT NULL DEFAULT '',
     route_number TEXT NOT NULL DEFAULT '',
     vehicle_number TEXT NOT NULL DEFAULT '',
-    price REAL DEFAULT NULL
+    price REAL DEFAULT NULL,
+    idempotency_key TEXT DEFAULT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_scan_history_user_time
     ON scan_history(vk_id, scanned_at DESC);
@@ -263,6 +264,16 @@ db.exec(`
 // Existing databases predate per-user scan balances. NULL means the balance
 // has not been assigned yet; once configured, zero blocks scanning and each
 // successful scan consumes one unit.
+const scanHistoryColumns = db.pragma('table_info(scan_history)');
+if (!scanHistoryColumns.some(column => column.name === 'idempotency_key')) {
+  db.exec('ALTER TABLE scan_history ADD COLUMN idempotency_key TEXT DEFAULT NULL');
+}
+db.exec(`
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_scan_history_idempotency
+    ON scan_history(idempotency_key)
+    WHERE idempotency_key IS NOT NULL AND idempotency_key <> '';
+`);
+
 const userColumns = db.pragma('table_info(users)');
 if (!userColumns.some(column => column.name === 'scan_balance')) {
   db.exec('ALTER TABLE users ADD COLUMN scan_balance INTEGER DEFAULT NULL');
@@ -376,15 +387,23 @@ if (!db.prepare('SELECT 1 FROM app_settings WHERE setting_key = ?').get(scanEner
 }
 
 const upsertUser = db.prepare(`
-  INSERT INTO users (vk_id, first_name, last_name, photo_url, first_seen, last_seen, visit_count, scan_balance, welcome_bonus_granted)
-  VALUES (@vk_id, @first_name, @last_name, @photo_url, @now, @now, 1, 3, 1)
-  ON CONFLICT(vk_id) DO UPDATE SET
-    first_name = CASE WHEN excluded.first_name <> '' THEN excluded.first_name ELSE users.first_name END,
-    last_name = CASE WHEN excluded.last_name <> '' THEN excluded.last_name ELSE users.last_name END,
-    photo_url = CASE WHEN excluded.photo_url <> '' THEN excluded.photo_url ELSE users.photo_url END,
-    last_seen = excluded.last_seen,
-    visit_count = users.visit_count + 1
+  UPDATE users SET
+    first_name = CASE WHEN @first_name <> '' THEN @first_name ELSE first_name END,
+    last_name = CASE WHEN @last_name <> '' THEN @last_name ELSE last_name END,
+    photo_url = CASE WHEN @photo_url <> '' THEN @photo_url ELSE photo_url END,
+    last_seen = @now,
+    visit_count = visit_count + 1
+  WHERE vk_id = @vk_id
 `);
+const updateNewUserProfile = db.prepare(`
+  UPDATE users SET
+    first_name = CASE WHEN @first_name <> '' THEN @first_name ELSE first_name END,
+    last_name = CASE WHEN @last_name <> '' THEN @last_name ELSE last_name END,
+    photo_url = CASE WHEN @photo_url <> '' THEN @photo_url ELSE photo_url END,
+    last_seen = @now
+  WHERE vk_id = @vk_id
+`);
+const getAnyScanForUser = db.prepare('SELECT 1 FROM scan_history WHERE vk_id = ? LIMIT 1');
 const listUsers = db.prepare(`
   SELECT u.vk_id, u.first_name, u.last_name, u.photo_url, u.first_seen, u.last_seen, u.visit_count,
          u.scan_balance, u.subscription_until, u.unlimited, u.last_scan_at, u.last_transport_number,
@@ -415,8 +434,27 @@ const recordScanCredit = db.prepare(`
 `);
 const recordScan = db.prepare(`
   INSERT INTO scan_history
-    (vk_id, scanned_at, paytag_id, transport_type, route_number, vehicle_number, price)
-  VALUES (?, ?, ?, ?, ?, ?, ?)
+    (vk_id, scanned_at, idempotency_key, paytag_id, transport_type, route_number, vehicle_number, price)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`);
+const getScanByIdempotencyKey = db.prepare(`
+  SELECT id, vk_id, scanned_at, paytag_id, transport_type, route_number, vehicle_number, price
+  FROM scan_history
+  WHERE idempotency_key = ?
+  LIMIT 1
+`);
+const clearDailyScanAfterSuccessfulScan = db.prepare(
+  'UPDATE users SET daily_scan_available = 0 WHERE vk_id = ? AND daily_scan_date = ?'
+);
+const revokeDailyScanIfScannedToday = db.prepare(`
+  UPDATE users
+  SET daily_scan_available = 0
+  WHERE vk_id = ? AND daily_scan_date = ?
+    AND EXISTS (
+      SELECT 1 FROM scan_history sh
+      WHERE sh.vk_id = users.vk_id
+        AND date(sh.scanned_at, '+5 hours') = ?
+    )
 `);
 const countScanEnergyRewardsForCodeToday = db.prepare(`
   SELECT COUNT(*) AS count
@@ -477,6 +515,17 @@ const ensureUserForScan = db.prepare(`
   ON CONFLICT(vk_id) DO NOTHING
 `);
 
+function ensureUserWithWelcome(userId, nowIso = new Date().toISOString()) {
+  return db.transaction(() => {
+    const inserted = ensureUserForScan.run(String(userId), nowIso, nowIso);
+    if (inserted.changes === 1) {
+      recordScanCredit.run(String(userId), nowIso, 3, 'welcome', 'Приветственные сканы');
+      return true;
+    }
+    return false;
+  }).immediate();
+}
+
 function yekaterinburgDayKey(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Yekaterinburg',
@@ -501,29 +550,43 @@ for (const claim of db.prepare('SELECT vk_id, game_id, claimed_at FROM game_rewa
   );
 }
 
-// The daily bonus is a regular scan added to the ordinary balance.
-// It is granted at most once per Yekaterinburg calendar day, only when the
-// user's ordinary balance is empty and they have no active subscription.
+// The daily scan is separate from the ordinary balance. It is granted once
+// per Yekaterinburg calendar day only when the ordinary balance is empty and
+// the user has not completed a successful scan today.
 const grantDailyScan = db.prepare(`
   UPDATE users
-  SET scan_balance = 1, daily_scan_date = ?, daily_scan_available = 0
+  SET daily_scan_date = ?, daily_scan_available = 1
   WHERE vk_id = ?
     AND COALESCE(scan_balance, 0) <= 0
     AND COALESCE(unlimited, 0) = 0
     AND (subscription_until IS NULL OR subscription_until <= ?)
     AND (daily_scan_date IS NULL OR daily_scan_date <> ?)
+    AND NOT EXISTS (
+      SELECT 1 FROM scan_history sh
+      WHERE sh.vk_id = users.vk_id
+        AND date(sh.scanned_at, '+5 hours') = ?
+    )
 `);
 
 function ensureDailyScan(userId, now = new Date()) {
   const dayKey = yekaterinburgDayKey(now);
   const nowIso = now.toISOString();
-  grantDailyScan.run(dayKey, String(userId), nowIso, dayKey);
+  db.transaction(() => {
+    revokeDailyScanIfScannedToday.run(String(userId), dayKey, dayKey);
+    const granted = grantDailyScan.run(dayKey, String(userId), nowIso, dayKey, dayKey);
+    if (granted.changes === 1) {
+      recordScanCredit.run(String(userId), nowIso, 1, 'daily', 'Ежедневный скан');
+    }
+  }).immediate();
   return dayKey;
 }
 
-function getDisplayedScanBalance(row) {
-  if (!row || row.scan_balance === null || row.scan_balance === undefined) return 0;
-  return Math.max(0, Number(row.scan_balance) || 0);
+function getDisplayedScanBalance(row, now = new Date()) {
+  if (!row) return 0;
+  const ordinaryBalance = Math.max(0, Number(row.scan_balance) || 0);
+  if (ordinaryBalance > 0) return ordinaryBalance;
+  const today = yekaterinburgDayKey(now);
+  return row.daily_scan_date === today && Number(row.daily_scan_available || 0) === 1 ? 1 : 0;
 }
 
 app.disable('x-powered-by');
@@ -1310,7 +1373,7 @@ app.post('/api/game/state', (req, res) => {
   const now = new Date();
   const nowIso = now.toISOString();
   const today = yekaterinburgDayKey(now);
-  ensureUserForScan.run(userId, nowIso, nowIso);
+  ensureUserWithWelcome(userId, nowIso);
   const legacyBestScore = Number(req.body?.legacyBestScore);
   if (Number.isSafeInteger(legacyBestScore) && legacyBestScore >= 0 && legacyBestScore <= 100000) {
     db.prepare('UPDATE users SET game_best_score = MAX(COALESCE(game_best_score, 0), ?) WHERE vk_id = ?').run(legacyBestScore, userId);
@@ -2132,6 +2195,12 @@ app.post('/api/paytag', async (req, res) => {
     return res.status(400).json({ error: 'Некорректный идентификатор paytagid в QR-коде.' });
   }
 
+  const suppliedRequestId = String(req.body?.scanRequestId || '').trim();
+  if (suppliedRequestId && !/^[0-9A-Za-z_-]{16,100}$/.test(suppliedRequestId)) {
+    return res.status(400).json({ error: 'Некорректный идентификатор запроса сканирования.' });
+  }
+  const scanRequestId = suppliedRequestId || crypto.randomUUID();
+
   let userId;
   try {
     ({ userId } = launchParamsFromRequest(req));
@@ -2142,19 +2211,42 @@ app.post('/api/paytag', async (req, res) => {
     });
   }
 
-  const now = new Date().toISOString();
-  const insertedUser = ensureUserForScan.run(userId, now, now);
-  if (insertedUser.changes === 1) {
-    recordScanCredit.run(userId, now, 3, 'welcome', 'Приветственные сканы');
+  const nowDate = new Date();
+  const now = nowDate.toISOString();
+  ensureUserWithWelcome(userId, now);
+  ensureDailyScan(userId, nowDate);
+
+  const existingScan = getScanByIdempotencyKey.get(scanRequestId);
+  if (existingScan) {
+    if (existingScan.vk_id !== userId) {
+      return res.status(409).json({ error: 'Этот идентификатор сканирования уже использован.' });
+    }
+    const entitlement = getUserScanBalance.get(userId);
+    const subscriptionActive = Boolean(entitlement?.subscription_until && Date.parse(entitlement.subscription_until) > Date.now());
+    return res.json({
+      ok: true,
+      data: {
+        transportType: existingScan.transport_type,
+        routeNumber: existingScan.route_number,
+        vehicleNumber: existingScan.vehicle_number,
+        price: existingScan.price === null || existingScan.price === undefined ? null : Number(existingScan.price)
+      },
+      scannedAt: existingScan.scanned_at,
+      source: 'idempotent-replay',
+      cacheHit: true,
+      scanBalance: getDisplayedScanBalance(entitlement),
+      subscriptionUntil: entitlement?.subscription_until || null,
+      unlimited: Number(entitlement?.unlimited || 0) === 1,
+      subscriptionActive,
+      energyRewardGranted: false,
+      duplicate: true
+    });
   }
-  ensureDailyScan(userId);
+
   const balanceRow = getUserScanBalance.get(userId);
-  const balanceBefore = balanceRow?.scan_balance === null || balanceRow?.scan_balance === undefined
-    ? 0
-    : Number(balanceRow.scan_balance);
   const subscriptionActive = Boolean(balanceRow?.subscription_until && Date.parse(balanceRow.subscription_until) > Date.now());
   const hasUnlimited = Number(balanceRow?.unlimited || 0) === 1 || subscriptionActive;
-  if (!hasUnlimited && (!Number.isSafeInteger(balanceBefore) || balanceBefore <= 0)) {
+  if (!hasUnlimited && getDisplayedScanBalance(balanceRow, nowDate) <= 0) {
     return res.status(402).json({
       ok: false,
       code: 'SCAN_BALANCE_EMPTY',
@@ -2204,51 +2296,61 @@ app.post('/api/paytag', async (req, res) => {
       }
       data = await task;
     }
-    // Re-read entitlements after the upstream request: another tab or request
-    // may have consumed a scan while this QR was being resolved.
-    const currentBeforeCharge = getUserScanBalance.get(userId);
-    const currentSubscriptionActive = Boolean(
-      currentBeforeCharge?.subscription_until &&
-      Date.parse(currentBeforeCharge.subscription_until) > Date.now()
-    );
-    const currentUnlimited = Number(currentBeforeCharge?.unlimited || 0) === 1 || currentSubscriptionActive;
-
-    // Paid/package scans are consumed first. The daily scan is separate and
-    // only consumed when the paid balance is empty. Charge only after valid data.
-    if (!currentUnlimited) {
-      const currentPaidBalance = Number(currentBeforeCharge?.scan_balance || 0);
-      if (currentPaidBalance > 0) {
-        const spent = spendUserScan.run(userId);
-        if (spent.changes !== 1) {
-          return res.status(402).json({
-            ok: false,
-            code: 'SCAN_BALANCE_EMPTY',
-            scanBalance: getDisplayedScanBalance(getUserScanBalance.get(userId)),
-            error: 'Баланс сканов изменился. Повторите попытку.'
-          });
-        }
-      } else {
-        return res.status(402).json({
-          ok: false,
-          code: 'SCAN_BALANCE_EMPTY',
-          scanBalance: getDisplayedScanBalance(getUserScanBalance.get(userId)),
-          error: 'Бесплатный скан на сегодня уже использован. Пополните баланс или возвращайтесь завтра.'
-        });
-      }
-      ensureDailyScan(userId);
-      sendLiveEntitlement(userId);
-    }
-    const currentEntitlement = getUserEntitlements.get(userId);
-    const scanBalance = getDisplayedScanBalance(currentEntitlement);
-    const subscriptionUntil = currentEntitlement?.subscription_until || null;
-    const subscriptionActive = Boolean(subscriptionUntil && Date.parse(subscriptionUntil) > Date.now());
-    const unlimited = Number(currentEntitlement?.unlimited || 0) === 1;
 
     const scannedAt = new Date().toISOString();
     const rewardDayKey = yekaterinburgDayKey(new Date(scannedAt));
     let energyRewardGranted = false;
     let referralRewarded = false;
+    let referralInviterId = null;
+    let duplicateScan = null;
+    let duplicateKeyConflict = false;
+    let insufficientBalance = false;
+
+    // Debit, trip history, energy and referral rewards are committed together.
+    // The second idempotency lookup also closes the race between parallel retries.
     db.transaction(() => {
+      const priorScan = getScanByIdempotencyKey.get(scanRequestId);
+      if (priorScan) {
+        if (priorScan.vk_id === userId) duplicateScan = priorScan;
+        else duplicateKeyConflict = true;
+        return;
+      }
+
+      const currentEntitlement = getUserEntitlements.get(userId);
+      const currentSubscriptionActive = Boolean(
+        currentEntitlement?.subscription_until &&
+        Date.parse(currentEntitlement.subscription_until) > Date.now()
+      );
+      const currentUnlimited = Number(currentEntitlement?.unlimited || 0) === 1 || currentSubscriptionActive;
+
+      if (!currentUnlimited) {
+        const currentPaidBalance = Math.max(0, Number(currentEntitlement?.scan_balance || 0));
+        const spent = currentPaidBalance > 0
+          ? spendUserScan.run(userId)
+          : spendDailyScan.run(userId, rewardDayKey);
+        if (spent.changes !== 1) {
+          insufficientBalance = true;
+          return;
+        }
+      }
+
+      updateUserAfterScan.run(
+        scannedAt,
+        String(data.vehicleNumber || '').trim() || null,
+        userId
+      );
+      const recordedScan = recordScan.run(
+        userId, scannedAt, scanRequestId, paytagid,
+        String(data.transportType || ''),
+        String(data.routeNumber || ''),
+        String(data.vehicleNumber || ''),
+        Number.isFinite(data.price) ? data.price : null
+      );
+
+      // A successful trip today makes the daily fallback unavailable for the rest of the day,
+      // even when this particular trip used a paid scan or subscription.
+      clearDailyScanAfterSuccessfulScan.run(userId, rewardDayKey);
+
       const codeRewardCount = Number(countScanEnergyRewardsForCodeToday.get(userId, paytagid, rewardDayKey)?.count || 0);
       const dayRewardCount = Number(countScanEnergyRewardsToday.get(userId, rewardDayKey)?.count || 0);
       const lastReward = getLastScanEnergyReward.get(userId, paytagid);
@@ -2257,17 +2359,6 @@ app.post('/api/paytag', async (req, res) => {
         Date.parse(scannedAt) - lastRewardAt >= 2 * 60 * 1000;
 
       energyRewardGranted = codeRewardCount < 3 && dayRewardCount < 15 && cooldownPassed;
-
-      updateUserAfterScan.run(
-        scannedAt,
-        String(data.vehicleNumber || '').trim() || null,
-        userId
-      );
-      const recordedScan = recordScan.run(
-        userId, scannedAt, paytagid, String(data.transportType || ''),
-        String(data.routeNumber || ''), String(data.vehicleNumber || ''),
-        Number.isFinite(data.price) ? data.price : null
-      );
 
       if (energyRewardGranted) {
         recordScanEnergyReward.run(recordedScan.lastInsertRowid, userId, paytagid, scannedAt, rewardDayKey);
@@ -2282,23 +2373,65 @@ app.post('/api/paytag', async (req, res) => {
           if (marked.changes === 1) {
             recordScanCredit.run(referral.inviter_vk_id, scannedAt, 3, 'referral', 'Бонус за приглашённого пользователя ' + userId);
             referralRewarded = true;
+            referralInviterId = referral.inviter_vk_id;
           }
         }
       }
     }).immediate();
-    if (referralRewarded) sendLiveEntitlement(getReferralForInvitee.get(userId)?.inviter_vk_id);
 
+    if (duplicateKeyConflict) {
+      return res.status(409).json({ error: 'Этот идентификатор сканирования уже использован.' });
+    }
+    if (duplicateScan) {
+      const entitlement = getUserScanBalance.get(userId);
+      const replaySubscriptionActive = Boolean(entitlement?.subscription_until && Date.parse(entitlement.subscription_until) > Date.now());
+      return res.json({
+        ok: true,
+        data: {
+          transportType: duplicateScan.transport_type,
+          routeNumber: duplicateScan.route_number,
+          vehicleNumber: duplicateScan.vehicle_number,
+          price: duplicateScan.price === null || duplicateScan.price === undefined ? null : Number(duplicateScan.price)
+        },
+        scannedAt: duplicateScan.scanned_at,
+        source: 'idempotent-replay',
+        cacheHit: true,
+        scanBalance: getDisplayedScanBalance(entitlement),
+        subscriptionUntil: entitlement?.subscription_until || null,
+        unlimited: Number(entitlement?.unlimited || 0) === 1,
+        subscriptionActive: replaySubscriptionActive,
+        energyRewardGranted: false,
+        duplicate: true
+      });
+    }
+    if (insufficientBalance) {
+      const latestBalance = getUserScanBalance.get(userId);
+      return res.status(402).json({
+        ok: false,
+        code: 'SCAN_BALANCE_EMPTY',
+        scanBalance: getDisplayedScanBalance(latestBalance),
+        error: 'Баланс сканов изменился. Пополните его или возвращайтесь завтра.'
+      });
+    }
+
+    if (referralRewarded && referralInviterId) sendLiveEntitlement(referralInviterId);
+
+    const finalEntitlement = getUserScanBalance.get(userId);
+    const finalSubscriptionActive = Boolean(
+      finalEntitlement?.subscription_until &&
+      Date.parse(finalEntitlement.subscription_until) > Date.now()
+    );
     return res.json({
       ok: true,
       data,
       scannedAt: scannedAt,
       source: cacheHit ? 'cache' : 'direct-api',
       cacheHit,
-      scanBalance,
-      subscriptionUntil,
-      unlimited,
+      scanBalance: getDisplayedScanBalance(finalEntitlement),
+      subscriptionUntil: finalEntitlement?.subscription_until || null,
+      unlimited: Number(finalEntitlement?.unlimited || 0) === 1,
       energyRewardGranted,
-      subscriptionActive
+      subscriptionActive: finalSubscriptionActive
     });
   } catch (error) {
     console.error('[api/paytag] ' + paytagid + ': ' + (error?.message || error));
@@ -2314,21 +2447,28 @@ app.post('/api/session', (req, res) => {
     const profile = req.body?.profile || {};
     if (req.body?.refreshOnly !== true) {
       const now = new Date().toISOString();
-      const existed = Boolean(db.prepare('SELECT 1 FROM users WHERE vk_id = ?').get(userId));
+      const existed = Boolean(getUserExists.get(userId));
       const referralCode = String(req.body?.referralCode || '').trim();
+      ensureUserWithWelcome(userId, now);
       db.transaction(() => {
-        upsertUser.run({
+        const profileData = {
           vk_id: userId,
           first_name: cleanText(profile.first_name),
           last_name: cleanText(profile.last_name),
           photo_url: cleanText(profile.photo_url, 1000),
           now
-        });
-        if (!existed) {
-          recordScanCredit.run(userId, now, 3, 'welcome', 'Приветственные сканы');
-          if (/^\\d{1,20}$/.test(referralCode) && referralCode !== userId && getUserExists.get(referralCode)) {
-            insertReferral.run(userId, referralCode, now);
-          }
+        };
+        if (existed) upsertUser.run(profileData);
+        else updateNewUserProfile.run(profileData);
+
+        // A game-state request can create the account before /api/session arrives.
+        // Attach its referral once when no successful scan or prior inviter exists.
+        if (/^\\d{1,20}$/.test(referralCode) &&
+            referralCode !== userId &&
+            getUserExists.get(referralCode) &&
+            !getReferralForInvitee.get(userId) &&
+            !getAnyScanForUser.get(userId)) {
+          insertReferral.run(userId, referralCode, now);
         }
       })();
     }
