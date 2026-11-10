@@ -2235,8 +2235,8 @@ app.post('/api/paytag', async (req, res) => {
 
   const existingScan = getScanByIdempotencyKey.get(scanRequestId);
   if (existingScan) {
-    if (existingScan.vk_id !== userId) {
-      return res.status(409).json({ error: 'Этот идентификатор сканирования уже использован.' });
+    if (existingScan.vk_id !== userId || existingScan.paytag_id !== paytagid) {
+      return res.status(409).json({ error: 'Этот идентификатор сканирования уже использован для другого запроса.' });
     }
     const entitlement = getUserScanBalance.get(userId);
     const subscriptionActive = Boolean(entitlement?.subscription_until && Date.parse(entitlement.subscription_until) > Date.now());
@@ -2329,7 +2329,7 @@ app.post('/api/paytag', async (req, res) => {
     db.transaction(() => {
       const priorScan = getScanByIdempotencyKey.get(scanRequestId);
       if (priorScan) {
-        if (priorScan.vk_id === userId) duplicateScan = priorScan;
+        if (priorScan.vk_id === userId && priorScan.paytag_id === paytagid) duplicateScan = priorScan;
         else duplicateKeyConflict = true;
         return;
       }
