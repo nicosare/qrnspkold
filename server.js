@@ -2299,6 +2299,7 @@ app.post('/api/paytag', async (req, res) => {
 
     const scannedAt = new Date().toISOString();
     const rewardDayKey = yekaterinburgDayKey(new Date(scannedAt));
+    ensureDailyScan(userId, new Date(scannedAt));
     let energyRewardGranted = false;
     let referralRewarded = false;
     let referralInviterId = null;
@@ -2463,7 +2464,7 @@ app.post('/api/session', (req, res) => {
 
         // A game-state request can create the account before /api/session arrives.
         // Attach its referral once when no successful scan or prior inviter exists.
-        if (/^\\d{1,20}$/.test(referralCode) &&
+        if (/^\d{1,20}$/.test(referralCode) &&
             referralCode !== userId &&
             getUserExists.get(referralCode) &&
             !getReferralForInvitee.get(userId) &&
