@@ -403,7 +403,16 @@ const updateNewUserProfile = db.prepare(`
     last_seen = @now
   WHERE vk_id = @vk_id
 `);
-const getAnyScanForUser = db.prepare('SELECT 1 FROM scan_history WHERE vk_id = ? LIMIT 1');
+const getAnyScanForUser = db.prepare(`
+  SELECT 1
+  FROM users u
+  WHERE u.vk_id = ?
+    AND (
+      u.last_scan_at IS NOT NULL
+      OR EXISTS (SELECT 1 FROM scan_history sh WHERE sh.vk_id = u.vk_id)
+    )
+  LIMIT 1
+`);
 const listUsers = db.prepare(`
   SELECT u.vk_id, u.first_name, u.last_name, u.photo_url, u.first_seen, u.last_seen, u.visit_count,
          u.scan_balance, u.subscription_until, u.unlimited, u.last_scan_at, u.last_transport_number,
@@ -454,10 +463,13 @@ const revokeDailyScanIfScannedToday = db.prepare(`
   UPDATE users
   SET daily_scan_available = 0
   WHERE vk_id = ? AND daily_scan_date = ?
-    AND EXISTS (
-      SELECT 1 FROM scan_history sh
-      WHERE sh.vk_id = users.vk_id
-        AND date(sh.scanned_at, '+5 hours') = ?
+    AND (
+      date(last_scan_at, '+5 hours') = ?
+      OR EXISTS (
+        SELECT 1 FROM scan_history sh
+        WHERE sh.vk_id = users.vk_id
+          AND date(sh.scanned_at, '+5 hours') = ?
+      )
     )
 `);
 const countScanEnergyRewardsForCodeToday = db.prepare(`
@@ -565,6 +577,7 @@ const grantDailyScan = db.prepare(`
     AND COALESCE(unlimited, 0) = 0
     AND (subscription_until IS NULL OR subscription_until <= ?)
     AND (daily_scan_date IS NULL OR daily_scan_date <> ?)
+    AND (last_scan_at IS NULL OR date(last_scan_at, '+5 hours') <> ?)
     AND NOT EXISTS (
       SELECT 1 FROM scan_history sh
       WHERE sh.vk_id = users.vk_id
@@ -576,8 +589,8 @@ function ensureDailyScan(userId, now = new Date()) {
   const dayKey = yekaterinburgDayKey(now);
   const nowIso = now.toISOString();
   db.transaction(() => {
-    revokeDailyScanIfScannedToday.run(String(userId), dayKey, dayKey);
-    const granted = grantDailyScan.run(dayKey, String(userId), nowIso, dayKey, dayKey);
+    revokeDailyScanIfScannedToday.run(String(userId), dayKey, dayKey, dayKey);
+    const granted = grantDailyScan.run(dayKey, String(userId), nowIso, dayKey, dayKey, dayKey);
     if (granted.changes === 1) {
       recordScanCredit.run(String(userId), nowIso, 1, 'daily', 'Ежедневный скан');
     }
