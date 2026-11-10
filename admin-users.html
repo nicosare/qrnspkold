@@ -388,14 +388,15 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
      const avatar=u.photo_url?'<img class="avatar" src="'+esc(u.photo_url)+'" alt="" referrerpolicy="no-referrer" loading="lazy">':'<span class="avatar" aria-hidden="true">VK</span>';
      const profile='https://vk.com/id'+encodeURIComponent(u.vk_id);
      const subscriptionActive=Boolean(u.subscription_until && Date.parse(u.subscription_until)>Date.now());
-     const entitlementStatus=u.unlimited?'Безлимит':subscriptionActive?'Подписка':u.scan_balance===null||u.scan_balance===undefined?'Баланс не назначен':(''+u.scan_balance+' '+(Number(u.scan_balance)===1?'скан':Number(u.scan_balance)>=2&&Number(u.scan_balance)<=4?'скана':'сканов'));
+     const dailyScanAvailable=Number(u.daily_scan_is_current||0)===1;
+     const scanBalanceLabel=u.unlimited?'Безлимит':u.scan_balance===null||u.scan_balance===undefined?'Не назначен':(String(u.scan_balance)+(dailyScanAvailable&&Number(u.scan_balance)<=0?' + 1 ежедневный':''));
      const subscriptionDetail=subscriptionActive?'<small>'+esc(remaining(u.subscription_until))+' · до '+esc(new Date(u.subscription_until).toLocaleString('ru-RU',{day:'numeric',month:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}))+'</small>':'';
      const lastScan=u.last_scan_at?date(u.last_scan_at):'Ещё не сканировал';
      const transport=[u.last_transport_type, u.last_route_number?'№ '+u.last_route_number:''].filter(Boolean).join(' ')||'—';
      return '<article class="user-card" data-user-card="'+esc(u.vk_id)+'">'+
        '<div class="person">'+avatar+'<div class="person-text"><a href="'+profile+'" target="_blank" rel="noopener noreferrer" class="name" style="color:inherit;text-decoration:none">'+esc(name)+'</a><div class="vk-id">VK ID: '+esc(u.vk_id)+' · '+esc(u.visit_count)+' посещ. · '+esc(u.scan_count||0)+' сканов</div></div></div>'+
        '<div class="stats">'+
-         '<div class="stat"><span class="stat-label">Баланс сканов</span><span class="stat-value">'+esc(u.unlimited?'Безлимит':(u.scan_balance===null||u.scan_balance===undefined?'Не назначен':u.scan_balance))+'</span></div>'+
+         '<div class="stat"><span class="stat-label">Баланс сканов</span><span class="stat-value">'+esc(scanBalanceLabel)+'</span></div>'+
          '<div class="stat"><span class="stat-label">Подписка</span><span class="stat-value">'+esc(subscriptionActive?new Date(u.subscription_until).toLocaleDateString('ru-RU'):(u.subscription_until?'Истекла':'Нет'))+'</span></div>'+
          '<div class="stat"><span class="stat-label">Последний скан</span><span class="stat-value">'+esc(lastScan)+'</span></div>'+
           '<div class="stat"><span class="stat-label">Последний транспорт</span><span class="stat-value">'+esc(transport)+'</span></div>'+
@@ -495,7 +496,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
        details.dataset.loaded='1';
        if(!data.credits.length){list.innerHTML='<div class="scan-history-empty">Начислений пока нет.</div>';return;}
        list.innerHTML=data.credits.map(item=>{
-         const source=item.source==='welcome'?'Приветственный бонус':item.source==='purchase'?'Покупка тарифа':item.source==='admin'?'Ручное начисление':item.source==='promo_code'?'Промокод':'Начисление';
+         const source=item.source==='welcome'?'Приветственный бонус':item.source==='daily'?'Ежедневный бонус':item.source==='referral'?'Реферальный бонус':item.source==='game_reward'?'Игровая награда':item.source==='purchase'?'Покупка тарифа':item.source==='admin'?'Ручное начисление':item.source==='promo_code'?'Промокод':'Начисление';
          const note=item.note?' · '+item.note:'';
          const amount=Number(item.amount);
          const plural=amount===1?'скан':amount>=2&&amount<=4?'скана':'сканов';
