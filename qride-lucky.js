@@ -149,7 +149,7 @@
     const freeRemaining = Number(state.freeSpinsRemaining || 0);
     freeStatusNode.textContent = free
       ? (freeRemaining === 1 ? 'Бесплатная попытка доступна' : 'Бесплатных попыток: ' + freeRemaining)
-      : 'Следующая бесплатная попытка — завтра';
+      : Number(state.freeSpinsPerDay || 0) > 0 ? 'Следующая бесплатная попытка — завтра' : 'Бесплатные попытки отключены';
     spinButton.disabled = spinning || Boolean(state.pendingResult);
     if (state.pendingResult) setStatus('У тебя есть неоткрытая награда. Забери её, чтобы продолжить.', false);
   }
