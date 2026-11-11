@@ -81,6 +81,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 .lucky-setting-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,.45fr) minmax(120px,.45fr);gap:9px;margin:12px 0}
 .lucky-setting{display:grid;gap:6px;min-width:0;padding:10px;border:1px solid var(--line);border-radius:11px;background:#fff}
 .lucky-setting>span{font-size:12px;font-weight:750;color:#566171}
+.lucky-fixed-setting{display:flex;align-items:center;min-height:40px;color:#1766bc;font-size:14px;font-weight:850}
 .lucky-setting input[type=number]{width:100%;min-width:0}
 .lucky-toggle{display:flex;align-items:center;gap:9px;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;font-size:13px;font-weight:750}
 .lucky-toggle input{width:18px;height:18px;min-height:18px;accent-color:var(--accent)}
@@ -256,7 +257,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
   <form id="lucky-config-form">
    <div class="lucky-setting-grid">
     <label class="lucky-toggle"><input id="lucky-enabled" type="checkbox"><span>Билет удачи включён</span></label>
-    <label class="lucky-setting"><span>Бесплатных попыток в день</span><input id="lucky-free-spins" type="number" min="0" max="5" step="1" value="1" required></label>
+    <div class="lucky-setting"><span>Бесплатная попытка</span><strong class="lucky-fixed-setting">1 раз в 24 часа</strong></div>
     <label class="lucky-setting"><span>Стоимость попытки, сканов</span><input id="lucky-spin-cost" type="number" min="1" max="10" step="1" value="1" required></label>
    </div>
    <div class="promo-list-heading"><strong>Награды</strong><button type="button" id="lucky-add-prize">Добавить награду</button></div>
@@ -547,7 +548,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
      if(!response.ok)throw new Error(data.error||'Не удалось загрузить «Билет удачи».');
      const config=data.config||{};
      document.getElementById('lucky-enabled').checked=config.enabled!==false;
-     document.getElementById('lucky-free-spins').value=Number(config.freeSpinsPerDay??1);
+     
      document.getElementById('lucky-spin-cost').value=Number(config.spinCostScans??1);
      renderLuckyPrizes((config.prizes||[]).map(p=>Object.assign({},p,{probability:Number(p.probabilityBp||0)/100})));
      const stats=data.stats||{};
@@ -606,7 +607,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    }
    const payload={
      enabled:document.getElementById('lucky-enabled').checked,
-     freeSpinsPerDay:Number(document.getElementById('lucky-free-spins').value),
+     
      spinCostScans:Number(document.getElementById('lucky-spin-cost').value),
      prizes
    };
