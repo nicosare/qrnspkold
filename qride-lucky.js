@@ -35,6 +35,7 @@
   let activeModal = null;
   let activeSpin = null;
   let spinning = false;
+  let spinAnimationToken = 0;
   let idleFrame = 0;
   let idleLastTime = 0;
   let idleOffset = 0;
@@ -210,7 +211,7 @@
   }
   function iconForResult(type) { return typeIcon(type); }
   function showResult(spin, restored) {
-    if (!spin) return;
+    if (!spin || (activeSpin && Number(activeSpin.id) === Number(spin.id))) return;
     activeSpin = spin;
     resultIcon.textContent = iconForResult(spin.rewardType);
     resultIcon.classList.toggle('is-subscription', spin.rewardType === 'subscription');
@@ -268,6 +269,7 @@
     return card.offsetLeft + card.offsetWidth / 2 - windowNode.clientWidth / 2;
   }
   function animateToPrize(prize) {
+    const animationToken = ++spinAnimationToken;
     return new Promise(function (resolve) {
       const startPrize = nearestVisiblePrize();
       const sequence = [startPrize];
@@ -285,6 +287,7 @@
       let lastPassed = 0;
       let tickCount = 0;
       function frame(now) {
+        if (animationToken !== spinAnimationToken) { resolve(false); return; }
         const progress = Math.min(1, (now - startedAt) / duration);
         const eased = 1 - Math.pow(1 - progress, 4.2);
         const offset = startOffset + (targetOffset - startOffset) * eased;
@@ -299,7 +302,7 @@
         else {
           rail.style.transform = 'translate3d(' + (-targetOffset) + 'px,0,0)';
           triggerHaptic('medium');
-          resolve();
+          resolve(true);
         }
       }
       requestAnimationFrame(frame);
@@ -347,8 +350,8 @@
       updateControls();
       setStatus('', false);
       if (data.spin) {
-        await animateToPrize(data.spin);
-        showResult(data.spin, false);
+        const animationCompleted = await animateToPrize(data.spin);
+        if (animationCompleted) showResult(data.spin, false);
       }
     } catch (error) {
       if (error.status === 402 && error.data && error.data.code === 'INSUFFICIENT_SCANS') {
@@ -434,8 +437,10 @@
     if (event.key === 'Escape' && activeModal) closeModal(activeModal, activeModal === resultModal);
   });
   document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'hidden') stopIdle();
-    else { refreshState(); if (!activeModal) startIdle(); }
+    if (document.visibilityState === 'hidden') {
+      stopIdle();
+      if (spinning) spinAnimationToken += 1;
+    } else { refreshState(); if (!activeModal) startIdle(); }
   });
   window.addEventListener('focus', refreshState);
   if ('IntersectionObserver' in window) {

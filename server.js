@@ -1734,6 +1734,8 @@ app.post('/api/lucky/spin', (req, res) => {
       const existing = db.prepare('SELECT * FROM lucky_spins WHERE vk_id = ? AND request_id = ?')
         .get(userId, requestId);
       if (existing) return { spin: existing, duplicate: true };
+      const pending = db.prepare('SELECT * FROM lucky_spins WHERE vk_id = ? AND acknowledged_at IS NULL ORDER BY id DESC LIMIT 1').get(userId);
+      if (pending) return { error: 'PENDING_RESULT', spin: pending };
 
       const user = db.prepare(
         'SELECT scan_balance, subscription_until, unlimited, daily_scan_date, daily_scan_available FROM users WHERE vk_id = ?'
@@ -1812,6 +1814,14 @@ app.post('/api/lucky/spin', (req, res) => {
     return res.status(500).json({ error: 'Не удалось выполнить прокрутку. Попробуй ещё раз.' });
   }
 
+  if (outcome.error === 'PENDING_RESULT') {
+    return res.status(409).json({
+      code: 'PENDING_RESULT',
+      error: 'Сначала забери уже полученную награду.',
+      spin: serializeLuckySpin(outcome.spin),
+      ...getLuckyPublicState(userId, config)
+    });
+  }
   if (outcome.error === 'INSUFFICIENT_SCANS') {
     return res.status(402).json({
       code: 'INSUFFICIENT_SCANS',
