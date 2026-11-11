@@ -5973,20 +5973,14 @@ body.scan-loading-open { overflow: hidden !important; }
     ctx.restore();
   }
 
-  function drawDebris(dt) {
+  function drawDebris() {
     debris.forEach(item => {
-      item.vy += 760 * dt;
-      item.x += item.vx * dt;
-      item.y += item.vy * dt;
-      item.rotation += item.spin * dt;
-      item.life -= dt;
       ctx.save();
       ctx.translate(item.x + item.width / 2, item.y + BLOCK_H / 2);
       ctx.rotate(item.rotation);
       drawBlock(-item.width / 2, -BLOCK_H / 2, item.width, BLOCK_H, item.color, Math.max(0, item.life / .7));
       ctx.restore();
     });
-    debris = debris.filter(item => item.life > 0 && item.y < H + 80);
   }
 
   function draw() {
@@ -5994,7 +5988,7 @@ body.scan-loading-open { overflow: hidden !important; }
     const dt = lastFrame ? Math.min((now - lastFrame) / 1000, .03) : 0;
     drawBackground();
     drawTower();
-    drawDebris(dt);
+    drawDebris();
     drawMovingBlock();
     if (scoreNode) scoreNode.textContent = 'Блоки: ' + score;
     if (targetNode) targetNode.textContent = score >= REWARD_TARGET ? 'Цель достигнута!' : (REWARD_TARGET - score) + ' до скана';
