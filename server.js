@@ -352,6 +352,31 @@ db.exec(`
     claimed_at TEXT NOT NULL,
     PRIMARY KEY (vk_id, game_id, day_key)
   );
+
+  CREATE TABLE IF NOT EXISTS lucky_spins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vk_id TEXT NOT NULL,
+    request_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    day_key TEXT NOT NULL,
+    is_free INTEGER NOT NULL DEFAULT 0,
+    scan_cost INTEGER NOT NULL DEFAULT 0,
+    config_version INTEGER NOT NULL,
+    prize_id TEXT NOT NULL,
+    reward_type TEXT NOT NULL CHECK(reward_type IN ('energy','scans','subscription')),
+    reward_title TEXT NOT NULL,
+    reward_amount INTEGER NOT NULL,
+    reward_probability_bp INTEGER NOT NULL,
+    acknowledged_at TEXT DEFAULT NULL,
+    UNIQUE(vk_id, request_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_lucky_spins_user_time
+    ON lucky_spins(vk_id, created_at DESC, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_lucky_spins_day
+    ON lucky_spins(vk_id, day_key, is_free);
+  CREATE INDEX IF NOT EXISTS idx_lucky_spins_prize
+    ON lucky_spins(prize_id, created_at DESC);
+
   INSERT OR IGNORE INTO game_reward_claims (vk_id, game_id, claimed_at)
   SELECT DISTINCT vk_id, 'runner', MIN(credited_at)
   FROM scan_credit_history
@@ -617,6 +642,129 @@ function getDisplayedScanBalance(row, now = new Date()) {
   if (ordinaryBalance > 0) return ordinaryBalance;
   const today = yekaterinburgDayKey(now);
   return row.daily_scan_date === today && Number(row.daily_scan_available || 0) === 1 ? 1 : 0;
+}
+
+
+const LUCKY_CONFIG_KEY = 'lucky_wheel_config';
+const LUCKY_DEFAULT_PRIZES = Object.freeze([
+  { id: 'energy_10', rewardType: 'energy', title: '+10 энергии', amount: 10, probabilityBp: 4000, enabled: true },
+  { id: 'energy_20', rewardType: 'energy', title: '+20 энергии', amount: 20, probabilityBp: 2500, enabled: true },
+  { id: 'energy_50', rewardType: 'energy', title: '+50 энергии', amount: 50, probabilityBp: 1000, enabled: true },
+  { id: 'scans_1', rewardType: 'scans', title: '+1 скан', amount: 1, probabilityBp: 1800, enabled: true },
+  { id: 'scans_2', rewardType: 'scans', title: '+2 скана', amount: 2, probabilityBp: 500, enabled: true },
+  { id: 'scans_5', rewardType: 'scans', title: '+5 сканов', amount: 5, probabilityBp: 150, enabled: true },
+  { id: 'subscription_7', rewardType: 'subscription', title: 'Безлимит на 7 дней', amount: 7, probabilityBp: 45, enabled: true },
+  { id: 'subscription_30', rewardType: 'subscription', title: 'Безлимит на 30 дней', amount: 30, probabilityBp: 5, enabled: true }
+]);
+function makeDefaultLuckyConfig() {
+  return {
+    version: 1,
+    enabled: true,
+    freeSpinsPerDay: 1,
+    spinCostScans: 1,
+    prizes: LUCKY_DEFAULT_PRIZES.map(prize => ({ ...prize }))
+  };
+}
+function getLuckyConfig() {
+  const row = db.prepare('SELECT setting_value FROM app_settings WHERE setting_key = ?').get(LUCKY_CONFIG_KEY);
+  if (!row) {
+    const config = makeDefaultLuckyConfig();
+    db.prepare('INSERT INTO app_settings (setting_key, setting_value, updated_at) VALUES (?, ?, ?)')
+      .run(LUCKY_CONFIG_KEY, JSON.stringify(config), new Date().toISOString());
+    return config;
+  }
+  try {
+    const saved = JSON.parse(row.setting_value);
+    if (!saved || typeof saved !== 'object' || !Array.isArray(saved.prizes)) throw new Error('Invalid lucky config');
+    const defaults = makeDefaultLuckyConfig();
+    return {
+      version: Number.isSafeInteger(Number(saved.version)) ? Number(saved.version) : 1,
+      enabled: saved.enabled !== false,
+      freeSpinsPerDay: Number.isSafeInteger(Number(saved.freeSpinsPerDay))
+        ? Math.min(5, Math.max(0, Number(saved.freeSpinsPerDay)))
+        : defaults.freeSpinsPerDay,
+      spinCostScans: Number.isSafeInteger(Number(saved.spinCostScans))
+        ? Math.min(10, Math.max(1, Number(saved.spinCostScans)))
+        : defaults.spinCostScans,
+      prizes: saved.prizes.map((prize, index) => ({
+        id: String(prize.id || ('prize_' + index)),
+        rewardType: String(prize.rewardType || 'energy'),
+        title: String(prize.title || 'Награда'),
+        amount: Number(prize.amount) || 1,
+        probabilityBp: Number(prize.probabilityBp) || 0,
+        enabled: prize.enabled !== false,
+        sortOrder: Number.isSafeInteger(Number(prize.sortOrder)) ? Number(prize.sortOrder) : index
+      }))
+    };
+  } catch (error) {
+    console.error('[lucky config read]', error?.message || error);
+    return makeDefaultLuckyConfig();
+  }
+}
+function serializeLuckyPrize(prize) {
+  return {
+    id: String(prize.id),
+    rewardType: String(prize.rewardType),
+    title: String(prize.title),
+    amount: Number(prize.amount),
+    probability: Number((Number(prize.probabilityBp) / 100).toFixed(2)),
+    enabled: prize.enabled !== false,
+    sortOrder: Number(prize.sortOrder || 0)
+  };
+}
+function serializeLuckySpin(row) {
+  if (!row) return null;
+  return {
+    id: Number(row.id),
+    prizeId: String(row.prize_id),
+    rewardType: String(row.reward_type),
+    title: String(row.reward_title),
+    amount: Number(row.reward_amount),
+    probability: Number((Number(row.reward_probability_bp) / 100).toFixed(2)),
+    isFree: Number(row.is_free) === 1,
+    scanCost: Number(row.scan_cost || 0),
+    configVersion: Number(row.config_version),
+    createdAt: row.created_at
+  };
+}
+function getLuckyPublicState(userId, config = getLuckyConfig()) {
+  const now = new Date();
+  const today = yekaterinburgDayKey(now);
+  const user = getUserEntitlements.get(String(userId));
+  const usedFree = Number(db.prepare(
+    'SELECT COUNT(*) AS count FROM lucky_spins WHERE vk_id = ? AND day_key = ? AND is_free = 1'
+  ).get(String(userId), today)?.count || 0);
+  const pendingRow = db.prepare(
+    'SELECT * FROM lucky_spins WHERE vk_id = ? AND acknowledged_at IS NULL ORDER BY id DESC LIMIT 1'
+  ).get(String(userId));
+  const subscriptionActive = Boolean(user?.subscription_until && Date.parse(user.subscription_until) > now.getTime())
+    || Number(user?.unlimited || 0) === 1;
+  return {
+    enabled: config.enabled,
+    configVersion: config.version,
+    freeSpinsPerDay: config.freeSpinsPerDay,
+    freeSpinsRemaining: Math.max(0, config.freeSpinsPerDay - usedFree),
+    spinCostScans: config.spinCostScans,
+    scanBalance: getDisplayedScanBalance(user, now),
+    subscriptionUntil: user?.subscription_until || null,
+    subscriptionActive,
+    prizes: config.prizes
+      .filter(prize => prize.enabled)
+      .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
+      .map(serializeLuckyPrize),
+    pendingResult: serializeLuckySpin(pendingRow)
+  };
+}
+function drawLuckyPrize(config) {
+  const pool = config.prizes.filter(prize => prize.enabled && Number(prize.probabilityBp) > 0);
+  const total = pool.reduce((sum, prize) => sum + Number(prize.probabilityBp), 0);
+  if (total !== 10000) throw new Error('Сумма вероятностей активных наград должна составлять 100%.');
+  let ticket = crypto.randomInt(10000);
+  for (const prize of pool) {
+    ticket -= Number(prize.probabilityBp);
+    if (ticket < 0) return prize;
+  }
+  return pool[pool.length - 1];
 }
 
 app.disable('x-powered-by');
@@ -1550,6 +1698,148 @@ app.post('/api/game/finish', (req, res) => {
   })();
   if (freeScanAwarded) sendLiveEntitlement(userId);
   return res.json({ ok: true, score, freeScanAwarded, ...gamePublicState(userId) });
+});
+
+
+app.post('/api/lucky/state', (req, res) => {
+  let userId;
+  try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
+  catch { return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' }); }
+  const now = new Date();
+  ensureUserWithWelcome(userId, now.toISOString());
+  ensureDailyScan(userId, now);
+  res.setHeader('Cache-Control', 'no-store');
+  return res.json({ ok: true, ...getLuckyPublicState(userId) });
+});
+
+app.post('/api/lucky/spin', (req, res) => {
+  let userId;
+  try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
+  catch { return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' }); }
+  const requestId = String(req.body?.requestId || '');
+  if (!/^[A-Za-z0-9_-]{16,80}$/.test(requestId)) {
+    return res.status(400).json({ error: 'Не удалось подтвердить попытку. Попробуй ещё раз.' });
+  }
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const today = yekaterinburgDayKey(now);
+  ensureUserWithWelcome(userId, nowIso);
+  ensureDailyScan(userId, now);
+  const config = getLuckyConfig();
+  if (!config.enabled) return res.status(403).json({ error: 'Билет удачи временно недоступен.' });
+
+  let outcome;
+  try {
+    outcome = db.transaction(() => {
+      const existing = db.prepare('SELECT * FROM lucky_spins WHERE vk_id = ? AND request_id = ?')
+        .get(userId, requestId);
+      if (existing) return { spin: existing, duplicate: true };
+
+      const user = db.prepare(
+        'SELECT scan_balance, subscription_until, unlimited, daily_scan_date, daily_scan_available FROM users WHERE vk_id = ?'
+      ).get(userId);
+      if (!user) return { error: 'Пользователь не найден.' };
+
+      const usedFree = Number(db.prepare(
+        'SELECT COUNT(*) AS count FROM lucky_spins WHERE vk_id = ? AND day_key = ? AND is_free = 1'
+      ).get(userId, today)?.count || 0);
+      const isFree = usedFree < config.freeSpinsPerDay;
+      let scanCost = 0;
+      if (!isFree) {
+        const packageBalance = Math.max(0, Number(user.scan_balance) || 0);
+        if (packageBalance >= config.spinCostScans) {
+          const spent = db.prepare(
+            'UPDATE users SET scan_balance = COALESCE(scan_balance, 0) - ? WHERE vk_id = ? AND COALESCE(scan_balance, 0) >= ?'
+          ).run(config.spinCostScans, userId, config.spinCostScans);
+          if (spent.changes !== 1) return { error: 'INSUFFICIENT_SCANS', requiredScans: config.spinCostScans };
+          scanCost = config.spinCostScans;
+        } else {
+          const subscriptionActive = Boolean(user.subscription_until && Date.parse(user.subscription_until) > now.getTime())
+            || Number(user.unlimited || 0) === 1;
+          const canSpendDailyScan = config.spinCostScans === 1
+            && packageBalance === 0
+            && Number(user.daily_scan_available || 0) === 1
+            && user.daily_scan_date === today
+            && !subscriptionActive;
+          if (canSpendDailyScan) {
+            const spentDaily = db.prepare(
+              'UPDATE users SET daily_scan_available = 0 WHERE vk_id = ? AND daily_scan_date = ? AND daily_scan_available = 1'
+            ).run(userId, today);
+            if (spentDaily.changes !== 1) return { error: 'INSUFFICIENT_SCANS', requiredScans: config.spinCostScans };
+            scanCost = 1;
+          } else {
+            return { error: 'INSUFFICIENT_SCANS', requiredScans: config.spinCostScans };
+          }
+        }
+      }
+
+      const prize = drawLuckyPrize(config);
+      if (prize.rewardType === 'energy') {
+        const credited = db.prepare(
+          'UPDATE users SET game_attempts = COALESCE(game_attempts, 0) + ? WHERE vk_id = ?'
+        ).run(prize.amount, userId);
+        if (credited.changes !== 1) throw new Error('Не удалось начислить энергию.');
+      } else if (prize.rewardType === 'scans') {
+        const credited = db.prepare(
+          'UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + ? WHERE vk_id = ?'
+        ).run(prize.amount, userId);
+        if (credited.changes !== 1) throw new Error('Не удалось начислить сканы.');
+        recordScanCredit.run(userId, nowIso, prize.amount, 'lucky_reward', 'Выигрыш в «Билете удачи»');
+      } else if (prize.rewardType === 'subscription') {
+        const currentExpiry = user.subscription_until && Date.parse(user.subscription_until) > now.getTime()
+          ? new Date(user.subscription_until)
+          : now;
+        const expiry = new Date(currentExpiry.getTime() + Number(prize.amount) * 86400000);
+        updateSubscription.run(expiry.toISOString(), userId);
+      } else {
+        throw new Error('Неизвестный тип награды.');
+      }
+
+      const inserted = db.prepare(
+        'INSERT INTO lucky_spins (vk_id, request_id, created_at, day_key, is_free, scan_cost, config_version, prize_id, reward_type, reward_title, reward_amount, reward_probability_bp) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      ).run(
+        userId, requestId, nowIso, today, isFree ? 1 : 0, scanCost, config.version,
+        prize.id, prize.rewardType, prize.title, prize.amount, prize.probabilityBp
+      );
+      return {
+        spin: db.prepare('SELECT * FROM lucky_spins WHERE id = ?').get(Number(inserted.lastInsertRowid)),
+        duplicate: false
+      };
+    }).immediate();
+  } catch (error) {
+    console.error('[lucky spin]', error?.message || error);
+    return res.status(500).json({ error: 'Не удалось выполнить прокрутку. Попробуй ещё раз.' });
+  }
+
+  if (outcome.error === 'INSUFFICIENT_SCANS') {
+    return res.status(402).json({
+      code: 'INSUFFICIENT_SCANS',
+      error: 'Для следующей прокрутки нужен ещё ' + Number(outcome.requiredScans || config.spinCostScans) + ' скан.',
+      requiredScans: Number(outcome.requiredScans || config.spinCostScans),
+      ...getLuckyPublicState(userId, config)
+    });
+  }
+  if (outcome.error) return res.status(404).json({ error: outcome.error });
+  sendLiveEntitlement(userId);
+  if (outcome.spin.reward_type === 'energy') sendLiveGameState(userId);
+  return res.json({
+    ok: true,
+    spin: serializeLuckySpin(outcome.spin),
+    duplicate: Boolean(outcome.duplicate),
+    ...getLuckyPublicState(userId, config)
+  });
+});
+
+app.post('/api/lucky/ack', (req, res) => {
+  let userId;
+  try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
+  catch { return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' }); }
+  const spinId = Number(req.body?.spinId);
+  if (!Number.isSafeInteger(spinId) || spinId < 1) return res.status(400).json({ error: 'Некорректный результат.' });
+  db.prepare('UPDATE lucky_spins SET acknowledged_at = ? WHERE id = ? AND vk_id = ? AND acknowledged_at IS NULL')
+    .run(new Date().toISOString(), spinId, userId);
+  return res.json({ ok: true });
 });
 
 app.post('/api/tariffs/permission', async (req, res) => {
@@ -2708,6 +2998,117 @@ app.post('/api/admin/game-rewards', requireAdmin, (req, res) => {
   });
   save();
   return res.json({ ok: true, thresholds: getGameRewardThresholds() });
+});
+
+
+app.get('/api/admin/lucky', requireAdmin, (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const config = getLuckyConfig();
+  const stats = db.prepare(
+    "SELECT COUNT(*) AS total, " +
+    "COALESCE(SUM(CASE WHEN is_free = 1 THEN 1 ELSE 0 END), 0) AS free, " +
+    "COALESCE(SUM(CASE WHEN is_free = 0 THEN 1 ELSE 0 END), 0) AS paid, " +
+    "COALESCE(SUM(scan_cost), 0) AS scansSpent FROM lucky_spins"
+  ).get();
+  const prizeStats = db.prepare(
+    'SELECT prize_id AS id, reward_title AS title, reward_type AS rewardType, COUNT(*) AS count ' +
+    'FROM lucky_spins GROUP BY prize_id, reward_title, reward_type ORDER BY count DESC, title COLLATE NOCASE'
+  ).all().map(item => ({
+    id: String(item.id), title: String(item.title), rewardType: String(item.rewardType), count: Number(item.count)
+  }));
+  const recent = db.prepare(
+    'SELECT id, vk_id, created_at, is_free, scan_cost, reward_title, reward_type, reward_amount, reward_probability_bp ' +
+    'FROM lucky_spins ORDER BY id DESC LIMIT 50'
+  ).all().map(row => ({
+    id: Number(row.id), vkId: String(row.vk_id), createdAt: row.created_at,
+    isFree: Number(row.is_free) === 1, scanCost: Number(row.scan_cost),
+    title: String(row.reward_title), rewardType: String(row.reward_type),
+    amount: Number(row.reward_amount), probability: Number((Number(row.reward_probability_bp) / 100).toFixed(2))
+  }));
+  return res.json({
+    config,
+    stats: {
+      total: Number(stats.total || 0),
+      free: Number(stats.free || 0),
+      paid: Number(stats.paid || 0),
+      scansSpent: Number(stats.scansSpent || 0)
+    },
+    prizeStats,
+    recent
+  });
+});
+
+app.post('/api/admin/lucky', requireAdmin, (req, res) => {
+  const input = req.body || {};
+  const freeSpinsPerDay = Number(input.freeSpinsPerDay);
+  const spinCostScans = Number(input.spinCostScans);
+  if (typeof input.enabled !== 'boolean') return res.status(400).json({ error: 'Укажи, включён ли «Билет удачи».' });
+  if (!Number.isSafeInteger(freeSpinsPerDay) || freeSpinsPerDay < 0 || freeSpinsPerDay > 5) {
+    return res.status(400).json({ error: 'Бесплатных попыток должно быть от 0 до 5 в день.' });
+  }
+  if (!Number.isSafeInteger(spinCostScans) || spinCostScans < 1 || spinCostScans > 10) {
+    return res.status(400).json({ error: 'Стоимость прокрутки должна быть от 1 до 10 сканов.' });
+  }
+  if (!Array.isArray(input.prizes) || input.prizes.length < 1 || input.prizes.length > 30) {
+    return res.status(400).json({ error: 'Добавь от 1 до 30 наград.' });
+  }
+  const seenIds = new Set();
+  const prizes = [];
+  let totalProbabilityBp = 0;
+  for (let index = 0; index < input.prizes.length; index += 1) {
+    const item = input.prizes[index] || {};
+    const id = String(item.id || '');
+    const rewardType = String(item.rewardType || '');
+    const title = cleanText(item.title, 60);
+    const amount = Number(item.amount);
+    const probability = Number(item.probability);
+    const enabled = item.enabled !== false;
+    if (!/^[A-Za-z0-9_-]{1,48}$/.test(id) || seenIds.has(id)) {
+      return res.status(400).json({ error: 'У каждой награды должен быть уникальный идентификатор.' });
+    }
+    seenIds.add(id);
+    if (!['energy', 'scans', 'subscription'].includes(rewardType)) {
+      return res.status(400).json({ error: 'Допустимые типы наград: энергия, сканы и безлимит.' });
+    }
+    if (!title) return res.status(400).json({ error: 'У каждой награды должно быть название.' });
+    const maxAmount = rewardType === 'subscription' ? 3650 : 100000;
+    if (!Number.isSafeInteger(amount) || amount < 1 || amount > maxAmount) {
+      return res.status(400).json({ error: 'Количество награды должно быть целым числом от 1 до ' + maxAmount + '.' });
+    }
+    if (!Number.isFinite(probability) || probability < 0 || probability > 100
+      || Math.abs(probability * 100 - Math.round(probability * 100)) > 0.000001) {
+      return res.status(400).json({ error: 'Вероятность укажи в диапазоне от 0 до 100% с точностью до 0,01%.' });
+    }
+    const probabilityBp = Math.round(probability * 100);
+    if (enabled && probabilityBp < 1) {
+      return res.status(400).json({ error: 'У активной награды вероятность должна быть не меньше 0,01%.' });
+    }
+    if (enabled) totalProbabilityBp += probabilityBp;
+    prizes.push({
+      id, rewardType, title, amount, probabilityBp, enabled, sortOrder: index
+    });
+  }
+  if (totalProbabilityBp !== 10000) {
+    return res.status(400).json({
+      error: 'Сумма вероятностей активных наград должна составлять ровно 100,00%. Сейчас: ' +
+        (totalProbabilityBp / 100).toFixed(2).replace('.', ',') + '%.'
+    });
+  }
+
+  const current = getLuckyConfig();
+  const config = {
+    version: current.version + 1,
+    enabled: input.enabled,
+    freeSpinsPerDay,
+    spinCostScans,
+    prizes
+  };
+  const now = new Date().toISOString();
+  db.prepare(
+    'INSERT INTO app_settings (setting_key, setting_value, updated_at) VALUES (?, ?, ?) ' +
+    'ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value, updated_at = excluded.updated_at'
+  ).run(LUCKY_CONFIG_KEY, JSON.stringify(config), now);
+  return res.json({ ok: true, config });
 });
 
 app.get('/api/admin/paytags', requireAdmin, (req, res) => {
