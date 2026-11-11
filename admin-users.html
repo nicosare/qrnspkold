@@ -692,7 +692,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    usersView.hidden=view!=='users';promosView.hidden=view!=='promos';paytagsView.hidden=view!=='paytags';gamesView.hidden=view!=='games';
    document.querySelector('h1').textContent=view==='promos'?'Промокоды QRide':view==='paytags'?'Paytag QRide':view==='games'?'Настройки игр QRide':'Пользователи QRide';
    document.querySelector('.top .sub').textContent=view==='promos'?'Коды скидок и пополнения баланса':view==='paytags'?'Кеш транспортных QR-кодов и управление ценами':view==='games'?'Пороги бесплатных сканов за игровые рекорды':'Нажми на карточку, чтобы открыть профиль VK';
-   count.textContent=view==='users'?(users.length?'Всего: '+users.length):view==='paytags'?'Загрузка…':view==='games'?'Настройки':'Промокоды';
+   count.textContent=view==='users'?(users.length?'Всего: '+users.length:'Загрузка…'):view==='paytags'?'Загрузка…':view==='games'?'Настройки':'Промокоды';
    if(view==='promos')loadPromos();
    if(view==='paytags')loadPaytags();
    if(view==='games')loadGameRewards();
