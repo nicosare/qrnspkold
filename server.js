@@ -1479,7 +1479,7 @@ app.post('/api/game/finish', (req, res) => {
         const claim = db.prepare("INSERT OR IGNORE INTO game_reward_daily_claims (vk_id, game_id, day_key, claimed_at) VALUES (?, 'runner', ?, ?)").run(userId, today, creditedAt);
         if (claim.changes === 1) {
           db.prepare('UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + 1, game_reward_day = ? WHERE vk_id = ?').run(today, userId);
-          recordScanCredit.run(userId, creditedAt, 1, 'game_reward', 'Бесплатный скан за 3000 очков в Q Runner');
+          recordScanCredit.run(userId, creditedAt, 1, 'game_reward', 'Бесплатный скан за 3000 очков в Q Run');
           freeScanAwarded = true;
         }
       }
