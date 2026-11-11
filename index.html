@@ -1178,6 +1178,53 @@
         #faq-overlay.faq-overlay-closing .faq-sheet,
         #game-streak-overlay.game-streak-modal-closing .game-streak-sheet { transform:translateY(24px); opacity:0; }
         .info-sheet-grabber { flex:0 0 auto; width:38px; height:4px; margin:0 auto 17px; border-radius:999px; background:#dce3ec; }
+        /* Keep the global QRide page-header artwork out of modal headers. */
+        .info-sheet-header::before, .info-sheet-header::after,
+        .faq-sheet .info-sheet-header::before, .faq-sheet .info-sheet-header::after {
+            content:none !important;
+            display:none !important;
+            background:none !important;
+            background-image:none !important;
+        }
+        .info-sheet-header, .faq-sheet .info-sheet-header {
+            box-sizing:border-box;
+            width:100%;
+            min-width:0;
+            padding:0 0 14px;
+            margin:0 0 16px;
+            overflow:visible;
+            background:transparent !important;
+            background-image:none !important;
+        }
+        #game-streak-overlay .game-streak-sheet {
+            width:min(100%,520px);
+            padding:10px 21px calc(22px + env(safe-area-inset-bottom));
+        }
+        #game-streak-overlay .game-streak-sheet .info-sheet-header {
+            margin:0 0 16px;
+            padding:0 0 14px;
+        }
+        #game-streak-overlay .game-streak-sheet .info-sheet-header > div,
+        #faq-overlay .faq-sheet .info-sheet-header > div {
+            flex:1 1 auto;
+            min-width:0;
+            overflow-wrap:anywhere;
+        }
+        #game-streak-overlay .game-streak-sheet .info-sheet-title,
+        #faq-overlay .faq-sheet .info-sheet-title {
+            margin:0;
+            overflow-wrap:anywhere;
+        }
+        #game-streak-overlay .game-streak-sheet .info-sheet-close,
+        #faq-overlay .faq-sheet .info-sheet-close {
+            position:relative;
+            flex:0 0 36px;
+            width:36px;
+            height:36px;
+            min-width:36px;
+            min-height:36px;
+            margin:0;
+        }
         .info-sheet-header, .faq-sheet .info-sheet-header {
             position:relative; z-index:1; flex:0 0 auto; align-items:flex-start; gap:15px;
             margin:0 0 16px; padding:0 0 14px; border:0; border-bottom:1px solid #edf1f6;
@@ -1199,6 +1246,10 @@
         .faq-sheet .faq-list { padding-right:2px; }
         @media(max-width:540px) {
             .info-overlay { align-items:flex-end; padding:0; }
+            #game-streak-overlay .game-streak-sheet { width:100%; padding:10px 17px calc(22px + env(safe-area-inset-bottom)); }
+            #game-streak-overlay .game-streak-sheet .info-sheet-header { margin-bottom:14px; padding-bottom:12px; }
+            #game-streak-overlay .game-streak-sheet .info-sheet-close,
+            #faq-overlay .faq-sheet .info-sheet-close { flex-basis:36px; width:36px; height:36px; min-width:36px; min-height:36px; }
             #faq-overlay .faq-sheet, #game-streak-overlay .game-streak-sheet {
                 width:100%; max-height:min(80dvh,620px);
                 padding:10px 17px calc(22px + env(safe-area-inset-bottom));
