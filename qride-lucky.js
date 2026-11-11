@@ -210,7 +210,7 @@
   }
   function iconForResult(type) { return typeIcon(type); }
   function showResult(spin, restored) {
-    if (!spin || spinning) return;
+    if (!spin) return;
     activeSpin = spin;
     resultIcon.textContent = iconForResult(spin.rewardType);
     resultIcon.classList.toggle('is-subscription', spin.rewardType === 'subscription');

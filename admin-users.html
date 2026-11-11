@@ -78,6 +78,46 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 .game-records{margin-top:7px;padding-top:7px;border-top:1px solid var(--line)}
 .game-records .stat{background:#f1f6fd}
 
+.lucky-setting-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,.45fr) minmax(120px,.45fr);gap:9px;margin:12px 0}
+.lucky-setting{display:grid;gap:6px;min-width:0;padding:10px;border:1px solid var(--line);border-radius:11px;background:#fff}
+.lucky-setting>span{font-size:12px;font-weight:750;color:#566171}
+.lucky-setting input[type=number]{width:100%;min-width:0}
+.lucky-toggle{display:flex;align-items:center;gap:9px;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;font-size:13px;font-weight:750}
+.lucky-toggle input{width:18px;height:18px;min-height:18px;accent-color:var(--accent)}
+.lucky-prize-list{display:grid;gap:8px;margin-top:10px}
+.lucky-prize-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(115px,.8fr) minmax(95px,.65fr) minmax(95px,.65fr) auto;align-items:end;gap:8px;padding:11px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.lucky-prize-field{display:grid;gap:5px;min-width:0}
+.lucky-prize-field>span{font-size:10px;font-weight:750;color:var(--muted)}
+.lucky-prize-field input,.lucky-prize-field select{width:100%;min-width:0;min-height:40px;padding:7px 8px;font-size:12px}
+.lucky-prize-enabled{display:flex;align-items:center;gap:5px;min-height:40px;color:#566171;font-size:11px;font-weight:700;white-space:nowrap}
+.lucky-prize-enabled input{width:17px;height:17px;min-height:17px;accent-color:var(--accent)}
+.lucky-prize-remove{min-height:40px;padding:6px 9px;border-color:#ffd4d1;background:#fff5f4;color:#b42318;font-size:11px}
+.lucky-probability-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0;padding:10px 12px;border-radius:10px;background:#f4f7fb;color:#536171;font-size:12px;font-weight:750}
+.lucky-probability-summary strong{font-size:14px;font-variant-numeric:tabular-nums}
+.lucky-probability-summary.is-valid{background:#edf8f1;color:#176b3a}
+.lucky-probability-summary.is-invalid{background:#fff3f1;color:#b42318}
+.lucky-admin-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:14px}
+.lucky-admin-stat{min-width:0;padding:11px;border:1px solid var(--line);border-radius:11px;background:#f8fafc}
+.lucky-admin-stat span{display:block;color:var(--muted);font-size:10px;line-height:1.3}
+.lucky-admin-stat strong{display:block;margin-top:5px;color:#26384c;font-size:19px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.lucky-admin-subtitle{margin:18px 0 8px;font-size:14px;font-weight:800}
+.lucky-admin-table{width:100%;border-collapse:collapse;font-size:12px}
+.lucky-admin-table th,.lucky-admin-table td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.lucky-admin-table th{color:var(--muted);font-size:10px;font-weight:750}
+.lucky-admin-table-wrap{overflow:auto;border:1px solid var(--line);border-radius:11px}
+.lucky-admin-empty{padding:18px;color:var(--muted);text-align:center;font-size:12px}
+.lucky-admin-hint{margin:7px 0 0;color:var(--muted);font-size:11px;line-height:1.45}
+@media(max-width:700px){
+ .lucky-setting-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ .lucky-setting-grid .lucky-setting:first-child{grid-column:1/-1}
+ .lucky-prize-row{grid-template-columns:minmax(0,1fr) minmax(110px,.8fr)}
+ .lucky-prize-row .lucky-prize-field:first-child{grid-column:1/-1}
+ .lucky-prize-enabled{grid-column:1}
+ .lucky-prize-remove{grid-column:2}
+ .lucky-admin-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .lucky-admin-table{min-width:560px}
+}
+
 .promo-create{display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,.5fr);gap:10px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fafbfd}
 .promo-field{display:grid;gap:6px;min-width:0}.promo-field>span{font-size:12px;font-weight:750;color:#566171}.promo-field input,.promo-field select{min-width:0;width:100%;min-height:44px}.promo-field[hidden]{display:none!important}
 .promo-offers-field,.promo-create-button,.promo-form-status{grid-column:1/-1}
@@ -140,6 +180,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  <a href="#promos" data-admin-view="promos">Промокоды</a>
  <a href="#paytags" data-admin-view="paytags">Paytag</a>
  <a href="#games" data-admin-view="games">Игры</a>
+ <a href="#lucky" data-admin-view="lucky">Билет удачи</a>
 </nav>
 <section class="panel">
  <div id="users-view">
@@ -209,6 +250,36 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
   </form>
   <div class="foot">Изменения применяются на сервере сразу после сохранения. Для Q Break количество блоков в игре также будет учитывать установленный порог.</div>
  </div>
+
+ <div id="lucky-view" hidden>
+  <div class="promo-intro">Управляй призовым фондом «Билета удачи». Вероятности задаются отдельно для каждой награды; сумма вероятностей всех включённых наград должна составлять ровно 100%.</div>
+  <form id="lucky-config-form">
+   <div class="lucky-setting-grid">
+    <label class="lucky-toggle"><input id="lucky-enabled" type="checkbox"><span>Билет удачи включён</span></label>
+    <label class="lucky-setting"><span>Бесплатных попыток в день</span><input id="lucky-free-spins" type="number" min="0" max="5" step="1" value="1" required></label>
+    <label class="lucky-setting"><span>Стоимость попытки, сканов</span><input id="lucky-spin-cost" type="number" min="1" max="10" step="1" value="1" required></label>
+   </div>
+   <div class="promo-list-heading"><strong>Награды</strong><button type="button" id="lucky-add-prize">Добавить награду</button></div>
+   <div id="lucky-prize-list" class="lucky-prize-list"></div>
+   <div class="lucky-probability-summary" id="lucky-probability-summary"><span>Сумма вероятностей активных наград</span><strong id="lucky-probability-total">0,00%</strong></div>
+   <p class="lucky-admin-hint">Вероятность задаётся с точностью до 0,01%. Типы наград: энергия, сканы или безлимит на указанное количество дней. Отключённые награды не участвуют в розыгрыше.</p>
+   <button class="primary promo-create-button" type="submit" id="lucky-save">Сохранить настройки</button>
+   <div id="lucky-form-status" class="action-status" role="status" aria-live="polite"></div>
+  </form>
+  <h3 class="lucky-admin-subtitle">Статистика</h3>
+  <div class="lucky-admin-stats">
+   <div class="lucky-admin-stat"><span>Всего прокруток</span><strong id="lucky-total-spins">—</strong></div>
+   <div class="lucky-admin-stat"><span>Бесплатных</span><strong id="lucky-free-spins-total">—</strong></div>
+   <div class="lucky-admin-stat"><span>Платных</span><strong id="lucky-paid-spins-total">—</strong></div>
+   <div class="lucky-admin-stat"><span>Списано сканов</span><strong id="lucky-scans-spent">—</strong></div>
+  </div>
+  <h3 class="lucky-admin-subtitle">Выпадения по наградам</h3>
+  <div id="lucky-prize-stats" class="lucky-admin-table-wrap"><div class="lucky-admin-empty">Загрузка…</div></div>
+  <h3 class="lucky-admin-subtitle">Последние прокрутки</h3>
+  <div id="lucky-recent" class="lucky-admin-table-wrap"><div class="lucky-admin-empty">Загрузка…</div></div>
+  <div class="foot">Новая конфигурация получает отдельную версию. Уже выполненные прокрутки сохраняют исходную награду, вероятность и версию настроек.</div>
+ </div>
+
 </section>
 </main>
 <script>
@@ -224,6 +295,11 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  const promosView = document.getElementById('promos-view');
  const paytagsView = document.getElementById('paytags-view');
  const gamesView = document.getElementById('games-view');
+ const luckyView = document.getElementById('lucky-view');
+ const luckyForm = document.getElementById('lucky-config-form');
+ const luckyPrizeList = document.getElementById('lucky-prize-list');
+ const luckyFormStatus = document.getElementById('lucky-form-status');
+ const luckyProbabilitySummary = document.getElementById('lucky-probability-summary');
  const gameRewardsForm = document.getElementById('game-rewards-form');
  const gameRewardsStatus = document.getElementById('game-rewards-status');
  const promoForm = document.getElementById('promo-create-form');
@@ -420,6 +496,133 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    }catch(error){gameRewardsStatus.className='action-status error';gameRewardsStatus.textContent=error.message;}
    finally{button.disabled=false;button.textContent='Сохранить настройки';}
  });
+
+ function luckyMessage(message,isError){
+   luckyFormStatus.className='action-status'+(isError?' error':'');
+   luckyFormStatus.textContent=message||'';
+ }
+ function luckyPrizeTypeLabel(type){
+   return type==='scans'?'Сканы':type==='subscription'?'Безлимит':'Энергия';
+ }
+ function renderLuckyPrizes(prizes){
+   luckyPrizeList.innerHTML=(prizes||[]).map((p,index)=>{
+     const type=['energy','scans','subscription'].includes(p.rewardType)?p.rewardType:'energy';
+     return '<div class="lucky-prize-row" data-lucky-row data-prize-id="'+esc(p.id||('prize_'+index))+'">'+
+       '<label class="lucky-prize-field"><span>Название награды</span><input data-prize-title type="text" maxlength="60" value="'+esc(p.title||'')+'" required></label>'+
+       '<label class="lucky-prize-field"><span>Тип</span><select data-prize-type>'+
+        '<option value="energy"'+(type==='energy'?' selected':'')+'>Энергия</option>'+
+        '<option value="scans"'+(type==='scans'?' selected':'')+'>Сканы</option>'+
+        '<option value="subscription"'+(type==='subscription'?' selected':'')+'>Безлимит</option></select></label>'+
+       '<label class="lucky-prize-field"><span>Количество / дней</span><input data-prize-amount type="number" min="1" max="'+(type==='subscription'?'3650':'100000')+'" step="1" value="'+esc(p.amount||1)+'" required></label>'+
+       '<label class="lucky-prize-field"><span>Вероятность, %</span><input data-prize-probability type="number" min="0" max="100" step="0.01" value="'+Number(p.probability||0).toFixed(2)+'" required></label>'+
+       '<label class="lucky-prize-enabled"><input data-prize-enabled type="checkbox"'+(p.enabled===false?'':' checked')+'><span>Активна</span></label>'+
+       '<button class="lucky-prize-remove" type="button" data-prize-remove>Удалить</button>'+
+       '</div>';
+   }).join('');
+   updateLuckyProbability();
+ }
+ function currentLuckyPrizes(){
+   return Array.from(luckyPrizeList.querySelectorAll('[data-lucky-row]')).map((row,index)=>({
+     id:String(row.dataset.prizeId||'prize_'+index),
+     title:String(row.querySelector('[data-prize-title]').value||'').trim(),
+     rewardType:row.querySelector('[data-prize-type]').value,
+     amount:Number(row.querySelector('[data-prize-amount]').value),
+     probability:Number(row.querySelector('[data-prize-probability]').value),
+     enabled:Boolean(row.querySelector('[data-prize-enabled]').checked)
+   }));
+ }
+ function updateLuckyProbability(){
+   if(!luckyPrizeList||!luckyProbabilitySummary)return;
+   const total=currentLuckyPrizes().reduce((sum,p)=>sum+(p.enabled?(Math.round(p.probability*100)/100):0),0);
+   const valid=Math.round(total*100)===10000;
+   document.getElementById('lucky-probability-total').textContent=total.toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
+   luckyProbabilitySummary.classList.toggle('is-valid',valid);
+   luckyProbabilitySummary.classList.toggle('is-invalid',!valid);
+ }
+ async function loadLucky(){
+   luckyMessage('Загружаем настройки и статистику…',false);
+   try{
+     const response=await fetch('../api/admin/lucky',{headers:{Authorization:auth},cache:'no-store'});
+     const data=await response.json();
+     if(!response.ok)throw new Error(data.error||'Не удалось загрузить «Билет удачи».');
+     const config=data.config||{};
+     document.getElementById('lucky-enabled').checked=config.enabled!==false;
+     document.getElementById('lucky-free-spins').value=Number(config.freeSpinsPerDay??1);
+     document.getElementById('lucky-spin-cost').value=Number(config.spinCostScans??1);
+     renderLuckyPrizes((config.prizes||[]).map(p=>Object.assign({},p,{probability:Number(p.probabilityBp||0)/100})));
+     const stats=data.stats||{};
+     document.getElementById('lucky-total-spins').textContent=Number(stats.total||0).toLocaleString('ru-RU');
+     document.getElementById('lucky-free-spins-total').textContent=Number(stats.free||0).toLocaleString('ru-RU');
+     document.getElementById('lucky-paid-spins-total').textContent=Number(stats.paid||0).toLocaleString('ru-RU');
+     document.getElementById('lucky-scans-spent').textContent=Number(stats.scansSpent||0).toLocaleString('ru-RU');
+     const prizeStats=data.prizeStats||[];
+     document.getElementById('lucky-prize-stats').innerHTML=prizeStats.length
+       ?'<table class="lucky-admin-table"><thead><tr><th>Награда</th><th>Тип</th><th>Выпадений</th></tr></thead><tbody>'+
+         prizeStats.map(p=>'<tr><td>'+esc(p.title)+'</td><td>'+esc(luckyPrizeTypeLabel(p.rewardType))+'</td><td>'+Number(p.count||0).toLocaleString('ru-RU')+'</td></tr>').join('')+
+         '</tbody></table>'
+       :'<div class="lucky-admin-empty">Прокруток пока нет.</div>';
+     const recent=data.recent||[];
+     document.getElementById('lucky-recent').innerHTML=recent.length
+       ?'<table class="lucky-admin-table"><thead><tr><th>Дата</th><th>VK ID</th><th>Награда</th><th>Попытка</th></tr></thead><tbody>'+
+         recent.map(p=>'<tr><td>'+esc(date(p.createdAt))+'</td><td>'+esc(p.vkId)+'</td><td>'+esc(p.title)+'<br><small>'+Number(p.probability).toLocaleString('ru-RU',{maximumFractionDigits:2})+'%</small></td><td>'+(p.isFree?'Бесплатно':'−'+Number(p.scanCost)+' скан.')+'</td></tr>').join('')+
+         '</tbody></table>'
+       :'<div class="lucky-admin-empty">Прокруток пока нет.</div>';
+     luckyMessage('Настройки загружены. Версия конфигурации: '+Number(config.version||1)+'.',false);
+   }catch(error){luckyMessage(error.message,true);}
+ }
+ document.getElementById('lucky-add-prize').addEventListener('click',()=>{
+   const id='custom_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7);
+   const prizes=currentLuckyPrizes();
+   prizes.push({id,title:'Новая награда',rewardType:'energy',amount:10,probability:0,enabled:false});
+   renderLuckyPrizes(prizes);
+ });
+ luckyPrizeList.addEventListener('input',updateLuckyProbability);
+ luckyPrizeList.addEventListener('change',event=>{
+   const row=event.target.closest('[data-lucky-row]');
+   if(row&&event.target.matches('[data-prize-type]')){
+     const type=event.target.value;
+     const amount=row.querySelector('[data-prize-amount]');
+     amount.max=type==='subscription'?'3650':'100000';
+     const unit=row.querySelector('.lucky-prize-field:nth-child(3)>span');
+     if(unit)unit.textContent=type==='subscription'?'Количество дней':'Количество';
+   }
+   updateLuckyProbability();
+ });
+ luckyPrizeList.addEventListener('click',event=>{
+   const button=event.target.closest('[data-prize-remove]');
+   if(!button)return;
+   const row=button.closest('[data-lucky-row]');
+   if(row)row.remove();
+   updateLuckyProbability();
+ });
+ luckyForm.addEventListener('submit',async event=>{
+   event.preventDefault();
+   const prizes=currentLuckyPrizes();
+   const total=prizes.reduce((sum,p)=>sum+(p.enabled?Math.round(p.probability*100):0),0);
+   if(total!==10000){luckyMessage('Сумма вероятностей активных наград должна составлять ровно 100,00%.',true);return;}
+   if(!prizes.length){luckyMessage('Добавь хотя бы одну награду.',true);return;}
+   if(prizes.some(p=>!p.title||!Number.isSafeInteger(p.amount)||p.amount<1||!Number.isFinite(p.probability)||p.probability<0||p.probability>100)){
+     luckyMessage('Проверь названия, количество и вероятности всех наград.',true);return;
+   }
+   const payload={
+     enabled:document.getElementById('lucky-enabled').checked,
+     freeSpinsPerDay:Number(document.getElementById('lucky-free-spins').value),
+     spinCostScans:Number(document.getElementById('lucky-spin-cost').value),
+     prizes
+   };
+   const button=document.getElementById('lucky-save');
+   button.disabled=true;button.textContent='Сохраняем…';
+   try{
+     const response=await fetch('../api/admin/lucky',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify(payload),cache:'no-store'});
+     const data=await response.json();
+     if(!response.ok)throw new Error(data.error||'Не удалось сохранить настройки.');
+     renderLuckyPrizes((data.config.prizes||[]).map(p=>Object.assign({},p,{probability:Number(p.probabilityBp||0)/100})));
+     luckyMessage('Настройки сохранены. Новая версия: '+Number(data.config.version)+'.',false);
+     await loadLucky();
+   }catch(error){luckyMessage(error.message,true);}
+   finally{button.disabled=false;button.textContent='Сохранить настройки';}
+ });
+
  function render(){
    const q=search.value.trim().toLowerCase();
    const filtered=users.filter(u=>(u.first_name+' '+u.last_name+' '+u.vk_id+' '+(u.last_transport_number||'')).toLowerCase().includes(q));
@@ -551,7 +754,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
        details.dataset.loaded='1';
        if(!data.credits.length){list.innerHTML='<div class="scan-history-empty">Начислений пока нет.</div>';return;}
        list.innerHTML=data.credits.map(item=>{
-         const source=item.source==='welcome'?'Приветственный бонус':item.source==='daily'?'Ежедневный бонус':item.source==='referral'?'Реферальный бонус':item.source==='game_reward'?'Игровая награда':item.source==='purchase'?'Покупка тарифа':item.source==='admin'?'Ручное начисление':item.source==='promo_code'?'Промокод':'Начисление';
+         const source=item.source==='welcome'?'Приветственный бонус':item.source==='daily'?'Ежедневный бонус':item.source==='referral'?'Реферальный бонус':item.source==='game_reward'?'Игровая награда':item.source==='lucky_reward'?'Билет удачи':item.source==='purchase'?'Покупка тарифа':item.source==='admin'?'Ручное начисление':item.source==='promo_code'?'Промокод':'Начисление';
          const note=item.note?' · '+item.note:'';
          const amount=Number(item.amount);
          const plural=amount===1?'скан':amount>=2&&amount<=4?'скана':'сканов';
@@ -689,19 +892,21 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  document.querySelectorAll('[data-admin-view]').forEach(link=>link.addEventListener('click',event=>{
    event.preventDefault();const view=link.dataset.adminView;
    document.querySelectorAll('[data-admin-view]').forEach(item=>item.classList.toggle('active',item===link));
-   usersView.hidden=view!=='users';promosView.hidden=view!=='promos';paytagsView.hidden=view!=='paytags';gamesView.hidden=view!=='games';
-   document.querySelector('h1').textContent=view==='promos'?'Промокоды QRide':view==='paytags'?'Paytag QRide':view==='games'?'Настройки игр QRide':'Пользователи QRide';
-   document.querySelector('.top .sub').textContent=view==='promos'?'Коды скидок и пополнения баланса':view==='paytags'?'Кеш транспортных QR-кодов и управление ценами':view==='games'?'Пороги бесплатных сканов за игровые рекорды':'Нажми на карточку, чтобы открыть профиль VK';
-   count.textContent=view==='users'?(users.length?'Всего: '+users.length:'Загрузка…'):view==='paytags'?'Загрузка…':view==='games'?'Настройки':'Промокоды';
+   usersView.hidden=view!=='users';promosView.hidden=view!=='promos';paytagsView.hidden=view!=='paytags';gamesView.hidden=view!=='games';luckyView.hidden=view!=='lucky';
+   document.querySelector('h1').textContent=view==='promos'?'Промокоды QRide':view==='paytags'?'Paytag QRide':view==='games'?'Настройки игр QRide':view==='lucky'?'Билет удачи QRide':'Пользователи QRide';
+   document.querySelector('.top .sub').textContent=view==='promos'?'Коды скидок и пополнения баланса':view==='paytags'?'Кеш транспортных QR-кодов и управление ценами':view==='games'?'Пороги бесплатных сканов за игровые рекорды':view==='lucky'?'Призовой фонд, вероятности и статистика':'Нажми на карточку, чтобы открыть профиль VK';
+   count.textContent=view==='users'?(users.length?'Всего: '+users.length:'Загрузка…'):view==='paytags'?'Загрузка…':view==='games'?'Настройки':view==='lucky'?'Награды':'Промокоды';
    if(view==='promos')loadPromos();
    if(view==='paytags')loadPaytags();
    if(view==='games')loadGameRewards();
+   if(view==='lucky')loadLucky();
    if(view==='users'&&!users.length)load();
-   if(history.replaceState)history.replaceState(null,'',window.location.pathname+window.location.search+(view==='promos'?'#promos':view==='paytags'?'#paytags':view==='games'?'#games':'#users'));
+   if(history.replaceState)history.replaceState(null,'',window.location.pathname+window.location.search+(view==='promos'?'#promos':view==='paytags'?'#paytags':view==='games'?'#games':view==='lucky'?'#lucky':'#users'));
  }));
  if(window.location.hash==='#promos')document.querySelector('[data-admin-view="promos"]').click();
  else if(window.location.hash==='#paytags')document.querySelector('[data-admin-view="paytags"]').click();
  else if(window.location.hash==='#games')document.querySelector('[data-admin-view="games"]').click();
+ else if(window.location.hash==='#lucky')document.querySelector('[data-admin-view="lucky"]').click();
  load();
 })();
 </script>
