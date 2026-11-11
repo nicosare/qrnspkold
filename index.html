@@ -4506,6 +4506,9 @@ body.scan-loading-open { overflow: hidden !important; }
 
 <script>
 (function () {
+  window.qrideFormatGameResult = function (label, value, reward, attempts) {
+    return 'Результат: ' + label.toLowerCase() + ' — ' + value + '. ' + reward + ' Осталось попыток: ' + attempts + '.';
+  };
   const canvas = document.getElementById('roadnote-game-canvas');
   const overlay = document.getElementById('roadnote-game-overlay');
   const overlayTitle = document.getElementById('roadnote-game-overlay-title');
@@ -5141,7 +5144,7 @@ body.scan-loading-open { overflow: hidden !important; }
     taptic('medium');
     running=false;over=true;cancelAnimationFrame(raf);const finalScore=Math.floor(score);
     if(finalScore>best){best=finalScore;recordNode.textContent=String(best);try{localStorage.setItem(storageKey,String(best));}catch(_){}}
-    let endingText = 'Счёт: '+finalScore+'. Нажми, чтобы попробовать ещё раз.';
+    let rewardStatus = 'Награда не получена.';
     if (gameSessionId) {
       const sessionToFinish = gameSessionId; gameSessionId = null;
       try {
@@ -5150,20 +5153,20 @@ body.scan-loading-open { overflow: hidden !important; }
         best = Math.max(best, Number(result.bestScore) || 0);
         try { localStorage.setItem(storageKey, String(best)); } catch (_) {}
         if (result.freeScanAwarded) {
-          endingText = 'Счёт: '+finalScore+'. Ты получил бесплатный скан.';
+          rewardStatus = 'Скан начислен.';
           showGameToast('Бесплатный скан начислен', 'Награда за 3000 очков', 'award');
         } else if (result.runnerRewardClaimed) {
-          endingText = 'Счёт: '+finalScore+'. Скан за Q Run уже получен — можно играть ради рекорда.';
+          rewardStatus = 'Скан за Q Run сегодня уже получен.';
         }
       } catch (error) {
-        endingText = 'Счёт: '+finalScore+'. Не удалось сохранить результат: '+error.message+'. Вернись на старт и проверь соединение.';
+        rewardStatus = 'Не удалось сохранить результат: '+error.message+'.';
       }
     }
     const hud = document.getElementById('roadnote-game-hud'); if (hud) hud.classList.add('is-hidden');
     const gameCard = document.getElementById('roadnote-game'); if (gameCard) gameCard.classList.remove('is-playing');
     if (arcadeLock.game === 'runner') arcadeLock.game = null;
     overlay.style.pointerEvents = 'auto';
-    showOverlay('Раунд завершён', endingText + ' Осталось попыток: ' + gameAttempts + '.');
+    showOverlay('Раунд завершён', window.qrideFormatGameResult('Счёт', finalScore, rewardStatus, gameAttempts));
     const replayButton = document.getElementById('roadnote-game-start'); if (replayButton) replayButton.textContent = 'Играть ещё';
     overlay.style.pointerEvents = 'auto';
     draw();
@@ -5171,7 +5174,7 @@ body.scan-loading-open { overflow: hidden !important; }
   function frame(now) {
     if(!running)return;
     if(document.hidden){last=0;raf=requestAnimationFrame(frame);return;}
-    const dt=last?Math.min((now-last)/1000,.035):0;last=now;elapsed+=dt;score+=dt*10;speed=230+score*.22;
+    const dt=last?Math.min((now-last)/1000,.035):0;last=now;elapsed+=dt;score+=dt*10;speed=230+score*.32;
     player.vy+=1250*dt;player.y+=player.vy*dt;
     if(player.y>=ground-player.h){player.y=ground-player.h;player.vy=0;player.onGround=true;}
     spawnIn-=dt;
@@ -5541,7 +5544,7 @@ body.scan-loading-open { overflow: hidden !important; }
     cancelAnimationFrame(raf);
     const rewardEligible = destroyed >= TOTAL_BLOCKS;
     taptic(rewardEligible ? 'medium' : 'light');
-    let endingText = 'Уничтожено блоков: ' + destroyed + '.';
+    let rewardStatus = 'Для скана нужно уничтожить 60 блоков.';
     if (sessionId) {
       const currentSession = sessionId;
       sessionId = null;
@@ -5553,24 +5556,24 @@ body.scan-loading-open { overflow: hidden !important; }
         });
         renderState(result);
         if (rewardEligible && result.freeScanAwarded) {
-          endingText += ' Ты получил бесплатный скан.';
+          rewardStatus = 'Скан начислен.';
           showToast('Бесплатный скан начислен', 'Награда за 60 блоков', true);
         } else if (rewardEligible && result.breakerRewardClaimed) {
-          endingText += ' Скан за Q Break на сегодня уже получен — можно играть ради рекорда.';
+          rewardStatus = 'Скан за Q Break сегодня уже получен.';
         } else if (rewardEligible) {
-          endingText += ' Условие награды выполнено.';
+          rewardStatus = 'Условие награды выполнено.';
         } else {
-          endingText += ' Для бесплатного скана нужно уничтожить 60 блоков.';
+          rewardStatus = 'Для скана нужно уничтожить 60 блоков.';
         }
       } catch (error) {
-        endingText += ' Не удалось сохранить результат: ' + error.message + '. Вернись на старт и проверь соединение.';
+        rewardStatus = 'Не удалось сохранить результат: ' + error.message + '.';
       }
     }
     hud.classList.add('is-hidden');
     card.classList.remove('is-playing');
     if (arcadeLock.game === 'breaker') arcadeLock.game = null;
     overlayTitle.textContent = 'Раунд завершён';
-    overlayText.textContent = endingText + ' Осталось попыток: ' + attempts + '.';
+    overlayText.textContent = window.qrideFormatGameResult('Уничтожено блоков', destroyed, rewardStatus, attempts);
     overlay.hidden = false;
     startButton.textContent = 'Играть ещё';
     draw();
@@ -5800,7 +5803,7 @@ body.scan-loading-open { overflow: hidden !important; }
   let raf = 0;
   let lastFrame = 0;
   let score = 0;
-  let speed = 250;
+  let speed = 145;
   let rewardClaimedToday = false;
   let moving = null;
   let tower = [];
@@ -6044,7 +6047,7 @@ body.scan-loading-open { overflow: hidden !important; }
 
     tower.push({ x:placedX, width:placedWidth });
     score += 1;
-    speed = Math.min(760, 250 + score * 8.2);
+    speed = Math.min(680, 145 + score * 7.2);
     taptic(perfect ? 'medium' : 'light');
 
     const nextDirection = -moving.direction;
@@ -6096,7 +6099,7 @@ body.scan-loading-open { overflow: hidden !important; }
     taptic('medium');
 
     const finalScore = score;
-    let endingText = 'Высота башни: ' + finalScore + ' блоков.';
+    let rewardStatus = finalScore >= REWARD_TARGET ? 'Условие награды выполнено.' : 'До скана не хватило ' + (REWARD_TARGET - finalScore) + ' блоков.';
     if (sessionId) {
       const currentSession = sessionId;
       sessionId = null;
@@ -6107,23 +6110,23 @@ body.scan-loading-open { overflow: hidden !important; }
         });
         renderState(result);
         if (result.freeScanAwarded) {
-          endingText += ' Ты получил бесплатный скан!';
+          rewardStatus = 'Скан начислен!';
           showToast('Бесплатный скан начислен', 'Награда за 50 блоков в Q Stack', true);
         } else if (finalScore >= REWARD_TARGET && result.stackRewardClaimed) {
-          endingText += ' Скан за Q Stack на сегодня уже получен — можно играть ради рекорда.';
+          rewardStatus = 'Скан за Q Stack сегодня уже получен.';
         } else if (finalScore < REWARD_TARGET) {
-          endingText += ' До скана не хватило ' + (REWARD_TARGET - finalScore) + ' блоков.';
+          rewardStatus = 'До скана не хватило ' + (REWARD_TARGET - finalScore) + ' блоков.';
         }
       } catch (error) {
-        endingText += ' Не удалось сохранить результат: ' + error.message + '. Проверь соединение.';
+        rewardStatus = 'Не удалось сохранить результат: ' + error.message + '.';
       }
     }
 
     hud.classList.add('is-hidden');
     card.classList.remove('is-playing');
     if (arcadeLock.game === 'stack') arcadeLock.game = null;
-    overlayTitle.textContent = 'Башня завершена';
-    overlayText.textContent = endingText + ' Осталось попыток: ' + attempts + '.';
+    overlayTitle.textContent = 'Раунд завершён';
+    overlayText.textContent = window.qrideFormatGameResult('Высота башни', finalScore + ' блоков', rewardStatus, attempts);
     overlay.hidden = false;
     startButton.textContent = 'Играть ещё';
     finishing = false;
