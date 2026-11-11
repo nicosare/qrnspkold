@@ -332,7 +332,7 @@
 
         while (centeredIndex < targetIndex && offset >= centerOffset(centeredIndex + 1)) {
           centeredIndex += 1;
-          if (!reduceMotion) triggerHaptic('light');
+          if (!reduceMotion) triggerHaptic(centeredIndex === targetIndex ? 'medium' : 'light');
         }
 
         if (progress < 1) requestAnimationFrame(frame);
@@ -409,6 +409,7 @@
     try {
       const next = await apiPost('api/lucky/state', {});
       state = next;
+      renderFaqPrizes();
       if (!next.pendingResult) {
         try { sessionStorage.removeItem(storageKey); } catch (_) {}
       }
@@ -422,7 +423,6 @@
       updateControls();
       if (next.pendingResult && !activeSpin) showResult(next.pendingResult, true);
       else startIdle();
-      renderFaqPrizes();
       setStatus('', false);
     } catch (error) {
       console.warn('[QRide lucky state]', error.message);
