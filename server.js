@@ -660,7 +660,6 @@ function makeDefaultLuckyConfig() {
   return {
     version: 1,
     enabled: true,
-    freeSpinsPerDay: 1,
     spinCostScans: 1,
     prizes: LUCKY_DEFAULT_PRIZES.map(prize => ({ ...prize }))
   };
@@ -680,9 +679,6 @@ function getLuckyConfig() {
     return {
       version: Number.isSafeInteger(Number(saved.version)) ? Number(saved.version) : 1,
       enabled: saved.enabled !== false,
-      freeSpinsPerDay: Number.isSafeInteger(Number(saved.freeSpinsPerDay))
-        ? Math.min(5, Math.max(0, Number(saved.freeSpinsPerDay)))
-        : defaults.freeSpinsPerDay,
       spinCostScans: Number.isSafeInteger(Number(saved.spinCostScans))
         ? Math.min(10, Math.max(1, Number(saved.spinCostScans)))
         : defaults.spinCostScans,
@@ -729,11 +725,15 @@ function serializeLuckySpin(row) {
 }
 function getLuckyPublicState(userId, config = getLuckyConfig()) {
   const now = new Date();
-  const today = yekaterinburgDayKey(now);
   const user = getUserEntitlements.get(String(userId));
-  const usedFree = Number(db.prepare(
-    'SELECT COUNT(*) AS count FROM lucky_spins WHERE vk_id = ? AND day_key = ? AND is_free = 1'
-  ).get(String(userId), today)?.count || 0);
+  const lastFreeSpin = db.prepare(
+    'SELECT created_at FROM lucky_spins WHERE vk_id = ? AND is_free = 1 ORDER BY created_at DESC, id DESC LIMIT 1'
+  ).get(String(userId));
+  const lastFreeSpinAt = Date.parse(lastFreeSpin?.created_at || '');
+  const freeSpinAvailableAt = Number.isFinite(lastFreeSpinAt)
+    ? new Date(lastFreeSpinAt + 24 * 60 * 60 * 1000).toISOString()
+    : null;
+  const freeSpinReady = !freeSpinAvailableAt || Date.parse(freeSpinAvailableAt) <= now.getTime();
   const pendingRow = db.prepare(
     'SELECT * FROM lucky_spins WHERE vk_id = ? AND acknowledged_at IS NULL ORDER BY id DESC LIMIT 1'
   ).get(String(userId));
@@ -742,8 +742,8 @@ function getLuckyPublicState(userId, config = getLuckyConfig()) {
   return {
     enabled: config.enabled,
     configVersion: config.version,
-    freeSpinsPerDay: config.freeSpinsPerDay,
-    freeSpinsRemaining: Math.max(0, config.freeSpinsPerDay - usedFree),
+    freeSpinsRemaining: freeSpinReady ? 1 : 0,
+    freeSpinAvailableAt: freeSpinReady ? null : freeSpinAvailableAt,
     spinCostScans: config.spinCostScans,
     scanBalance: getDisplayedScanBalance(user, now),
     subscriptionUntil: user?.subscription_until || null,
@@ -1745,10 +1745,11 @@ app.post('/api/lucky/spin', (req, res) => {
       ).get(userId);
       if (!user) return { error: 'Пользователь не найден.' };
 
-      const usedFree = Number(db.prepare(
-        'SELECT COUNT(*) AS count FROM lucky_spins WHERE vk_id = ? AND day_key = ? AND is_free = 1'
-      ).get(userId, today)?.count || 0);
-      const isFree = usedFree < config.freeSpinsPerDay;
+      const freeCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+      const recentFreeSpin = db.prepare(
+        'SELECT id FROM lucky_spins WHERE vk_id = ? AND is_free = 1 AND created_at > ? ORDER BY created_at DESC, id DESC LIMIT 1'
+      ).get(userId, freeCutoff);
+      const isFree = !recentFreeSpin;
       let scanCost = 0;
       if (!isFree) {
         const packageBalance = Math.max(0, Number(user.scan_balance) || 0);
@@ -3056,12 +3057,8 @@ app.get('/api/admin/lucky', requireAdmin, (_req, res) => {
 
 app.post('/api/admin/lucky', requireAdmin, (req, res) => {
   const input = req.body || {};
-  const freeSpinsPerDay = Number(input.freeSpinsPerDay);
   const spinCostScans = Number(input.spinCostScans);
   if (typeof input.enabled !== 'boolean') return res.status(400).json({ error: 'Укажи, включён ли «Билет удачи».' });
-  if (!Number.isSafeInteger(freeSpinsPerDay) || freeSpinsPerDay < 0 || freeSpinsPerDay > 5) {
-    return res.status(400).json({ error: 'Бесплатных попыток должно быть от 0 до 5 в день.' });
-  }
   if (!Number.isSafeInteger(spinCostScans) || spinCostScans < 1 || spinCostScans > 10) {
     return res.status(400).json({ error: 'Стоимость прокрутки должна быть от 1 до 10 сканов.' });
   }
@@ -3115,7 +3112,6 @@ app.post('/api/admin/lucky', requireAdmin, (req, res) => {
   const config = {
     version: current.version + 1,
     enabled: input.enabled,
-    freeSpinsPerDay,
     spinCostScans,
     prizes
   };
