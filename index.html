@@ -1047,6 +1047,74 @@
         #faq-overlay.faq-overlay-opening .faq-sheet { transform:translateY(18px); opacity:0; }
         #faq-overlay.faq-overlay-closing .faq-sheet { transform:translateY(24px); opacity:0; }
 
+        /* Shared bottom-sheet presentation for informational QRide modals. */
+        .info-overlay {
+            z-index:16000; display:flex; align-items:flex-end; justify-content:center;
+            padding:0; overflow:hidden; overscroll-behavior:none;
+            background:rgba(13,24,39,.48);
+            -webkit-backdrop-filter:none; backdrop-filter:none;
+            transition:opacity .18s ease;
+        }
+        .info-overlay[hidden] { display:none !important; opacity:0; }
+        #faq-overlay.faq-overlay-opening, #game-streak-overlay.game-streak-modal-opening { opacity:0; }
+        #faq-overlay.faq-overlay-closing, #game-streak-overlay.game-streak-modal-closing { opacity:0; pointer-events:none; }
+        #faq-overlay .faq-sheet, #game-streak-overlay .game-streak-sheet {
+            position:relative; box-sizing:border-box; width:min(100%,520px);
+            max-height:min(80dvh,620px); padding:10px 21px calc(22px + env(safe-area-inset-bottom));
+            overflow-y:auto; overscroll-behavior-y:contain; touch-action:pan-y;
+            border:1px solid rgba(255,255,255,.82); border-bottom:0;
+            border-radius:25px 25px 0 0; background:#fff;
+            box-shadow:0 -12px 36px rgba(13,30,52,.16);
+            opacity:1; transform:translateY(0);
+            transition:transform .22s cubic-bezier(.2,.75,.25,1),opacity .18s ease;
+            will-change:transform,opacity;
+        }
+        #faq-overlay .faq-sheet { display:flex; flex-direction:column; height:min(80dvh,620px); overflow:hidden; }
+        #faq-overlay.faq-overlay-opening .faq-sheet,
+        #game-streak-overlay.game-streak-modal-opening .game-streak-sheet { transform:translateY(18px); opacity:.6; }
+        #faq-overlay.faq-overlay-closing .faq-sheet,
+        #game-streak-overlay.game-streak-modal-closing .game-streak-sheet { transform:translateY(24px); opacity:0; }
+        .info-sheet-grabber {
+            flex:0 0 auto; width:38px; height:4px; margin:0 auto 17px;
+            border-radius:999px; background:#dce3ec;
+        }
+        .info-sheet-header, .faq-sheet .info-sheet-header {
+            position:relative; z-index:1; flex:0 0 auto;
+            align-items:flex-start; gap:15px;
+            margin:0 0 16px; padding:0 0 14px;
+            border:0; border-bottom:1px solid #edf1f6; border-radius:0;
+            background:transparent; touch-action:pan-y;
+        }
+        .info-sheet-close, .qride-collect-info-close, .tariff-modal-close {
+            display:grid; place-items:center; flex:0 0 36px;
+            width:36px; height:36px; min-height:36px; margin:0; padding:0 0 2px;
+            border:0; border-radius:50%; background:#f0f3f7; color:#647386;
+            font-family:Arial,sans-serif; font-size:24px; font-weight:400; line-height:1;
+            cursor:pointer; -webkit-tap-highlight-color:transparent;
+            transition:background .15s ease,color .15s ease,transform .15s ease;
+        }
+        .info-sheet-close:active, .qride-collect-info-close:active, .tariff-modal-close:active { transform:scale(.94); }
+        .info-sheet-close:focus-visible, .qride-collect-info-close:focus-visible, .tariff-modal-close:focus-visible {
+            outline:3px solid #91baff; outline-offset:2px;
+        }
+        .info-sheet-title { font-size:22px; }
+        .info-sheet-subtitle { max-width:440px; }
+        .faq-sheet .faq-list { padding-right:2px; }
+        @media(max-width:540px) {
+            .info-overlay { align-items:flex-end; padding:0; }
+            #faq-overlay .faq-sheet, #game-streak-overlay .game-streak-sheet {
+                width:100%; max-height:min(80dvh,620px);
+                padding:10px 17px calc(22px + env(safe-area-inset-bottom));
+                border-radius:25px 25px 0 0;
+            }
+            #faq-overlay .faq-sheet { height:min(80dvh,620px); }
+            .info-sheet-header, .faq-sheet .info-sheet-header { margin-bottom:14px; }
+            .info-sheet-title { font-size:20px; }
+        }
+        @media(prefers-reduced-motion:reduce) {
+            .info-overlay, #faq-overlay .faq-sheet, #game-streak-overlay .game-streak-sheet { transition:none !important; }
+        }
+
         #game-streak-overlay { opacity:1; transition:opacity .18s ease; }
         #game-streak-overlay[hidden] { display:none !important; opacity:0; }
         #game-streak-overlay.game-streak-modal-closing { opacity:0; pointer-events:none; }
@@ -1434,6 +1502,42 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
 @keyframes tariffSheetIn{from{transform:translateY(18px);opacity:.7}to{transform:translateY(0);opacity:1}}
 @media(min-width:600px){.tariff-modal{align-items:center;padding:20px}.tariff-modal-sheet{border-radius:24px;max-height:88vh}.tariff-modal-backdrop{cursor:pointer}}
 @media(prefers-reduced-motion:reduce){.tariff-modal-sheet{animation:none}}
+/* Match QRide Plus and Collect sheets: one backdrop, one close control, one motion curve. */
+.tariff-modal {
+    z-index:16000; align-items:flex-end; padding:0;
+    background:rgba(13,24,39,.48); opacity:1;
+    transition:opacity .18s ease; overscroll-behavior:none;
+}
+.tariff-modal[hidden] { display:none !important; opacity:0; }
+.tariff-modal.is-opening, .tariff-modal.is-closing { pointer-events:none; }
+.tariff-modal.is-opening, .tariff-modal.is-closing { opacity:0; }
+.tariff-modal-sheet {
+    width:min(100%,520px); max-height:min(80dvh,620px);
+    padding:10px 21px calc(22px + env(safe-area-inset-bottom));
+    overflow-y:auto; overscroll-behavior-y:contain; touch-action:pan-y;
+    border:1px solid rgba(255,255,255,.82); border-bottom:0;
+    border-radius:25px 25px 0 0;
+    background:#fff; box-shadow:0 -12px 36px rgba(13,30,52,.16);
+    opacity:1; transform:translateY(0); animation:none;
+    transition:transform .22s cubic-bezier(.2,.75,.25,1),opacity .18s ease;
+    will-change:transform,opacity;
+}
+.tariff-modal.is-opening .tariff-modal-sheet { transform:translateY(18px); opacity:.6; }
+.tariff-modal.is-closing .tariff-modal-sheet { transform:translateY(24px); opacity:0; }
+.tariff-modal-grabber { width:38px; height:4px; margin:0 auto 17px; border-radius:999px; background:#dce3ec; }
+.tariff-modal-header { margin-bottom:16px; }
+.tariff-modal-header h3 { font-size:22px; line-height:1.2; }
+.tariff-modal-close { margin:0; padding:0 0 2px; }
+@media(min-width:600px) {
+    .tariff-modal { align-items:flex-end; padding:0; }
+    .tariff-modal-sheet { max-height:min(80dvh,620px); border-radius:25px 25px 0 0; }
+}
+@media(max-width:540px) {
+    .tariff-modal-sheet { width:100%; padding:10px 17px calc(22px + env(safe-area-inset-bottom)); border-radius:25px 25px 0 0; }
+}
+@media(prefers-reduced-motion:reduce) {
+    .tariff-modal, .tariff-modal-sheet { transition:none !important; }
+}
 /* QRide scan interstitial: Q assembles the real transport result. */
 body.scan-loading-open { overflow: hidden !important; }
 .scan-loading-overlay {
@@ -1889,6 +1993,7 @@ body.scan-loading-open { overflow: hidden !important; }
 
 <section class="info-overlay" id="faq-overlay" role="dialog" aria-modal="true" aria-labelledby="faq-title" hidden>
     <div class="info-sheet faq-sheet">
+        <div class="info-sheet-grabber" aria-hidden="true"></div>
         <header class="info-sheet-header">
             <div>
                 <span class="faq-kicker">QRIDE · СПРАВКА</span>
@@ -1918,6 +2023,7 @@ body.scan-loading-open { overflow: hidden !important; }
 
 <section class="info-overlay" id="game-streak-overlay" role="dialog" aria-modal="true" aria-labelledby="game-streak-modal-title" hidden>
     <div class="info-sheet game-streak-sheet">
+        <div class="info-sheet-grabber" aria-hidden="true"></div>
         <header class="info-sheet-header">
             <div>
                 <span class="faq-kicker">QRIDE · ТВОЯ СЕРИЯ</span>
