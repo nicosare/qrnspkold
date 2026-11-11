@@ -4671,6 +4671,27 @@ body.scan-loading-open { overflow: hidden !important; }
     if (qrideGameHeartbeatTimer) clearInterval(qrideGameHeartbeatTimer);
     qrideGameHeartbeatTimer = null;
   };
+  let qrideGameAbandonSent = false;
+  function abandonQrideGameOnExit() {
+    if (qrideGameAbandonSent || !qrideGameHeartbeatSession) return;
+    qrideGameAbandonSent = true;
+    const sessionId = qrideGameHeartbeatSession;
+    qrideGameHeartbeatSession = null;
+    if (qrideGameHeartbeatTimer) clearInterval(qrideGameHeartbeatTimer);
+    qrideGameHeartbeatTimer = null;
+    try {
+      fetch(gameApiBase + 'api/game/abandon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ launchParams, sessionId }),
+        cache: 'no-store',
+        credentials: 'omit',
+        keepalive: true
+      }).catch(() => {});
+    } catch (_) {}
+  }
+  window.addEventListener('pagehide', abandonQrideGameOnExit);
+  window.addEventListener('beforeunload', abandonQrideGameOnExit);
   async function gameRequest(path, payload) {
     const endpoint = gameApiBase + path.replace(/^\//, '');
     const response = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({launchParams, ...(payload || {})}), cache:'no-store', credentials:'omit' });
