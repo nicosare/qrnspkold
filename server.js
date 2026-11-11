@@ -1384,7 +1384,7 @@ function gamePublicState(userId) {
     bestScore: Math.max(0, Number(row?.game_best_score || 0)),
     breakerBestScore,
     stackBestScore,
-    rewardThreshold: 3000,
+    rewardThreshold: 2000,
     stackRewardThreshold: 50
   };
 }
@@ -1480,11 +1480,11 @@ app.post('/api/game/finish', (req, res) => {
     if (marked.changes !== 1) return;
     if (gameId === 'runner') {
       db.prepare('UPDATE users SET game_total_score = COALESCE(game_total_score, 0) + ?, game_best_score = MAX(COALESCE(game_best_score, 0), ?) WHERE vk_id = ?').run(score, score, userId);
-      if (score >= 3000) {
+      if (score >= 2000) {
         const claim = db.prepare("INSERT OR IGNORE INTO game_reward_daily_claims (vk_id, game_id, day_key, claimed_at) VALUES (?, 'runner', ?, ?)").run(userId, today, creditedAt);
         if (claim.changes === 1) {
           db.prepare('UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + 1, game_reward_day = ? WHERE vk_id = ?').run(today, userId);
-          recordScanCredit.run(userId, creditedAt, 1, 'game_reward', 'Бесплатный скан за 3000 очков в Q Run');
+          recordScanCredit.run(userId, creditedAt, 1, 'game_reward', 'Бесплатный скан за 2000 очков в Q Run');
           freeScanAwarded = true;
         }
       }
