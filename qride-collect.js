@@ -28,8 +28,10 @@
   let previousBodyRight = '';
   let previousBodyWidth = '';
   let pageScrollY = 0;
+  let infoCloseTimer = null;
 
   let historyLayer = null;
+  let historyCloseTimer = null;
   let historySubtitle = null;
   let historyList = null;
   let historyStatus = null;
@@ -356,7 +358,15 @@
     const typeKey = String(card.getAttribute('data-transport-type') || '').trim().toLowerCase();
     const routeNumber = normalizeRoute(card.getAttribute('data-route-number'));
     const typeLabel = typeKey.charAt(0).toUpperCase() + typeKey.slice(1);
+    if (historyCloseTimer) clearTimeout(historyCloseTimer);
+    historyCloseTimer = null;
+    historyLayer.classList.remove('is-opening', 'is-closing');
     historyLayer.hidden = false;
+    void historyLayer.offsetWidth;
+    historyLayer.classList.add('is-opening');
+    requestAnimationFrame(function () {
+      if (historyLayer && !historyLayer.hidden) historyLayer.classList.remove('is-opening');
+    });
     historySubtitle.textContent = typeLabel + ' №' + routeNumber;
     historyList.innerHTML = '';
     historyStatus.textContent = 'Загружаем историю поездок…';
@@ -394,20 +404,27 @@
   }
 
   function closeHistory() {
-    if (!historyLayer || historyLayer.hidden) return;
-    historyLayer.hidden = true;
-    if (historyController) {
-      historyController.abort();
-      historyController = null;
-    }
-    document.body.style.overflow = historyPreviousBodyOverflow;
-    document.body.style.position = historyPreviousBodyPosition;
-    document.body.style.top = historyPreviousBodyTop;
-    document.body.style.left = historyPreviousBodyLeft;
-    document.body.style.right = historyPreviousBodyRight;
-    document.body.style.width = historyPreviousBodyWidth;
-    window.scrollTo(0, historyPageScrollY);
-    if (historyTrigger && historyTrigger.isConnected) historyTrigger.focus({ preventScroll: true });
+    if (!historyLayer || historyLayer.hidden || historyLayer.classList.contains('is-closing')) return;
+    historyLayer.classList.remove('is-opening');
+    historyLayer.classList.add('is-closing');
+    if (historyCloseTimer) clearTimeout(historyCloseTimer);
+    historyCloseTimer = window.setTimeout(function () {
+      historyLayer.hidden = true;
+      historyLayer.classList.remove('is-opening', 'is-closing');
+      historyCloseTimer = null;
+      if (historyController) {
+        historyController.abort();
+        historyController = null;
+      }
+      document.body.style.overflow = historyPreviousBodyOverflow;
+      document.body.style.position = historyPreviousBodyPosition;
+      document.body.style.top = historyPreviousBodyTop;
+      document.body.style.left = historyPreviousBodyLeft;
+      document.body.style.right = historyPreviousBodyRight;
+      document.body.style.width = historyPreviousBodyWidth;
+      window.scrollTo(0, historyPageScrollY);
+      if (historyTrigger && historyTrigger.isConnected) historyTrigger.focus({ preventScroll: true });
+    }, 220);
   }
 
   async function refreshCollection() {
@@ -457,22 +474,37 @@
     document.body.style.left = '0';
     document.body.style.right = '0';
     document.body.style.width = '100%';
+    if (infoCloseTimer) clearTimeout(infoCloseTimer);
+    infoCloseTimer = null;
+    infoLayer.classList.remove('is-opening', 'is-closing');
     infoLayer.hidden = false;
+    void infoLayer.offsetWidth;
+    infoLayer.classList.add('is-opening');
+    requestAnimationFrame(function () {
+      if (infoLayer && !infoLayer.hidden) infoLayer.classList.remove('is-opening');
+    });
     const closeButton = infoLayer.querySelector('.qride-collect-info-close');
     if (closeButton) closeButton.focus({ preventScroll: true });
   }
 
   function closeInfo() {
-    if (!infoLayer || infoLayer.hidden) return;
-    infoLayer.hidden = true;
-    document.body.style.overflow = previousBodyOverflow;
-    document.body.style.position = previousBodyPosition;
-    document.body.style.top = previousBodyTop;
-    document.body.style.left = previousBodyLeft;
-    document.body.style.right = previousBodyRight;
-    document.body.style.width = previousBodyWidth;
-    window.scrollTo(0, pageScrollY);
-    if (infoTrigger && infoTrigger.isConnected) infoTrigger.focus({ preventScroll: true });
+    if (!infoLayer || infoLayer.hidden || infoLayer.classList.contains('is-closing')) return;
+    infoLayer.classList.remove('is-opening');
+    infoLayer.classList.add('is-closing');
+    if (infoCloseTimer) clearTimeout(infoCloseTimer);
+    infoCloseTimer = window.setTimeout(function () {
+      infoLayer.hidden = true;
+      infoLayer.classList.remove('is-opening', 'is-closing');
+      infoCloseTimer = null;
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.position = previousBodyPosition;
+      document.body.style.top = previousBodyTop;
+      document.body.style.left = previousBodyLeft;
+      document.body.style.right = previousBodyRight;
+      document.body.style.width = previousBodyWidth;
+      window.scrollTo(0, pageScrollY);
+      if (infoTrigger && infoTrigger.isConnected) infoTrigger.focus({ preventScroll: true });
+    }, 220);
   }
 
   if (infoLayer) {
