@@ -466,3 +466,72 @@
     .qride-collect-history-item { gap: 7px; padding-left: 10px; }
     .qride-collect-history-ticket { min-height: 34px; padding: 0 9px; }
 }
+
+
+/* Shared modal motion and backdrop: QRide Collect, its history sheet and other app sheets. */
+.qride-collect-info {
+    z-index:16000;
+    background:transparent;
+    transition:opacity .18s ease;
+}
+.qride-collect-info.is-opening,
+.qride-collect-info.is-closing {
+    opacity:0;
+}
+.qride-collect-info.is-closing { pointer-events:none; }
+.qride-collect-info-backdrop {
+    background:rgba(13,24,39,.48);
+}
+.qride-collect-info-sheet {
+    width:min(100%,520px);
+    max-height:min(80dvh,620px);
+    padding:10px 21px calc(22px + env(safe-area-inset-bottom));
+    border:1px solid rgba(255,255,255,.82);
+    border-bottom:0;
+    border-radius:25px 25px 0 0;
+    box-shadow:0 -12px 36px rgba(13,30,52,.16);
+    animation:none;
+    opacity:1;
+    transform:translateY(0);
+    transition:transform .22s cubic-bezier(.2,.75,.25,1),opacity .18s ease;
+    will-change:transform,opacity;
+}
+.qride-collect-info.is-opening .qride-collect-info-sheet {
+    transform:translateY(18px);
+    opacity:.6;
+}
+.qride-collect-info.is-closing .qride-collect-info-sheet {
+    transform:translateY(24px);
+    opacity:0;
+}
+.qride-collect-info-grabber {
+    margin-bottom:17px;
+    background:#dce3ec;
+}
+.qride-collect-info-close {
+    flex-basis:36px;
+    width:36px;
+    height:36px;
+    margin:0;
+    padding:0 0 2px;
+    background:#f0f3f7;
+    color:#647386;
+    font-family:Arial,sans-serif;
+    font-size:24px;
+    font-weight:400;
+    transition:background .15s ease,color .15s ease,transform .15s ease;
+}
+.qride-collect-info-close:active { transform:scale(.94); }
+.qride-collect-info-close:focus-visible { outline:3px solid #91baff; outline-offset:2px; }
+@media(max-width:540px) {
+    .qride-collect-info-sheet {
+        width:100%;
+        max-height:min(80dvh,620px);
+        padding:10px 17px calc(22px + env(safe-area-inset-bottom));
+        border-radius:25px 25px 0 0;
+    }
+}
+@media(prefers-reduced-motion:reduce) {
+    .qride-collect-info,
+    .qride-collect-info-sheet { transition:none !important; }
+}
