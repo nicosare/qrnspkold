@@ -4686,7 +4686,7 @@ body.scan-loading-open { overflow: hidden !important; }
       streakDaysNode.replaceChildren(fragment);
       requestAnimationFrame(() => { streakDaysNode.scrollLeft = streakDaysNode.scrollWidth; });
     }
-    if (rewardNode) rewardNode.textContent = state.runnerRewardClaimed ? 'Скан за эту игру уже получен' : '3000 очков = 1 бесплатный скан';
+    if (rewardNode) rewardNode.textContent = state.runnerRewardClaimed ? 'Скан за эту игру уже получен' : '2000 очков = 1 бесплатный скан';
     const runnerRewardTitle = document.querySelector('#roadnote-game .roadnote-game-reward-title');
     const runnerRewardCaption = document.querySelector('#roadnote-game .roadnote-game-reward-caption');
     if (runnerRewardTitle) runnerRewardTitle.textContent = state.runnerRewardClaimed
