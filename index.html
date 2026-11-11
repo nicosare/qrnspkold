@@ -1219,6 +1219,67 @@
         }
 
     
+        /* Final shared modal sizing and motion; all pop-up sheets use the Collect geometry. */
+        .info-overlay {
+            z-index:16000; display:flex; align-items:flex-end; justify-content:center;
+            padding:0; overflow:hidden; overscroll-behavior:none;
+            background:rgba(13,24,39,.48); -webkit-backdrop-filter:none; backdrop-filter:none;
+            transition:opacity .18s ease;
+        }
+        .info-overlay[hidden] { display:none !important; opacity:0; }
+        #faq-overlay.faq-overlay-opening, #game-streak-overlay.game-streak-modal-opening { opacity:0; }
+        #faq-overlay.faq-overlay-closing, #game-streak-overlay.game-streak-modal-closing { opacity:0; pointer-events:none; }
+        #faq-overlay .faq-sheet, #game-streak-overlay .game-streak-sheet {
+            position:relative; box-sizing:border-box; width:min(100%,520px);
+            max-height:min(80dvh,620px); padding:10px 21px calc(22px + env(safe-area-inset-bottom));
+            overflow-y:auto; overscroll-behavior-y:contain; touch-action:pan-y;
+            border:1px solid rgba(255,255,255,.82); border-bottom:0;
+            border-radius:25px 25px 0 0; background:#fff;
+            box-shadow:0 -12px 36px rgba(13,30,52,.16);
+            opacity:1; transform:translateY(0);
+            transition:transform .22s cubic-bezier(.2,.75,.25,1),opacity .18s ease;
+            will-change:transform,opacity;
+        }
+        #faq-overlay .faq-sheet { display:flex; flex-direction:column; height:min(80dvh,620px); overflow:hidden; }
+        #faq-overlay.faq-overlay-opening .faq-sheet,
+        #game-streak-overlay.game-streak-modal-opening .game-streak-sheet { transform:translateY(18px); opacity:.6; }
+        #faq-overlay.faq-overlay-closing .faq-sheet,
+        #game-streak-overlay.game-streak-modal-closing .game-streak-sheet { transform:translateY(24px); opacity:0; }
+        .info-sheet-grabber { flex:0 0 auto; width:38px; height:4px; margin:0 auto 17px; border-radius:999px; background:#dce3ec; }
+        .info-sheet-header, .faq-sheet .info-sheet-header {
+            position:relative; z-index:1; flex:0 0 auto; align-items:flex-start; gap:15px;
+            margin:0 0 16px; padding:0 0 14px; border:0; border-bottom:1px solid #edf1f6;
+            border-radius:0; background:transparent; touch-action:pan-y;
+        }
+        .info-sheet-close, .qride-collect-info-close, .tariff-modal-close {
+            display:grid; place-items:center; flex:0 0 36px; width:36px; height:36px;
+            min-height:36px; margin:0; padding:0 0 2px; border:0; border-radius:50%;
+            background:#f0f3f7; color:#647386; font-family:Arial,sans-serif;
+            font-size:24px; font-weight:400; line-height:1; cursor:pointer;
+            -webkit-tap-highlight-color:transparent;
+            transition:background .15s ease,color .15s ease,transform .15s ease;
+        }
+        .info-sheet-close:active, .qride-collect-info-close:active, .tariff-modal-close:active { transform:scale(.94); }
+        .info-sheet-close:focus-visible, .qride-collect-info-close:focus-visible, .tariff-modal-close:focus-visible {
+            outline:3px solid #91baff; outline-offset:2px;
+        }
+        .info-sheet-title { font-size:22px; }
+        .faq-sheet .faq-list { padding-right:2px; }
+        @media(max-width:540px) {
+            .info-overlay { align-items:flex-end; padding:0; }
+            #faq-overlay .faq-sheet, #game-streak-overlay .game-streak-sheet {
+                width:100%; max-height:min(80dvh,620px);
+                padding:10px 17px calc(22px + env(safe-area-inset-bottom));
+                border-radius:25px 25px 0 0;
+            }
+            #faq-overlay .faq-sheet { height:min(80dvh,620px); }
+            .info-sheet-header, .faq-sheet .info-sheet-header { margin-bottom:14px; }
+            .info-sheet-title { font-size:20px; }
+        }
+        @media(prefers-reduced-motion:reduce) {
+            .info-overlay, #faq-overlay .faq-sheet, #game-streak-overlay .game-streak-sheet { transition:none !important; }
+        }
+
         /* The start screen is available immediately; only changed data gets a small reveal. */
         .start-balance-card {
             transition: box-shadow .22s ease, transform .22s cubic-bezier(.2,.75,.25,1);
