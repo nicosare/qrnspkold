@@ -73,6 +73,10 @@
   function typeLabel(type) {
     return type === 'subscription' ? 'Безлимит' : type === 'scans' ? 'Сканы' : 'Энергия';
   }
+  function scanWord(value) {
+    const n = Math.abs(Number(value) || 0), last = n % 10, lastTwo = n % 100;
+    return lastTwo >= 11 && lastTwo <= 14 ? 'сканов' : last === 1 ? 'скан' : last >= 2 && last <= 4 ? 'скана' : 'сканов';
+  }
   function typeIcon(type) {
     return type === 'subscription' ? '∞' : type === 'scans' ? '▧' : 'ϟ';
   }
@@ -126,7 +130,7 @@
   }
   function startIdle() {
     stopIdle();
-    if (spinning || document.visibilityState === 'hidden' || !isIntersecting || reduceMotion) return;
+    if (spinning || activeModal || document.visibilityState === 'hidden' || !isIntersecting || reduceMotion) return;
     idleFrame = requestAnimationFrame(idleTick);
   }
   function setStatus(message, isError) {
@@ -138,17 +142,20 @@
     const free = Number(state.freeSpinsRemaining || 0) > 0;
     const cost = Number(state.spinCostScans || 1);
     spinButton.querySelector('span').textContent = 'Испытать удачу';
-    costNode.textContent = free ? 'Бесплатно' : cost + ' ' + (cost === 1 ? 'скан' : 'скана');
-    balanceNode.textContent = 'Баланс: ' + Number(state.scanBalance || 0) + ' скан.' +
+    costNode.textContent = free ? 'Бесплатно' : cost + ' ' + scanWord(cost);
+    balanceNode.textContent = 'Баланс: ' + Number(state.scanBalance || 0) + ' ' + scanWord(state.scanBalance || 0) +
       (state.subscriptionActive ? '\nБезлимит активен' : '');
+    balanceNode.style.whiteSpace = 'pre-line';
+    const freeRemaining = Number(state.freeSpinsRemaining || 0);
     freeStatusNode.textContent = free
-      ? 'Бесплатная попытка доступна'
+      ? (freeRemaining === 1 ? 'Бесплатная попытка доступна' : 'Бесплатных попыток: ' + freeRemaining)
       : 'Следующая бесплатная попытка — завтра';
     spinButton.disabled = spinning || Boolean(state.pendingResult);
     if (state.pendingResult) setStatus('У тебя есть неоткрытая награда. Забери её, чтобы продолжить.', false);
   }
   function openModal(modal) {
     if (!modal) return;
+    stopIdle();
     if (closeTimer) clearTimeout(closeTimer);
     closeTimer = 0;
     if (!backgroundLocked) {
@@ -195,19 +202,27 @@
       if (activeModal === target) activeModal = null;
       if (!activeModal) unlockBackground();
       if (acknowledge && activeSpin) acknowledgeSpin(activeSpin.id);
+      else if (!activeModal) startIdle();
     }, 220);
   }
   async function acknowledgeSpin(spinId) {
+    const completedSpin = activeSpin;
     try {
       await apiPost('api/lucky/ack', { spinId: spinId });
     } catch (error) {
       console.warn('[QRide lucky acknowledgement]', error.message);
+      activeSpin = null;
+      if (state && completedSpin) state.pendingResult = completedSpin;
+      if (completedSpin) showResult(completedSpin, true);
+      return;
     }
     activeSpin = null;
     try { sessionStorage.removeItem(storageKey); } catch (_) {}
     if (state) state.pendingResult = null;
     updateControls();
     setStatus('', false);
+    renderIdleRail();
+    startIdle();
   }
   function iconForResult(type) { return typeIcon(type); }
   function showResult(spin, restored) {
@@ -217,7 +232,7 @@
     resultIcon.classList.toggle('is-subscription', spin.rewardType === 'subscription');
     resultTitle.textContent = spin.title || 'Награда получена';
     resultDetail.textContent = amountDetail(spin);
-    resultMeta.textContent = (spin.isFree ? 'Бесплатная попытка' : 'Потрачено: ' + Number(spin.scanCost || 0) + ' скан.') +
+    resultMeta.textContent = (spin.isFree ? 'Бесплатная попытка' : 'Потрачено: ' + Number(spin.scanCost || 0) + ' ' + scanWord(spin.scanCost || 0)) +
       ' · Шанс этой награды: ' + Number(spin.probability || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + '%';
     if (restored) setStatus('Прокрутка завершилась, пока приложение было закрыто. Награда уже начислена.', false);
     openModal(resultModal);
@@ -294,8 +309,8 @@
         rail.style.transform = 'translate3d(' + (-offset) + 'px,0,0)';
         const passed = Math.max(0, Math.floor((offset - startOffset) / 124));
         if (passed > lastPassed) {
+          tickCount += passed - lastPassed;
           lastPassed = passed;
-          tickCount += passed;
           if (tickCount % 3 === 0) triggerHaptic('light');
         }
         if (progress < 1) requestAnimationFrame(frame);
