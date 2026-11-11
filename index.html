@@ -2315,7 +2315,6 @@ body.scan-loading-open { overflow: hidden !important; }
                 <canvas class="roadnote-game-canvas qride-stack-canvas" id="qride-stack-canvas" width="640" height="720" aria-label="Q Stack: останавливай движущиеся блоки и строй башню"></canvas>
                 <div class="roadnote-game-hud is-hidden" id="qride-stack-hud" aria-live="polite">
                     <span id="qride-stack-score">Блоки: 0</span>
-                    <span id="qride-stack-target">50 блоков → 1 скан</span>
                 </div>
                 <div class="roadnote-game-overlay" id="qride-stack-overlay">
                     <strong id="qride-stack-overlay-title">Q Stack</strong>
@@ -5754,15 +5753,19 @@ body.scan-loading-open { overflow: hidden !important; }
   const recordNode = document.getElementById('qride-stack-record');
   const hud = document.getElementById('qride-stack-hud');
   const scoreNode = document.getElementById('qride-stack-score');
-  const targetNode = document.getElementById('qride-stack-target');
   const rewardTitle = document.getElementById('qride-stack-reward-title');
   const rewardCaption = document.getElementById('qride-stack-reward-caption');
   const energyNode = document.getElementById('roadnote-game-energy-count');
   const toastHost = document.getElementById('roadnote-game-toast-host');
   if (!canvas || !card || !overlay || !startButton) return;
 
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { alpha:false, desynchronized:true });
   if (!ctx) return;
+  const backgroundCanvas = document.createElement('canvas');
+  backgroundCanvas.width = canvas.width;
+  backgroundCanvas.height = canvas.height;
+  const backgroundCtx = backgroundCanvas.getContext('2d');
+  let backgroundReady = false;
 
   const W = canvas.width;
   const H = canvas.height;
@@ -5858,7 +5861,6 @@ body.scan-loading-open { overflow: hidden !important; }
     attempts = Math.max(0, Number(state.attempts) || 0);
     rewardClaimedToday = Boolean(state.stackRewardClaimed);
     if (energyNode) energyNode.textContent = String(attempts);
-    if (targetNode) targetNode.textContent = rewardClaimedToday ? 'Скан уже получен сегодня' : (score >= REWARD_TARGET ? 'Цель достигнута!' : (REWARD_TARGET - score) + ' до скана');
     if (state.stackBestScore !== undefined && recordNode) {
       recordNode.textContent = String(Math.max(0, Number(state.stackBestScore) || 0));
     }
@@ -5886,9 +5888,6 @@ body.scan-loading-open { overflow: hidden !important; }
     const color = palette[colorIndex % palette.length];
     ctx.save();
     ctx.globalAlpha = alpha == null ? 1 : alpha;
-    ctx.shadowColor = 'rgba(22,63,112,.15)';
-    ctx.shadowBlur = 6;
-    ctx.shadowOffsetY = 3;
     ctx.fillStyle = color.fill;
     roundedRect(x, y, width, height, 4);
     ctx.fill();
@@ -5916,34 +5915,29 @@ body.scan-loading-open { overflow: hidden !important; }
   }
 
   function drawBackground() {
-    const gradient = ctx.createLinearGradient(0, 0, 0, H);
-    gradient.addColorStop(0, '#eaf5ff');
-    gradient.addColorStop(.72, '#f7fbff');
-    gradient.addColorStop(1, '#e8f1fb');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, W, H);
-
-    ctx.save();
-    ctx.globalAlpha = .36;
-    ctx.fillStyle = '#fff';
-    for (let i = 0; i < 5; i++) {
-      const x = 68 + i * 132;
-      const y = 82 + (i % 2) * 68;
-      ctx.beginPath();
-      ctx.ellipse(x, y, 30, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
+    if (!backgroundReady) {
+      const bg = backgroundCtx;
+      const gradient = bg.createLinearGradient(0, 0, 0, H);
+      gradient.addColorStop(0, '#eaf5ff');
+      gradient.addColorStop(.72, '#f7fbff');
+      gradient.addColorStop(1, '#e8f1fb');
+      bg.fillStyle = gradient;
+      bg.fillRect(0, 0, W, H);
+      bg.globalAlpha = .36;
+      bg.fillStyle = '#fff';
+      for (let i = 0; i < 5; i++) {
+        const x = 68 + i * 132, y = 82 + (i % 2) * 68;
+        bg.beginPath(); bg.ellipse(x, y, 30, 5, 0, 0, Math.PI * 2); bg.fill();
+      }
+      bg.globalAlpha = .18;
+      bg.strokeStyle = '#7aa9d8'; bg.lineWidth = 1;
+      for (let x = 42; x < W; x += 64) {
+        bg.beginPath(); bg.moveTo(x, 0); bg.lineTo(x, H); bg.stroke();
+      }
+      bg.globalAlpha = 1;
+      backgroundReady = true;
     }
-    ctx.globalAlpha = .18;
-    ctx.strokeStyle = '#7aa9d8';
-    ctx.lineWidth = 1;
-    for (let x = 42; x < W; x += 64) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, H);
-      ctx.stroke();
-    }
-    ctx.restore();
-
+    ctx.drawImage(backgroundCanvas, 0, 0);
     const cam = cameraOffset();
     ctx.fillStyle = '#d9e8f7';
     ctx.fillRect(0, FLOOR_Y + BLOCK_H + cam, W, 3);
@@ -5993,14 +5987,11 @@ body.scan-loading-open { overflow: hidden !important; }
   }
 
   function draw() {
-    const now = performance.now();
-    const dt = lastFrame ? Math.min((now - lastFrame) / 1000, .03) : 0;
     drawBackground();
     drawTower();
     drawDebris();
     drawMovingBlock();
     if (scoreNode) scoreNode.textContent = 'Блоки: ' + score;
-    if (targetNode) targetNode.textContent = rewardClaimedToday ? 'Скан уже получен сегодня' : (score >= REWARD_TARGET ? 'Цель достигнута!' : (REWARD_TARGET - score) + ' до скана');
   }
 
   function resetRound() {
@@ -6011,7 +6002,6 @@ body.scan-loading-open { overflow: hidden !important; }
     lastDropAt = 0;
     moving = { x:0, width:START_WIDTH, direction:1 };
     if (scoreNode) scoreNode.textContent = 'Блоки: 0';
-    if (targetNode) targetNode.textContent = rewardClaimedToday ? 'Скан уже получен сегодня' : '50 блоков → 1 скан';
     draw();
   }
 
