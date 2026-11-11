@@ -1364,6 +1364,9 @@
         .qride-breaker-card.is-playing .roadnote-game-record { display:none; }
          .qride-breaker-card.is-playing #qride-breaker-speed { display:none!important; }
         #qride-breaker-progress { font-variant-numeric:tabular-nums; }
+         #qride-stack-card { margin:0; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
+         .qride-stack-canvas { touch-action:manipulation!important; height:auto!important; min-height:0; aspect-ratio:8/9; }
+         #qride-stack-card.is-playing .roadnote-game-record { display:none; }
         .game-streak-days{grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:0}
         .game-streak-day{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:66px;padding:8px 2px;border:1px solid #e3e8ef;border-radius:12px;background:#f2f3f4;text-align:center}
         .game-streak-day span{display:block;color:#424142;font-size:16px;font-weight:850;line-height:1}
@@ -2064,7 +2067,7 @@ body.scan-loading-open { overflow: hidden !important; }
             <details><summary><span class="faq-number">07</span><span>Как работает скидка на первую покупку?</span></summary><div class="faq-answer"><p>Скидка действует до первого подтверждённого подключения любого платного тарифа. После начисления цены всех тарифов переключаются на обычные. Если оплата не состоялась, первая покупка ещё не считается совершённой и скидка сохраняется.</p></div></details>
             <details><summary><span class="faq-number">08</span><span>Как работает серия ежедневных заходов?</span></summary><div class="faq-answer"><p>Открывай QRide каждый день — запускать игру необязательно. За заход начисляются игровые попытки: в первый и второй день по одной, в третий и четвёртый по две, в пятый и шестой по три, а начиная с седьмого — по пять каждый день. Если пропустить целый день, серия начнётся заново. Уже полученные попытки не сгорают.</p></div></details>
             <details><summary><span class="faq-number">09</span><span>Как получить дополнительные игровые попытки?</span></summary><div class="faq-answer"><p>За успешный скан начисляются ещё 3 <svg class="faq-inline-bolt" viewBox="0 0 24 24" aria-label="игровые попытки"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> игровые попытки. Энергия начисляется не за каждое сканирование: за один QR-код можно получить её не более 3 раз в сутки, всего — не более 15 раз в сутки. Между начислениями за один и тот же код должно пройти не менее 2 минут. Само сканирование при этом не ограничивается. Попытки также выдаются за ежедневные заходы в QRide. Их остаток виден прямо в игре, а накопленные попытки сохраняются.</p></div></details>
-            <details><summary><span class="faq-number">10</span><span>Как получить бесплатный скан за игру?</span></summary><div class="faq-answer"><p>В Q Runner набери 3000 очков за один раунд, а в Q Breaker уничтожь 60 блоков. За каждую игру можно получить отдельный бесплатный скан раз в день. Твой рекорд и общий прогресс не сбрасываются. Когда скан будет начислен, QRide покажет уведомление.</p></div></details>
+            <details><summary><span class="faq-number">10</span><span>Как получить бесплатный скан за игру?</span></summary><div class="faq-answer"><p>В Q Run набери 3000 очков за раунд, в Q Break — уничтожь 60 блоков, а в Q Stack — поставь 50 блоков в башню. За каждую игру можно получить отдельный бесплатный скан раз в день. Рекорды сохраняются, а после достижения цели QRide покажет уведомление.</p></div></details>
             <details><summary><span class="faq-number">11</span><span>Можно ли оплатить проезд через QRide?</span></summary><div class="faq-answer"><p>Нет. QRide не продаёт билеты, не принимает оплату за проезд и не является платёжным средством. Приложение предназначено для считывания и отображения информации из транспортных QR-кодов.</p></div></details>
             <details><summary><span class="faq-number">12</span><span>Насколько точны данные?</span></summary><div class="faq-answer"><p>QRide показывает данные, полученные от внешнего сервиса, и не гарантирует их постоянную доступность, полноту или точность. Используй приложение на свой страх и риск и самостоятельно проверяй важную информацию. QRide не заменяет официальный билет или подтверждение оплаты.</p></div></details>
             <details><summary><span class="faq-number">13</span><span>Что важно знать о безопасности и ответственности?</span></summary><div class="faq-answer"><p>Не используй отображённую информацию как единственное подтверждение оплаты. За фактическую оплату проезда отвечают официальные транспортные сервисы и перевозчик. QRide — информационный инструмент; использование приложения не создаёт платёжных обязательств и не гарантирует принятие QR-кода перевозчиком.</p></div></details>
@@ -2092,7 +2095,7 @@ body.scan-loading-open { overflow: hidden !important; }
             </div>
             <div class="game-streak-modal-invite">
                 <strong>Загляни в QRide Arcade</strong>
-                <span>Играй в Q Runner и Q Breaker, набирай очки и получай дополнительные сканы.</span>
+                <span>Играй в Q Run, Q Break и Q Stack, побивай рекорды и получай дополнительные сканы.</span>
             </div>
             <button class="game-streak-modal-cta" id="game-streak-modal-games" type="button">К играм</button>
         </div>
@@ -2270,7 +2273,7 @@ body.scan-loading-open { overflow: hidden !important; }
                 <canvas class="roadnote-game-canvas" id="roadnote-game-canvas" width="640" height="240" aria-label="Мини-игра: нажимай, чтобы перепрыгивать препятствия"></canvas>
                 <div class="roadnote-game-hud is-hidden" id="roadnote-game-hud" aria-live="polite"><span id="roadnote-game-score">Счёт: 0</span><span id="roadnote-game-reward">3000 очков = бесплатный скан</span></div>
                 <div class="roadnote-game-overlay" id="roadnote-game-overlay">
-                    <strong id="roadnote-game-overlay-title">Q Runner</strong>
+                    <strong id="roadnote-game-overlay-title">Q Run</strong>
                     <span id="roadnote-game-overlay-text">Перепрыгивай препятствия и набирай очки.</span>
                     <div class="roadnote-game-reward-preview" data-game-rule="reward">
                         <span class="roadnote-game-reward-label">НАГРАДА</span>
@@ -2283,16 +2286,16 @@ body.scan-loading-open { overflow: hidden !important; }
 
             <div class="arcade-divider" aria-hidden="true"><span></span><i></i><span></span></div>
 
-        <section class="qride-breaker-card" id="qride-breaker-card" aria-label="Q Breaker">
+        <section class="qride-breaker-card" id="qride-breaker-card" aria-label="Q Break">
             <div class="roadnote-game-stage">
                 <div class="roadnote-game-record">Рекорд: <span id="qride-breaker-record">0</span></div>
-                <canvas class="roadnote-game-canvas qride-breaker-canvas" id="qride-breaker-canvas" width="640" height="720" aria-label="Q Breaker: управляй платформой, отбивай мяч и разбивай блоки"></canvas>
+                <canvas class="roadnote-game-canvas qride-breaker-canvas" id="qride-breaker-canvas" width="640" height="720" aria-label="Q Break: управляй платформой, отбивай мяч и разбивай блоки"></canvas>
                 <div class="roadnote-game-hud is-hidden" id="qride-breaker-hud" aria-live="polite">
                     <span id="qride-breaker-progress">Блоки: 0</span>
                     <span id="qride-breaker-speed">Скорость ×1,0</span>
                 </div>
                 <div class="roadnote-game-overlay" id="qride-breaker-overlay">
-                    <strong id="qride-breaker-overlay-title">Q Breaker</strong>
+                    <strong id="qride-breaker-overlay-title">Q Break</strong>
                     <span id="qride-breaker-overlay-text">Управляй платформой, отбивай мяч и продержись как можно дольше.</span>
                     <div class="roadnote-game-reward-preview" data-game-rule="reward">
                         <span class="roadnote-game-reward-label">НАГРАДА</span>
@@ -2303,8 +2306,30 @@ body.scan-loading-open { overflow: hidden !important; }
                 </div>
             </div>
         </section>
-        </section>
 
+        <div class="arcade-divider" aria-hidden="true"><span></span><i></i><span></span></div>
+
+        <section class="qride-stack-card" id="qride-stack-card" aria-label="Q Stack">
+            <div class="roadnote-game-stage">
+                <div class="roadnote-game-record">Рекорд: <span id="qride-stack-record">0</span></div>
+                <canvas class="roadnote-game-canvas qride-stack-canvas" id="qride-stack-canvas" width="640" height="720" aria-label="Q Stack: останавливай движущиеся блоки и строй башню"></canvas>
+                <div class="roadnote-game-hud is-hidden" id="qride-stack-hud" aria-live="polite">
+                    <span id="qride-stack-score">Блоки: 0</span>
+                    <span id="qride-stack-target">50 блоков → 1 скан</span>
+                </div>
+                <div class="roadnote-game-overlay" id="qride-stack-overlay">
+                    <strong id="qride-stack-overlay-title">Q Stack</strong>
+                    <span id="qride-stack-overlay-text">Останавливай движущиеся блоки точно друг на друге. Чем выше башня, тем быстрее темп.</span>
+                    <div class="roadnote-game-reward-preview" data-game-rule="reward">
+                        <span class="roadnote-game-reward-label">НАГРАДА</span>
+                        <strong class="roadnote-game-reward-title" id="qride-stack-reward-title">50 блоков → 1 скан</strong>
+                        <span class="roadnote-game-reward-caption" id="qride-stack-reward-caption">Один бесплатный скан в день за эту игру</span>
+                    </div>
+                    <button class="roadnote-game-start" id="qride-stack-start" type="button">Играть</button>
+                </div>
+            </div>
+        </section>
+        </section>
         <section class="start-referral" aria-labelledby="start-referral-title">
             <div class="start-referral-title" id="start-referral-title">Пригласи друга</div>
             <p class="start-referral-description">Поделись QRide. Когда друг впервые успешно отсканирует QR-код, тебе начислим 3 скана.</p>
@@ -4663,7 +4688,7 @@ body.scan-loading-open { overflow: hidden !important; }
     const runnerRewardTitle = document.querySelector('#roadnote-game .roadnote-game-reward-title');
     const runnerRewardCaption = document.querySelector('#roadnote-game .roadnote-game-reward-caption');
     if (runnerRewardTitle) runnerRewardTitle.textContent = state.runnerRewardClaimed
-      ? 'Скан за Q Runner на сегодня уже получен'
+      ? 'Скан за Q Run на сегодня уже получен'
       : '3000 очков за раунд → 1 скан';
     if (runnerRewardCaption) runnerRewardCaption.textContent = state.runnerRewardClaimed
       ? 'Новая награда будет доступна завтра'
@@ -5123,7 +5148,7 @@ body.scan-loading-open { overflow: hidden !important; }
           endingText = 'Счёт: '+finalScore+'. Ты получил бесплатный скан.';
           showGameToast('Бесплатный скан начислен', 'Награда за 3000 очков', 'award');
         } else if (result.runnerRewardClaimed) {
-          endingText = 'Счёт: '+finalScore+'. Скан за Q Runner уже получен — можно играть ради рекорда.';
+          endingText = 'Счёт: '+finalScore+'. Скан за Q Run уже получен — можно играть ради рекорда.';
         }
       } catch (error) {
         endingText = 'Счёт: '+finalScore+'. Не удалось сохранить результат: '+error.message+'. Вернись на старт и проверь соединение.';
@@ -5263,7 +5288,7 @@ body.scan-loading-open { overflow: hidden !important; }
     if (energy) energy.textContent = String(attempts);
     if (state.breakerBestScore !== undefined) recordNode.textContent = String(Math.max(0, Number(state.breakerBestScore) || 0));
     rewardTitle.textContent = state.breakerRewardClaimed
-      ? 'Скан за Q Breaker на сегодня уже получен'
+      ? 'Скан за Q Break на сегодня уже получен'
       : '60 блоков → 1 скан';
     rewardCaption.textContent = state.breakerRewardClaimed
       ? 'Новая награда будет доступна завтра'
@@ -5526,7 +5551,7 @@ body.scan-loading-open { overflow: hidden !important; }
           endingText += ' Ты получил бесплатный скан.';
           showToast('Бесплатный скан начислен', 'Награда за 60 блоков', true);
         } else if (rewardEligible && result.breakerRewardClaimed) {
-          endingText += ' Скан за Q Breaker на сегодня уже получен — можно играть ради рекорда.';
+          endingText += ' Скан за Q Break на сегодня уже получен — можно играть ради рекорда.';
         } else if (rewardEligible) {
           endingText += ' Условие награды выполнено.';
         } else {
