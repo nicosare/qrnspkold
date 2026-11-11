@@ -1588,7 +1588,15 @@ button.tariff-application-row{cursor:pointer}button.tariff-application-row:activ
 .tariff-modal-grabber { width:38px; height:4px; margin:0 auto 17px; border-radius:999px; background:#dce3ec; }
 .tariff-modal-header { margin-bottom:16px; }
 .tariff-modal-header h3 { font-size:22px; line-height:1.2; }
-.tariff-modal-close { margin:0; padding:0 0 2px; }
+.tariff-modal-close {
+    display:grid; place-items:center; flex:0 0 36px;
+    width:36px; height:36px; min-height:36px; margin:0; padding:0 0 2px;
+    border:0; border-radius:50%; background:#f0f3f7; color:#647386;
+    font-family:Arial,sans-serif; font-size:24px; font-weight:400; line-height:1;
+    transition:background .15s ease,color .15s ease,transform .15s ease;
+}
+.tariff-modal-close:active { transform:scale(.94); }
+.tariff-modal-close:focus-visible { outline:3px solid #91baff; outline-offset:2px; }
 @media(min-width:600px) {
     .tariff-modal { align-items:flex-end; padding:0; }
     .tariff-modal-sheet { max-height:min(80dvh,620px); border-radius:25px 25px 0 0; }
