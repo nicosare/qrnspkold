@@ -354,6 +354,11 @@ db.exec(`
   GROUP BY vk_id;
 `);
 
+// Keep historical reward descriptions aligned with the current Arcade game names.
+db.prepare(
+  "UPDATE scan_credit_history SET note = REPLACE(REPLACE(note, 'Q Runner', 'Q Run'), 'Q Breaker', 'Q Break') WHERE note LIKE '%Q Runner%' OR note LIKE '%Q Breaker%'"
+).run();
+
 // Older accounts with an unassigned balance receive the welcome scans once.
 // Accounts that already had an assigned balance are treated as previously onboarded.
 db.prepare(`
