@@ -14,7 +14,7 @@
             (params.has('sign') || params.has('vk_user_id'));
         if (!isRoadnoteVkLaunch) {
             document.open();
-            document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>
+            document.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>
 /* Arcade layout: seven equal days and a clear, uncluttered game preview. */
 #scan-status:empty{display:none!important;min-height:0!important;margin:0!important;padding:0!important}
 #game-streak-card{margin:0!important;padding:0!important}
@@ -41,7 +41,7 @@
 .roadnote-game-overlay .roadnote-game-start{position:relative!important;z-index:1!important;flex:0 0 auto!important;min-height:34px!important;margin:0!important;padding:7px 20px!important;font-size:13px!important;line-height:1.1!important}
 </style>
 
-</head><body>Откройте QRide через VK Mini App.</body></html>');
+</head><body>Откройте QRide через VK Mini App.</body></html>`);
             document.close();
         }
     })();
