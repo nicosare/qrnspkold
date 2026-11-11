@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QRide — Транспортные данные</title>
     <link rel="stylesheet" href="qride-collect.css?v=20261108-2">
-    <link rel="stylesheet" href="qride-lucky.css?v=20261112-1">
+    <link rel="stylesheet" href="qride-lucky.css?v=20261112-2">
     <script>
     (function () {
         var params = new URLSearchParams(window.location.search);
@@ -2072,7 +2072,7 @@ body.scan-loading-open { overflow: hidden !important; }
             <details><summary><span class="faq-number">11</span><span>Можно ли оплатить проезд через QRide?</span></summary><div class="faq-answer"><p>Нет. QRide не продаёт билеты, не принимает оплату за проезд и не является платёжным средством. Приложение предназначено для считывания и отображения информации из транспортных QR-кодов.</p></div></details>
             <details><summary><span class="faq-number">12</span><span>Насколько точны данные?</span></summary><div class="faq-answer"><p>QRide показывает данные, полученные от внешнего сервиса, и не гарантирует их постоянную доступность, полноту или точность. Используй приложение на свой страх и риск и самостоятельно проверяй важную информацию. QRide не заменяет официальный билет или подтверждение оплаты.</p></div></details>
             <details><summary><span class="faq-number">13</span><span>Что важно знать о безопасности и ответственности?</span></summary><div class="faq-answer"><p>Не используй отображённую информацию как единственное подтверждение оплаты. За фактическую оплату проезда отвечают официальные транспортные сервисы и перевозчик. QRide — информационный инструмент; использование приложения не создаёт платёжных обязательств и не гарантирует принятие QR-кода перевозчиком.</p></div></details>
-            <details><summary><span class="faq-number">14</span><span>Как работает «Билет удачи»?</span></summary><div class="faq-answer"><p>Обычно каждый день доступна одна бесплатная попытка — точное количество видно в блоке. Следующие прокрутки оплачиваются сканами: активная подписка не отменяет эту стоимость. Если сканов не хватает, можно выбрать пакет. Пустых результатов нет: возможные награды и их вероятности всегда доступны в разделе. Результат определяется сервером и начисляется до завершения анимации. Бесплатные попытки не накапливаются.</p></div></details>
+            <details><summary><span class="faq-number">14</span><span>Как работает «Билет удачи»?</span></summary><div class="faq-answer"><p>Одна бесплатная попытка становится доступна раз в 24 часа после предыдущей. Следующие прокрутки оплачиваются сканами: активная подписка не отменяет эту стоимость. Если сканов не хватает, можно выбрать пакет. Пустых результатов нет: каждая попытка приносит награду. Результат определяется сервером и начисляется до завершения анимации. Виды наград и актуальные вероятности:</p><div class="qride-lucky-faq-prizes" id="qride-lucky-faq-prizes" aria-live="polite"><span>Загружаем список наград…</span></div></div></details>
         </div>
         <p class="faq-footer">QRide — информационный инструмент, а не сервис оплаты проезда.</p>
     </div>
@@ -2211,12 +2211,11 @@ body.scan-loading-open { overflow: hidden !important; }
                     <div class="qride-lucky-kicker">QRIDE · БОНУСЫ</div>
                     <h3 id="qride-lucky-title">Билет удачи</h3>
                 </div>
-                <button class="qride-lucky-info" id="qride-lucky-info" type="button" aria-label="Посмотреть награды и шансы">i</button>
             </div>
-            <p class="qride-lucky-lead">Попробуй удачу — каждая попытка приносит награду.</p>
+            <p class="qride-lucky-lead">Испытай удачу — каждая попытка приносит награду.</p>
             <div class="qride-lucky-machine" id="qride-lucky-machine">
                 <div class="qride-lucky-pointer" aria-hidden="true"><span></span></div>
-                <div class="qride-lucky-window" id="qride-lucky-window" aria-label="Карусель возможных наград">
+                <div class="qride-lucky-window" id="qride-lucky-window" aria-label="Карусель наград">
                     <div class="qride-lucky-rail" id="qride-lucky-rail"></div>
                 </div>
             </div>
@@ -2225,54 +2224,40 @@ body.scan-loading-open { overflow: hidden !important; }
                     <span>Испытать удачу</span>
                     <small id="qride-lucky-cost">Загрузка…</small>
                 </button>
-                <div class="qride-lucky-balance" id="qride-lucky-balance" aria-live="polite"></div>
             </div>
             <div class="qride-lucky-foot">
-                <span id="qride-lucky-free-status">Бесплатная попытка каждый день</span>
-                <button type="button" id="qride-lucky-odds-link">Награды и шансы</button>
+                <span id="qride-lucky-free-status">Бесплатная попытка доступна</span>
             </div>
             <p class="qride-lucky-status" id="qride-lucky-status" role="status" aria-live="polite"></p>
         </section>
 
-        <section class="qride-lucky-modal" id="qride-lucky-odds-modal" role="dialog" aria-modal="true" aria-labelledby="qride-lucky-odds-title" hidden>
-            <button class="qride-lucky-backdrop" type="button" data-lucky-close aria-label="Закрыть"></button>
-            <div class="qride-lucky-sheet">
-                <div class="qride-lucky-grabber" aria-hidden="true"></div>
-                <header class="qride-lucky-modal-header">
-                    <div><div class="qride-lucky-kicker">БИЛЕТ УДАЧИ</div><h3 id="qride-lucky-odds-title">Возможные награды</h3></div>
-                    <button class="qride-lucky-close" type="button" data-lucky-close aria-label="Закрыть">×</button>
-                </header>
-                <p class="qride-lucky-modal-lead">Каждая награда выпадает с указанной вероятностью. Результат определяется сервером до начала анимации.</p>
-                <div class="qride-lucky-odds-list" id="qride-lucky-odds-list"></div>
-                <p class="qride-lucky-modal-note">Вероятности одинаковы для всех попыток и не меняются в зависимости от истории пользователя.</p>
-            </div>
-        </section>
-
-        <section class="qride-lucky-modal" id="qride-lucky-result-modal" role="dialog" aria-modal="true" aria-labelledby="qride-lucky-result-title" hidden>
-            <button class="qride-lucky-backdrop" type="button" data-lucky-result-close aria-label="Закрыть"></button>
-            <div class="qride-lucky-sheet qride-lucky-result-sheet">
-                <div class="qride-lucky-grabber" aria-hidden="true"></div>
-                <div class="qride-lucky-result-spark" aria-hidden="true"></div>
-                <div class="qride-lucky-result-icon" id="qride-lucky-result-icon"></div>
+        <section class="qride-collect-info" id="qride-lucky-result-modal" role="dialog" aria-modal="true" aria-labelledby="qride-lucky-result-title" hidden>
+            <button class="qride-collect-info-backdrop" type="button" data-lucky-result-close aria-label="Закрыть"></button>
+            <div class="qride-collect-info-sheet qride-lucky-result-sheet">
+                <div class="qride-collect-info-grabber" aria-hidden="true"></div>
+                <div class="qride-lucky-result-icon" id="qride-lucky-result-icon" aria-hidden="true"></div>
                 <div class="qride-lucky-result-caption">ТВОЯ НАГРАДА</div>
-                <h3 id="qride-lucky-result-title">Твой выигрыш!</h3>
+                <h4 id="qride-lucky-result-title">Твой выигрыш!</h4>
                 <p class="qride-lucky-result-detail" id="qride-lucky-result-detail"></p>
                 <p class="qride-lucky-result-meta" id="qride-lucky-result-meta"></p>
-                <button class="qride-lucky-result-button" type="button" data-lucky-result-close>Отлично!</button>
+                <button class="qride-collect-info-action" type="button" data-lucky-result-close>Отлично!</button>
             </div>
         </section>
 
-        <section class="qride-lucky-modal" id="qride-lucky-insufficient-modal" role="dialog" aria-modal="true" aria-labelledby="qride-lucky-insufficient-title" hidden>
-            <button class="qride-lucky-backdrop" type="button" data-lucky-close aria-label="Закрыть"></button>
-            <div class="qride-lucky-sheet">
-                <div class="qride-lucky-grabber" aria-hidden="true"></div>
-                <header class="qride-lucky-modal-header">
-                    <div><div class="qride-lucky-kicker">БИЛЕТ УДАЧИ</div><h3 id="qride-lucky-insufficient-title">Не хватает сканов</h3></div>
-                    <button class="qride-lucky-close" type="button" data-lucky-close aria-label="Закрыть">×</button>
-                </header>
-                <p class="qride-lucky-modal-lead" id="qride-lucky-insufficient-copy">Для следующей прокрутки нужен 1 скан. Выбери пакет, чтобы продолжить.</p>
+        <section class="qride-collect-info" id="qride-lucky-insufficient-modal" role="dialog" aria-modal="true" aria-labelledby="qride-lucky-insufficient-title" hidden>
+            <button class="qride-collect-info-backdrop" type="button" data-lucky-close aria-label="Закрыть"></button>
+            <div class="qride-collect-info-sheet qride-lucky-insufficient-sheet">
+                <div class="qride-collect-info-grabber" aria-hidden="true"></div>
+                <div class="qride-collect-info-top">
+                    <div>
+                        <div class="qride-lucky-kicker">QRIDE PLUS</div>
+                        <h4 id="qride-lucky-insufficient-title">Не хватает сканов</h4>
+                    </div>
+                    <button class="qride-collect-info-close" type="button" data-lucky-close aria-label="Закрыть">×</button>
+                </div>
+                <p class="qride-collect-info-copy" id="qride-lucky-insufficient-copy">Для прокрутки нужен 1 скан. Выбери пакет, чтобы продолжить.</p>
                 <div class="qride-lucky-packages" id="qride-lucky-packages"></div>
-                <button class="qride-lucky-secondary" type="button" data-lucky-close>Не сейчас</button>
+                <button class="qride-collect-info-action qride-lucky-secondary" type="button" data-lucky-close>Не сейчас</button>
             </div>
         </section>
 
@@ -6330,7 +6315,7 @@ body.scan-loading-open { overflow: hidden !important; }
 </script>
 <script src="qride-mascot.js"></script>
 <script src="qride-collect.js?v=20261108-2"></script>
-<script src="qride-lucky.js?v=20261112-1"></script>
+<script src="qride-lucky.js?v=20261112-2"></script>
 
 
 </body>
