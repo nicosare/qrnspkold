@@ -5798,6 +5798,7 @@ body.scan-loading-open { overflow: hidden !important; }
   let lastFrame = 0;
   let score = 0;
   let speed = 250;
+  let rewardClaimedToday = false;
   let moving = null;
   let tower = [];
   let debris = [];
@@ -5855,7 +5856,9 @@ body.scan-loading-open { overflow: hidden !important; }
   function renderState(state) {
     if (!state) return;
     attempts = Math.max(0, Number(state.attempts) || 0);
+    rewardClaimedToday = Boolean(state.stackRewardClaimed);
     if (energyNode) energyNode.textContent = String(attempts);
+    if (targetNode) targetNode.textContent = rewardClaimedToday ? 'Скан уже получен сегодня' : (score >= REWARD_TARGET ? 'Цель достигнута!' : (REWARD_TARGET - score) + ' до скана');
     if (state.stackBestScore !== undefined && recordNode) {
       recordNode.textContent = String(Math.max(0, Number(state.stackBestScore) || 0));
     }
@@ -5991,7 +5994,7 @@ body.scan-loading-open { overflow: hidden !important; }
     drawDebris();
     drawMovingBlock();
     if (scoreNode) scoreNode.textContent = 'Блоки: ' + score;
-    if (targetNode) targetNode.textContent = score >= REWARD_TARGET ? 'Цель достигнута!' : (REWARD_TARGET - score) + ' до скана';
+    if (targetNode) targetNode.textContent = rewardClaimedToday ? 'Скан уже получен сегодня' : (score >= REWARD_TARGET ? 'Цель достигнута!' : (REWARD_TARGET - score) + ' до скана');
   }
 
   function resetRound() {
@@ -6002,7 +6005,7 @@ body.scan-loading-open { overflow: hidden !important; }
     lastDropAt = 0;
     moving = { x:0, width:START_WIDTH, direction:1 };
     if (scoreNode) scoreNode.textContent = 'Блоки: 0';
-    if (targetNode) targetNode.textContent = '50 блоков → 1 скан';
+    if (targetNode) targetNode.textContent = rewardClaimedToday ? 'Скан уже получен сегодня' : '50 блоков → 1 скан';
     draw();
   }
 
