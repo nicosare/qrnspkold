@@ -75,6 +75,9 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 .admin-nav a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:#354150;font-size:13px;font-weight:750}
 .admin-nav a.active{background:#eaf3ff;border-color:#bfdaff;color:#1766bc}
 .promo-intro{margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.45}
+.game-records{margin-top:7px;padding-top:7px;border-top:1px solid var(--line)}
+.game-records .stat{background:#f1f6fd}
+
 .promo-create{display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,.5fr);gap:10px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fafbfd}
 .promo-field{display:grid;gap:6px;min-width:0}.promo-field>span{font-size:12px;font-weight:750;color:#566171}.promo-field input,.promo-field select{min-width:0;width:100%;min-height:44px}.promo-field[hidden]{display:none!important}
 .promo-offers-field,.promo-create-button,.promo-form-status{grid-column:1/-1}
@@ -136,6 +139,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  <a href="#users" class="active" data-admin-view="users">Пользователи</a>
  <a href="#promos" data-admin-view="promos">Промокоды</a>
  <a href="#paytags" data-admin-view="paytags">Paytag</a>
+ <a href="#games" data-admin-view="games">Игры</a>
 </nav>
 <section class="panel">
  <div id="users-view">
@@ -194,6 +198,17 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    <button class="paytag-reset" id="paytag-reset" type="button">Очистить кеш</button>
   </div>
  </div>
+ <div id="games-view" hidden>
+  <div class="promo-intro">Настрой порог результата, за который игрок получает один бесплатный скан. Награда за каждую игру выдаётся отдельно, не чаще одного раза в день.</div>
+  <form id="game-rewards-form" class="promo-create">
+   <label class="promo-field"><span>Q Run · очки за раунд</span><input id="game-threshold-runner" type="number" min="1" max="100000" step="1" required></label>
+   <label class="promo-field"><span>Q Break · уничтоженных блоков</span><input id="game-threshold-breaker" type="number" min="1" max="100000" step="1" required></label>
+   <label class="promo-field"><span>Q Stack · блоков в башне</span><input id="game-threshold-stack" type="number" min="1" max="100000" step="1" required></label>
+   <button class="primary promo-create-button" type="submit" id="game-rewards-save">Сохранить настройки</button>
+   <div id="game-rewards-status" class="action-status" role="status" aria-live="polite"></div>
+  </form>
+  <div class="foot">Изменения применяются на сервере сразу после сохранения. Для Q Break количество блоков в игре также будет учитывать установленный порог.</div>
+ </div>
 </section>
 </main>
 <script>
@@ -208,6 +223,9 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  const usersView = document.getElementById('users-view');
  const promosView = document.getElementById('promos-view');
  const paytagsView = document.getElementById('paytags-view');
+ const gamesView = document.getElementById('games-view');
+ const gameRewardsForm = document.getElementById('game-rewards-form');
+ const gameRewardsStatus = document.getElementById('game-rewards-status');
  const promoForm = document.getElementById('promo-create-form');
  const promoCodeInput = document.getElementById('promo-code');
   const promoDiscountInput = document.getElementById('promo-discount');
@@ -370,6 +388,38 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    finally{button.disabled=false;button.textContent='Очистить кеш';}
  });
 
+ async function loadGameRewards(){
+   if(!query){gameRewardsStatus.className='action-status error';gameRewardsStatus.textContent='Откройте страницу из VK Mini App.';return}
+   gameRewardsStatus.className='action-status';gameRewardsStatus.textContent='Загружаем настройки…';
+   try{
+     const response=await fetch('../api/admin/game-rewards',{headers:{Authorization:auth},cache:'no-store'});
+     const data=await response.json();
+     if(!response.ok)throw new Error(data.error||'Не удалось загрузить настройки игр.');
+     const thresholds=data.thresholds||{};
+     document.getElementById('game-threshold-runner').value=thresholds.runner??2000;
+     document.getElementById('game-threshold-breaker').value=thresholds.breaker??60;
+     document.getElementById('game-threshold-stack').value=thresholds.stack??50;
+     gameRewardsStatus.className='action-status';gameRewardsStatus.textContent='Текущие пороги загружены.';
+   }catch(error){gameRewardsStatus.className='action-status error';gameRewardsStatus.textContent=error.message;}
+ }
+ gameRewardsForm.addEventListener('submit',async event=>{
+   event.preventDefault();
+   const thresholds={
+     runner:Number(document.getElementById('game-threshold-runner').value),
+     breaker:Number(document.getElementById('game-threshold-breaker').value),
+     stack:Number(document.getElementById('game-threshold-stack').value)
+   };
+   if(Object.values(thresholds).some(value=>!Number.isSafeInteger(value)||value<1||value>100000)){
+     gameRewardsStatus.className='action-status error';gameRewardsStatus.textContent='Укажи целое число от 1 до 100000 для каждой игры.';return;
+   }
+   const button=document.getElementById('game-rewards-save');button.disabled=true;button.textContent='Сохраняем…';
+   try{
+     const response=await fetch('../api/admin/game-rewards',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify({thresholds}),cache:'no-store'});
+     const data=await response.json();if(!response.ok)throw new Error(data.error||'Не удалось сохранить настройки.');
+     gameRewardsStatus.className='action-status';gameRewardsStatus.textContent='Настройки сохранены. Новые пороги уже действуют.';
+   }catch(error){gameRewardsStatus.className='action-status error';gameRewardsStatus.textContent=error.message;}
+   finally{button.disabled=false;button.textContent='Сохранить настройки';}
+ });
  function render(){
    const q=search.value.trim().toLowerCase();
    const filtered=users.filter(u=>(u.first_name+' '+u.last_name+' '+u.vk_id+' '+(u.last_transport_number||'')).toLowerCase().includes(q));
@@ -401,6 +451,11 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
          '<div class="stat"><span class="stat-label">Последний скан</span><span class="stat-value">'+esc(lastScan)+'</span></div>'+
           '<div class="stat"><span class="stat-label">Последний транспорт</span><span class="stat-value">'+esc(transport)+'</span></div>'+
           '<div class="stat"><span class="stat-label">Энергия</span><span class="stat-value">'+esc(Number(u.game_attempts||0))+'</span></div>'+
+       '</div>'+
+       '<div class="stats game-records">'+
+         '<div class="stat"><span class="stat-label">Рекорд Q Run</span><span class="stat-value">'+esc(Number(u.runner_best_score||0))+' очк.</span></div>'+
+         '<div class="stat"><span class="stat-label">Рекорд Q Break</span><span class="stat-value">'+esc(Number(u.breaker_best_score||0))+' блоков</span></div>'+
+         '<div class="stat"><span class="stat-label">Рекорд Q Stack</span><span class="stat-value">'+esc(Number(u.stack_best_score||0))+' блоков</span></div>'+
        '</div>'+
        '<details class="scan-history" data-scan-history="'+esc(u.vk_id)+'"><summary>История сканов · '+esc(u.scan_count||0)+'</summary><div class="scan-history-list"><div class="scan-history-empty">Нажмите, чтобы загрузить историю.</div></div></details>'+
        '<details class="credit-history" data-credit-history="'+esc(u.vk_id)+'"><summary>История начислений</summary><div class="scan-history-list"><div class="scan-history-empty">Нажмите, чтобы загрузить историю.</div></div></details>'+
@@ -634,17 +689,19 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  document.querySelectorAll('[data-admin-view]').forEach(link=>link.addEventListener('click',event=>{
    event.preventDefault();const view=link.dataset.adminView;
    document.querySelectorAll('[data-admin-view]').forEach(item=>item.classList.toggle('active',item===link));
-   usersView.hidden=view!=='users';promosView.hidden=view!=='promos';paytagsView.hidden=view!=='paytags';
-   document.querySelector('h1').textContent=view==='promos'?'Промокоды QRide':view==='paytags'?'Paytag QRide':'Пользователи QRide';
-   document.querySelector('.top .sub').textContent=view==='promos'?'Коды скидок и пополнения баланса':view==='paytags'?'Кеш транспортных QR-кодов и управление ценами':'Нажми на карточку, чтобы открыть профиль VK';
-   count.textContent=view==='users'?(users.length?'Всего: '+users.length:'Загрузка…'):view==='paytags'?'Загрузка…':'Промокоды';
+   usersView.hidden=view!=='users';promosView.hidden=view!=='promos';paytagsView.hidden=view!=='paytags';gamesView.hidden=view!=='games';
+   document.querySelector('h1').textContent=view==='promos'?'Промокоды QRide':view==='paytags'?'Paytag QRide':view==='games'?'Настройки игр QRide':'Пользователи QRide';
+   document.querySelector('.top .sub').textContent=view==='promos'?'Коды скидок и пополнения баланса':view==='paytags'?'Кеш транспортных QR-кодов и управление ценами':view==='games'?'Пороги бесплатных сканов за игровые рекорды':'Нажми на карточку, чтобы открыть профиль VK';
+   count.textContent=view==='users'?(users.length?'Всего: '+users.length):view==='paytags'?'Загрузка…':view==='games'?'Настройки':'Промокоды';
    if(view==='promos')loadPromos();
    if(view==='paytags')loadPaytags();
+   if(view==='games')loadGameRewards();
    if(view==='users'&&!users.length)load();
-   if(history.replaceState)history.replaceState(null,'',window.location.pathname+window.location.search+(view==='promos'?'#promos':view==='paytags'?'#paytags':'#users'));
+   if(history.replaceState)history.replaceState(null,'',window.location.pathname+window.location.search+(view==='promos'?'#promos':view==='paytags'?'#paytags':view==='games'?'#games':'#users'));
  }));
  if(window.location.hash==='#promos')document.querySelector('[data-admin-view="promos"]').click();
  else if(window.location.hash==='#paytags')document.querySelector('[data-admin-view="paytags"]').click();
+ else if(window.location.hash==='#games')document.querySelector('[data-admin-view="games"]').click();
  load();
 })();
 </script>
