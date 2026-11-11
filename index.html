@@ -4649,6 +4649,28 @@ body.scan-loading-open { overflow: hidden !important; }
     : (gamePathname.slice(gamePathname.lastIndexOf('/') + 1).includes('.')
       ? gamePathname.slice(0, gamePathname.lastIndexOf('/') + 1)
       : gamePathname + '/');
+  let qrideGameHeartbeatTimer = null;
+  let qrideGameHeartbeatSession = null;
+  window.__qrideGameHeartbeatStart = function(sessionId) {
+    if (qrideGameHeartbeatTimer) clearInterval(qrideGameHeartbeatTimer);
+    qrideGameHeartbeatSession = sessionId;
+    const beat = () => {
+      if (!qrideGameHeartbeatSession || document.hidden) return;
+      fetch(gameApiBase + 'api/game/heartbeat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ launchParams, sessionId: qrideGameHeartbeatSession }),
+        cache: 'no-store', credentials: 'omit'
+      }).catch(() => {});
+    };
+    beat();
+    qrideGameHeartbeatTimer = setInterval(beat, 20000);
+  };
+  window.__qrideGameHeartbeatStop = function(sessionId) {
+    if (sessionId && qrideGameHeartbeatSession !== sessionId) return;
+    qrideGameHeartbeatSession = null;
+    if (qrideGameHeartbeatTimer) clearInterval(qrideGameHeartbeatTimer);
+    qrideGameHeartbeatTimer = null;
+  };
   async function gameRequest(path, payload) {
     const endpoint = gameApiBase + path.replace(/^\//, '');
     const response = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({launchParams, ...(payload || {})}), cache:'no-store', credentials:'omit' });
@@ -5123,6 +5145,7 @@ body.scan-loading-open { overflow: hidden !important; }
     try {
       const result = await gameRequest('/api/game/start', { gameId: 'runner' });
       gameSessionId = result.sessionId;
+      window.__qrideGameHeartbeatStart(gameSessionId);
       renderGameState(result);
       taptic('light');
       cancelAnimationFrame(raf); running=true;over=false;elapsed=0;score=0;lastDisplayedScore=-1;speed=230;spawnIn=.9;obstacles=[];particles=[];
@@ -5153,6 +5176,7 @@ body.scan-loading-open { overflow: hidden !important; }
     let rewardStatus = 'Награда не получена.';
     if (gameSessionId) {
       const sessionToFinish = gameSessionId; gameSessionId = null;
+      window.__qrideGameHeartbeatStop(sessionToFinish);
       try {
         const result = await gameRequest('/api/game/finish', {sessionId:sessionToFinish, score:finalScore});
         renderGameState(result);
@@ -5504,6 +5528,7 @@ body.scan-loading-open { overflow: hidden !important; }
     try {
       const state = await gameRequest('/api/game/start', { gameId: 'breaker' });
       sessionId = state.sessionId;
+      window.__qrideGameHeartbeatStart(sessionId);
       renderState(state);
       createLevel();
       elapsed = 0;
@@ -5546,6 +5571,7 @@ body.scan-loading-open { overflow: hidden !important; }
     if (sessionId) {
       const currentSession = sessionId;
       sessionId = null;
+      window.__qrideGameHeartbeatStop(currentSession);
       try {
         const result = await gameRequest('/api/game/finish', {
           sessionId: currentSession,
@@ -6069,6 +6095,7 @@ body.scan-loading-open { overflow: hidden !important; }
     try {
       const state = await gameRequest('/api/game/start', { gameId:'stack' });
       sessionId = state.sessionId;
+      window.__qrideGameHeartbeatStart(sessionId);
       renderState(state);
       resetRound();
       running = true;
@@ -6102,6 +6129,7 @@ body.scan-loading-open { overflow: hidden !important; }
     if (sessionId) {
       const currentSession = sessionId;
       sessionId = null;
+      window.__qrideGameHeartbeatStop(currentSession);
       try {
         const result = await gameRequest('/api/game/finish', {
           sessionId:currentSession,
