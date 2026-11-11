@@ -1366,6 +1366,7 @@ function gamePublicState(userId) {
   const today = yekaterinburgDayKey();
   const claims = new Set(db.prepare('SELECT game_id FROM game_reward_daily_claims WHERE vk_id = ? AND day_key = ?').all(userId, today).map(item => item.game_id));
   const breakerBestScore = Number(db.prepare("SELECT COALESCE(MAX(score), 0) AS score FROM game_sessions WHERE vk_id = ? AND game_id = 'breaker'").get(userId)?.score || 0);
+  const stackBestScore = Number(db.prepare("SELECT COALESCE(MAX(score), 0) AS score FROM game_sessions WHERE vk_id = ? AND game_id = 'stack'").get(userId)?.score || 0);
   return {
     attempts: Math.max(0, Number(row?.game_attempts || 0)),
     streak: Math.max(0, Number(row?.game_streak || 0)),
@@ -1373,10 +1374,13 @@ function gamePublicState(userId) {
     freeScanClaimedToday: row?.game_reward_day === today,
     runnerRewardClaimed: claims.has('runner'),
     breakerRewardClaimed: claims.has('breaker'),
+    stackRewardClaimed: claims.has('stack'),
     totalScore: Math.max(0, Number(row?.game_total_score || 0)),
     bestScore: Math.max(0, Number(row?.game_best_score || 0)),
     breakerBestScore,
-    rewardThreshold: 3000
+    stackBestScore,
+    rewardThreshold: 3000,
+    stackRewardThreshold: 50
   };
 }
 function sendLiveGameState(userId) {
@@ -1416,7 +1420,7 @@ app.post('/api/game/start', (req, res) => {
   try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
   catch { return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' }); }
   const gameId = String(req.body?.gameId || 'runner');
-  if (!['runner', 'breaker'].includes(gameId)) return res.status(400).json({ error: 'Неизвестная игра.' });
+  if (!['runner', 'breaker', 'stack'].includes(gameId)) return res.status(400).json({ error: 'Неизвестная игра.' });
   const now = Date.now();
   const sessionId = crypto.randomUUID();
   let started = false;
@@ -1459,6 +1463,9 @@ app.post('/api/game/finish', (req, res) => {
       return res.status(400).json({ error: 'Результат не прошёл проверку.' });
     }
   }
+  if (gameId === 'stack' && score > Math.floor(elapsedSeconds * 5) + 3) {
+    return res.status(400).json({ error: 'Результат не прошёл проверку.' });
+  }
   const today = yekaterinburgDayKey(new Date(now));
   const creditedAt = new Date(now).toISOString();
   let freeScanAwarded = false;
@@ -1480,7 +1487,14 @@ app.post('/api/game/finish', (req, res) => {
       const claim = db.prepare("INSERT OR IGNORE INTO game_reward_daily_claims (vk_id, game_id, day_key, claimed_at) VALUES (?, 'breaker', ?, ?)").run(userId, today, creditedAt);
       if (claim.changes === 1) {
         db.prepare('UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + 1 WHERE vk_id = ?').run(userId);
-        recordScanCredit.run(userId, creditedAt, 1, 'game_reward', 'Бесплатный скан за прохождение Q Breaker');
+        recordScanCredit.run(userId, creditedAt, 1, 'game_reward', 'Бесплатный скан за прохождение Q Break');
+        freeScanAwarded = true;
+      }
+    } else if (gameId === 'stack' && score >= 50) {
+      const claim = db.prepare("INSERT OR IGNORE INTO game_reward_daily_claims (vk_id, game_id, day_key, claimed_at) VALUES (?, 'stack', ?, ?)").run(userId, today, creditedAt);
+      if (claim.changes === 1) {
+        db.prepare('UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + 1 WHERE vk_id = ?').run(userId);
+        recordScanCredit.run(userId, creditedAt, 1, 'game_reward', 'Бесплатный скан за 50 блоков в Q Stack');
         freeScanAwarded = true;
       }
     }
