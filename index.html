@@ -1046,6 +1046,31 @@
         #faq-overlay .faq-sheet { transform:translateY(0); opacity:1; transition:transform .22s cubic-bezier(.2,.75,.25,1), opacity .18s ease; will-change:transform,opacity; }
         #faq-overlay.faq-overlay-opening .faq-sheet { transform:translateY(18px); opacity:0; }
         #faq-overlay.faq-overlay-closing .faq-sheet { transform:translateY(24px); opacity:0; }
+
+        #game-streak-overlay { opacity:1; transition:opacity .18s ease; }
+        #game-streak-overlay[hidden] { display:none !important; opacity:0; }
+        #game-streak-overlay.game-streak-modal-closing { opacity:0; pointer-events:none; }
+        #game-streak-overlay .game-streak-sheet { transform:translateY(0); opacity:1; transition:transform .22s cubic-bezier(.2,.75,.25,1), opacity .18s ease; will-change:transform,opacity; }
+        #game-streak-overlay.game-streak-modal-opening .game-streak-sheet { transform:translateY(18px); opacity:0; }
+        #game-streak-overlay.game-streak-modal-closing .game-streak-sheet { transform:translateY(24px); opacity:0; }
+        .game-streak-sheet { box-sizing:border-box; width:min(100%,460px); }
+        .game-streak-sheet .info-sheet-header { margin:-22px -22px 18px; }
+        .game-streak-modal-body { display:flex; flex-direction:column; align-items:center; gap:15px; text-align:center; }
+        .game-streak-modal-lead { max-width:340px; margin:0; color:#647386; font-size:14px; line-height:1.55; }
+        .game-streak-modal-reward { display:flex; align-items:center; justify-content:center; gap:9px; width:100%; box-sizing:border-box; padding:16px; border:1px solid #dce8f8; border-radius:17px; background:#f2f7ff; }
+        .game-streak-modal-reward-label { color:#6c7d91; font-size:12px; font-weight:700; }
+        .game-streak-modal-reward-value { display:inline-flex; align-items:center; gap:5px; color:#0052EE; font-size:23px; font-weight:900; line-height:1; }
+        .game-streak-modal-reward-value svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+        .game-streak-modal-invite { width:100%; box-sizing:border-box; padding:15px 16px; border:1px solid #e6edf6; border-radius:16px; background:#fff; text-align:left; }
+        .game-streak-modal-invite strong { display:block; margin-bottom:5px; color:#26384d; font-size:15px; font-weight:850; }
+        .game-streak-modal-invite span { display:block; color:#718095; font-size:12px; line-height:1.5; }
+        .game-streak-modal-cta { display:flex; align-items:center; justify-content:center; width:100%; min-height:50px; margin-top:2px; padding:12px 18px; border:0; border-radius:14px; background:#0052EE; color:#fff; font:inherit; font-size:15px; font-weight:850; box-shadow:0 7px 18px #0052EE30; cursor:pointer; touch-action:manipulation; }
+        .game-streak-modal-cta:active { transform:scale(.98); }
+        #game-streak-days .game-streak-day { cursor:pointer; }
+        #game-streak-days .game-streak-day:focus-visible { outline:3px solid #91baff; outline-offset:2px; }
+        @media (prefers-reduced-motion:reduce) {
+            #game-streak-overlay, #game-streak-overlay .game-streak-sheet { transition:none !important; }
+        }
         @media (prefers-reduced-motion:reduce) {
             #faq-overlay, #faq-overlay .faq-sheet { transition:none !important; }
         }
@@ -1891,6 +1916,30 @@ body.scan-loading-open { overflow: hidden !important; }
     </div>
 </section>
 
+<section class="info-overlay" id="game-streak-overlay" role="dialog" aria-modal="true" aria-labelledby="game-streak-modal-title" hidden>
+    <div class="info-sheet game-streak-sheet">
+        <header class="info-sheet-header">
+            <div>
+                <span class="faq-kicker">QRIDE · ТВОЯ СЕРИЯ</span>
+                <h2 class="info-sheet-title" id="game-streak-modal-title">Ты с нами уже 1 день подряд</h2>
+                <p class="info-sheet-subtitle">Каждый ежедневный заход приносит игровые попытки.</p>
+            </div>
+            <button class="info-sheet-close" id="game-streak-modal-close" type="button" aria-label="Закрыть">×</button>
+        </header>
+        <div class="game-streak-modal-body">
+            <p class="game-streak-modal-lead">Продолжай заходить в QRide каждый день, чтобы сохранять серию и получать больше энергии.</p>
+            <div class="game-streak-modal-reward">
+                <span class="game-streak-modal-reward-label">Твоя награда сегодня</span>
+                <strong class="game-streak-modal-reward-value" id="game-streak-modal-reward">+1 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg></strong>
+            </div>
+            <div class="game-streak-modal-invite">
+                <strong>Загляни в QRide Arcade</strong>
+                <span>Играй в Q Runner и Q Breaker, набирай очки и получай дополнительные сканы.</span>
+            </div>
+            <button class="game-streak-modal-cta" id="game-streak-modal-games" type="button">К играм</button>
+        </div>
+    </div>
+</section>
 
 <section class="admin-panel-overlay" id="admin-panel-overlay" role="dialog" aria-modal="true" aria-labelledby="admin-panel-title" hidden>
     <header class="admin-panel-header">
@@ -4288,7 +4337,114 @@ body.scan-loading-open { overflow: hidden !important; }
   if (!canvas || !overlay || !overlayTitle || !overlayText || !recordNode) return;
   const launchParams = window.location.search.slice(1);
   let gameAttempts = 0, gameStreak = 0, gameSessionId = null, startingGame = false;
+  const streakDailyRewards = [1, 1, 2, 2, 3, 3, 5];
   const arcadeLock = window.__qrideArcadeLock || (window.__qrideArcadeLock = { game: null });
+
+  const streakOverlay = document.getElementById('game-streak-overlay');
+  const streakSheet = streakOverlay && streakOverlay.querySelector('.game-streak-sheet');
+  const streakModalTitle = document.getElementById('game-streak-modal-title');
+  const streakModalReward = document.getElementById('game-streak-modal-reward');
+  const streakModalClose = document.getElementById('game-streak-modal-close');
+  const streakModalGames = document.getElementById('game-streak-modal-games');
+  let streakCloseTimer = null;
+
+  function russianDayWord(value) {
+    const number = Math.abs(Number(value) || 0);
+    const lastTwo = number % 100;
+    const last = number % 10;
+    if (lastTwo >= 11 && lastTwo <= 14) return 'дней';
+    if (last === 1) return 'день';
+    if (last >= 2 && last <= 4) return 'дня';
+    return 'дней';
+  }
+
+  function closeStreakModal(afterClose) {
+    if (!streakOverlay || streakOverlay.hidden || streakOverlay.classList.contains('game-streak-modal-closing')) return;
+    if (streakCloseTimer) clearTimeout(streakCloseTimer);
+    streakOverlay.classList.remove('game-streak-modal-opening');
+    streakOverlay.classList.add('game-streak-modal-closing');
+    streakCloseTimer = window.setTimeout(function () {
+      streakOverlay.hidden = true;
+      streakOverlay.classList.remove('game-streak-modal-closing', 'game-streak-modal-opening');
+      streakCloseTimer = null;
+      if (typeof afterClose === 'function') afterClose();
+    }, 190);
+  }
+
+  function openStreakModal() {
+    if (!streakOverlay) return;
+    if (streakCloseTimer) clearTimeout(streakCloseTimer);
+    streakCloseTimer = null;
+    const days = Math.max(1, Math.floor(Number(gameStreak) || 1));
+    const reward = streakDailyRewards[Math.min(days, streakDailyRewards.length) - 1] || 5;
+    if (streakModalTitle) streakModalTitle.textContent = 'Ты пользуешься QRide уже ' + days + ' ' + russianDayWord(days) + ' подряд';
+    if (streakModalReward) {
+      streakModalReward.innerHTML = '+' + reward + ' <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg>';
+    }
+    streakOverlay.classList.remove('game-streak-modal-closing', 'game-streak-modal-opening');
+    streakOverlay.hidden = false;
+    void streakOverlay.offsetWidth;
+    streakOverlay.classList.add('game-streak-modal-opening');
+    requestAnimationFrame(function () {
+      streakOverlay.classList.remove('game-streak-modal-opening');
+    });
+  }
+
+  if (streakDaysNode) {
+    streakDaysNode.addEventListener('click', function (event) {
+      const card = event.target && event.target.closest ? event.target.closest('.game-streak-day') : null;
+      if (card && streakDaysNode.contains(card)) openStreakModal();
+    });
+    streakDaysNode.addEventListener('keydown', function (event) {
+      const card = event.target && event.target.closest ? event.target.closest('.game-streak-day') : null;
+      if (!card || !streakDaysNode.contains(card) || (event.key !== 'Enter' && event.key !== ' ')) return;
+      event.preventDefault();
+      openStreakModal();
+    });
+  }
+
+  if (streakModalClose) {
+    streakModalClose.addEventListener('click', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeStreakModal();
+    });
+  }
+  if (streakModalGames) {
+    streakModalGames.addEventListener('click', function () {
+      closeStreakModal(function () {
+        const arcadeSection = document.getElementById('roadnote-game');
+        if (arcadeSection) arcadeSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  }
+  if (streakOverlay) {
+    streakOverlay.addEventListener('click', function (event) {
+      if (event.target === streakOverlay) closeStreakModal();
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') closeStreakModal();
+    });
+  }
+  if (streakSheet) {
+    let swipeStartX = 0, swipeStartY = 0, swipeTracking = false;
+    streakSheet.addEventListener('touchstart', function (event) {
+      if (!event.touches || event.touches.length !== 1) { swipeTracking = false; return; }
+      const target = event.target;
+      if (target && target.closest && target.closest('button, a')) { swipeTracking = false; return; }
+      swipeStartX = event.touches[0].clientX;
+      swipeStartY = event.touches[0].clientY;
+      swipeTracking = true;
+    }, { passive: true });
+    streakSheet.addEventListener('touchend', function (event) {
+      if (!swipeTracking || !event.changedTouches || !event.changedTouches.length) return;
+      const dx = event.changedTouches[0].clientX - swipeStartX;
+      const dy = event.changedTouches[0].clientY - swipeStartY;
+      swipeTracking = false;
+      if (dy >= 65 && dy > Math.abs(dx) * 1.25) closeStreakModal();
+    }, { passive: true });
+    streakSheet.addEventListener('touchcancel', function () { swipeTracking = false; }, { passive: true });
+  }
   function showGameToast(title, message, icon) {
     if (!toastHost) return;
     const toast = document.createElement('div'); toast.className = 'roadnote-game-toast';
@@ -4323,13 +4479,16 @@ body.scan-loading-open { overflow: hidden !important; }
     if (energyNode) energyNode.textContent = String(gameAttempts);
     if (attemptsNode) attemptsNode.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> ' + gameAttempts;
     if (streakDaysNode) {
-      const rewards = [1, 1, 2, 2, 3, 3, 5];
+      const rewards = streakDailyRewards;
       const firstDay = gameStreak > 7 ? Math.floor((gameStreak - 1) / 7) * 7 + 1 : 1;
       const lastDay = firstDay + 6;
       const fragment = document.createDocumentFragment();
       for (let day = firstDay; day <= lastDay; day++) {
         const card = document.createElement('div');
         card.className = 'game-streak-day' + (day < gameStreak ? ' is-done' : day === gameStreak ? ' is-active' : '');
+        card.tabIndex = 0;
+        card.setAttribute('role', 'button');
+        card.setAttribute('aria-label', 'День ' + day + ': награда ' + (rewards[day - 1] || 5) + ' игровых попыток. Подробнее о серии');
         const number = document.createElement('span');
         number.textContent = String(day);
         const reward = document.createElement('small');
