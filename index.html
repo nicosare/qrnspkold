@@ -5125,7 +5125,7 @@ body.scan-loading-open { overflow: hidden !important; }
       gameSessionId = result.sessionId;
       renderGameState(result);
       taptic('light');
-      cancelAnimationFrame(raf); running=true;over=false;elapsed=0;score=0;speed=230;spawnIn=.9;obstacles=[];particles=[];
+      cancelAnimationFrame(raf); running=true;over=false;elapsed=0;score=0;lastDisplayedScore=-1;speed=230;spawnIn=.9;obstacles=[];particles=[];
       const hud = document.getElementById('roadnote-game-hud'); if (hud) hud.classList.remove('is-hidden');
       const gameCard = document.getElementById('roadnote-game'); if (gameCard) gameCard.classList.add('is-playing');
       player.y=ground-player.h;player.vy=0;player.onGround=true;last=0;overlay.hidden=true;raf=requestAnimationFrame(frame);
@@ -5370,24 +5370,24 @@ body.scan-loading-open { overflow: hidden !important; }
     speedNode.textContent = 'Темп ×' + (speed / 235).toFixed(1).replace('.', ',');
   }
 
-  function drawBackground() {
-    const gradient = ctx.createLinearGradient(0, 0, 0, H);
+  const backgroundCanvas = document.createElement('canvas');
+  backgroundCanvas.width = W; backgroundCanvas.height = H;
+  const backgroundCtx = backgroundCanvas.getContext('2d');
+  if (backgroundCtx) {
+    const gradient = backgroundCtx.createLinearGradient(0, 0, 0, H);
     gradient.addColorStop(0, '#eaf5ff');
     gradient.addColorStop(.76, '#f7fbff');
     gradient.addColorStop(1, '#e8f1fb');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = 'rgba(255,255,255,.42)';
-    ctx.beginPath();
-    ctx.arc(560, 45, 24, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(189,217,245,.32)';
-    for (let i = 0; i < 5; i++) {
-      const x = 32 + i * 146;
-      ctx.beginPath();
-      ctx.ellipse(x, 157 + (i % 2) * 12, 20, 3, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    backgroundCtx.fillStyle = gradient;
+    backgroundCtx.fillRect(0, 0, W, H);
+    backgroundCtx.fillStyle = 'rgba(255,255,255,.42)';
+    backgroundCtx.beginPath(); backgroundCtx.arc(560, 45, 24, 0, Math.PI * 2); backgroundCtx.fill();
+    backgroundCtx.fillStyle = 'rgba(189,217,245,.32)';
+    for (let i = 0; i < 5; i++) { const x = 32 + i * 146; backgroundCtx.beginPath(); backgroundCtx.ellipse(x, 157 + (i % 2) * 12, 20, 3, 0, 0, Math.PI * 2); backgroundCtx.fill(); }
+  }
+  function drawBackground() {
+    if (backgroundCtx) ctx.drawImage(backgroundCanvas, 0, 0);
+    else { ctx.fillStyle = '#f7fbff'; ctx.fillRect(0, 0, W, H); }
   }
 
   function drawBlocks() {
@@ -5419,9 +5419,6 @@ body.scan-loading-open { overflow: hidden !important; }
   function drawPaddle() {
     const x = paddle.x - paddle.width / 2;
     ctx.save();
-    ctx.shadowColor = 'rgba(0,82,238,.22)';
-    ctx.shadowBlur = 9;
-    ctx.shadowOffsetY = 3;
     ctx.fillStyle = '#0052EE';
     roundedRect(x, PADDLE_Y, paddle.width, PADDLE_HEIGHT, 5);
     ctx.fill();
