@@ -2067,7 +2067,7 @@ body.scan-loading-open { overflow: hidden !important; }
             <details><summary><span class="faq-number">07</span><span>Как работает скидка на первую покупку?</span></summary><div class="faq-answer"><p>Скидка действует до первого подтверждённого подключения любого платного тарифа. После начисления цены всех тарифов переключаются на обычные. Если оплата не состоялась, первая покупка ещё не считается совершённой и скидка сохраняется.</p></div></details>
             <details><summary><span class="faq-number">08</span><span>Как работает серия ежедневных заходов?</span></summary><div class="faq-answer"><p>Открывай QRide каждый день — запускать игру необязательно. За заход начисляются игровые попытки: в первый и второй день по одной, в третий и четвёртый по две, в пятый и шестой по три, а начиная с седьмого — по пять каждый день. Если пропустить целый день, серия начнётся заново. Уже полученные попытки не сгорают.</p></div></details>
             <details><summary><span class="faq-number">09</span><span>Как получить дополнительные игровые попытки?</span></summary><div class="faq-answer"><p>За успешный скан начисляются ещё 3 <svg class="faq-inline-bolt" viewBox="0 0 24 24" aria-label="игровые попытки"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> игровые попытки. Энергия начисляется не за каждое сканирование: за один QR-код можно получить её не более 3 раз в сутки, всего — не более 15 раз в сутки. Между начислениями за один и тот же код должно пройти не менее 2 минут. Само сканирование при этом не ограничивается. Попытки также выдаются за ежедневные заходы в QRide. Их остаток виден прямо в игре, а накопленные попытки сохраняются.</p></div></details>
-            <details><summary><span class="faq-number">10</span><span>Как получить бесплатный скан за игру?</span></summary><div class="faq-answer"><p>В Q Run набери 3000 очков за раунд, в Q Break — уничтожь 60 блоков, а в Q Stack — поставь 50 блоков в башню. За каждую игру можно получить отдельный бесплатный скан раз в день. Рекорды сохраняются, а после достижения цели QRide покажет уведомление.</p></div></details>
+            <details><summary><span class="faq-number">10</span><span>Как получить бесплатный скан за игру?</span></summary><div class="faq-answer"><p>В Q Run набери 2000 очков за раунд, в Q Break — уничтожь 60 блоков, а в Q Stack — поставь 50 блоков в башню. За каждую игру можно получить отдельный бесплатный скан раз в день. Рекорды сохраняются, а после достижения цели QRide покажет уведомление.</p></div></details>
             <details><summary><span class="faq-number">11</span><span>Можно ли оплатить проезд через QRide?</span></summary><div class="faq-answer"><p>Нет. QRide не продаёт билеты, не принимает оплату за проезд и не является платёжным средством. Приложение предназначено для считывания и отображения информации из транспортных QR-кодов.</p></div></details>
             <details><summary><span class="faq-number">12</span><span>Насколько точны данные?</span></summary><div class="faq-answer"><p>QRide показывает данные, полученные от внешнего сервиса, и не гарантирует их постоянную доступность, полноту или точность. Используй приложение на свой страх и риск и самостоятельно проверяй важную информацию. QRide не заменяет официальный билет или подтверждение оплаты.</p></div></details>
             <details><summary><span class="faq-number">13</span><span>Что важно знать о безопасности и ответственности?</span></summary><div class="faq-answer"><p>Не используй отображённую информацию как единственное подтверждение оплаты. За фактическую оплату проезда отвечают официальные транспортные сервисы и перевозчик. QRide — информационный инструмент; использование приложения не создаёт платёжных обязательств и не гарантирует принятие QR-кода перевозчиком.</p></div></details>
@@ -2271,13 +2271,13 @@ body.scan-loading-open { overflow: hidden !important; }
             <div class="roadnote-game-stage">
                 <div class="roadnote-game-record">Рекорд: <span id="roadnote-game-record">0</span></div>
                 <canvas class="roadnote-game-canvas" id="roadnote-game-canvas" width="640" height="240" aria-label="Мини-игра: нажимай, чтобы перепрыгивать препятствия"></canvas>
-                <div class="roadnote-game-hud is-hidden" id="roadnote-game-hud" aria-live="polite"><span id="roadnote-game-score">Счёт: 0</span><span id="roadnote-game-reward">3000 очков = бесплатный скан</span></div>
+                <div class="roadnote-game-hud is-hidden" id="roadnote-game-hud" aria-live="polite"><span id="roadnote-game-score">Счёт: 0</span><span id="roadnote-game-reward">2000 очков = бесплатный скан</span></div>
                 <div class="roadnote-game-overlay" id="roadnote-game-overlay">
                     <strong id="roadnote-game-overlay-title">Q Run</strong>
                     <span id="roadnote-game-overlay-text">Перепрыгивай препятствия и набирай очки.</span>
                     <div class="roadnote-game-reward-preview" data-game-rule="reward">
                         <span class="roadnote-game-reward-label">НАГРАДА</span>
-                        <strong class="roadnote-game-reward-title">3000 очков за раунд → 1 скан</strong>
+                        <strong class="roadnote-game-reward-title">2000 очков за раунд → 1 скан</strong>
                         <span class="roadnote-game-reward-caption">Один бесплатный скан в день за эту игру</span>
                     </div>
                     <button class="roadnote-game-start" id="roadnote-game-start" type="button">Играть</button>
@@ -4691,7 +4691,7 @@ body.scan-loading-open { overflow: hidden !important; }
     const runnerRewardCaption = document.querySelector('#roadnote-game .roadnote-game-reward-caption');
     if (runnerRewardTitle) runnerRewardTitle.textContent = state.runnerRewardClaimed
       ? 'Скан за Q Run на сегодня уже получен'
-      : '3000 очков за раунд → 1 скан';
+      : '2000 очков за раунд → 1 скан';
     if (runnerRewardCaption) runnerRewardCaption.textContent = state.runnerRewardClaimed
       ? 'Новая награда будет доступна завтра'
       : 'Один бесплатный скан в день за эту игру';
@@ -5087,12 +5087,18 @@ body.scan-loading-open { overflow: hidden !important; }
     }
     ctx.restore();
   }
+  let lastDisplayedScore = -1;
+  const scoreNode = document.getElementById('roadnote-game-score');
   function draw() {
     drawRoad();
-    obstacles.forEach(drawObstacle);
+    for (let i = 0; i < obstacles.length; i++) drawObstacle(obstacles[i]);
     drawRoadnotePlane();
     drawPlayer();
-    const scoreNode = document.getElementById('roadnote-game-score'); if (scoreNode) scoreNode.textContent = 'Счёт: ' + String(Math.floor(score)).padStart(4,'0');
+    const displayedScore = Math.floor(score);
+    if (scoreNode && displayedScore !== lastDisplayedScore) {
+      scoreNode.textContent = 'Счёт: ' + String(displayedScore).padStart(4,'0');
+      lastDisplayedScore = displayedScore;
+    }
   }
   function showOverlay(title,text) { overlayTitle.textContent=title;overlayText.textContent=text;overlay.hidden=false; }
   function taptic(style) {
@@ -5154,7 +5160,7 @@ body.scan-loading-open { overflow: hidden !important; }
         try { localStorage.setItem(storageKey, String(best)); } catch (_) {}
         if (result.freeScanAwarded) {
           rewardStatus = 'Скан начислен.';
-          showGameToast('Бесплатный скан начислен', 'Награда за 3000 очков', 'award');
+          showGameToast('Бесплатный скан начислен', 'Награда за 2000 очков', 'award');
         } else if (result.runnerRewardClaimed) {
           rewardStatus = 'Скан за Q Run сегодня уже получен.';
         }
@@ -5388,14 +5394,9 @@ body.scan-loading-open { overflow: hidden !important; }
     blocks.forEach(block => {
       if (block.hp <= 0) return;
       const shade = block.color;
-      ctx.save();
-      ctx.shadowColor = 'rgba(39,76,116,.12)';
-      ctx.shadowBlur = 4;
-      ctx.shadowOffsetY = 2;
       ctx.fillStyle = shade.fill;
       roundedRect(block.x, block.y, block.w, block.h, 4);
       ctx.fill();
-      ctx.restore();
       ctx.strokeStyle = shade.edge;
       ctx.lineWidth = 1;
       roundedRect(block.x + .5, block.y + .5, block.w - 1, block.h - 1, 4);
