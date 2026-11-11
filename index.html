@@ -2067,7 +2067,7 @@ body.scan-loading-open { overflow: hidden !important; }
             <details><summary><span class="faq-number">07</span><span>Как работает скидка на первую покупку?</span></summary><div class="faq-answer"><p>Скидка действует до первого подтверждённого подключения любого платного тарифа. После начисления цены всех тарифов переключаются на обычные. Если оплата не состоялась, первая покупка ещё не считается совершённой и скидка сохраняется.</p></div></details>
             <details><summary><span class="faq-number">08</span><span>Как работает серия ежедневных заходов?</span></summary><div class="faq-answer"><p>Открывай QRide каждый день — запускать игру необязательно. За заход начисляются игровые попытки: в первый и второй день по одной, в третий и четвёртый по две, в пятый и шестой по три, а начиная с седьмого — по пять каждый день. Если пропустить целый день, серия начнётся заново. Уже полученные попытки не сгорают.</p></div></details>
             <details><summary><span class="faq-number">09</span><span>Как получить дополнительные игровые попытки?</span></summary><div class="faq-answer"><p>За успешный скан начисляются ещё 3 <svg class="faq-inline-bolt" viewBox="0 0 24 24" aria-label="игровые попытки"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> игровые попытки. Энергия начисляется не за каждое сканирование: за один QR-код можно получить её не более 3 раз в сутки, всего — не более 15 раз в сутки. Между начислениями за один и тот же код должно пройти не менее 2 минут. Само сканирование при этом не ограничивается. Попытки также выдаются за ежедневные заходы в QRide. Их остаток виден прямо в игре, а накопленные попытки сохраняются.</p></div></details>
-            <details><summary><span class="faq-number">10</span><span>Как получить бесплатный скан за игру?</span></summary><div class="faq-answer"><p>В Q Run набери 2000 очков за раунд, в Q Break — уничтожь 60 блоков, а в Q Stack — поставь 50 блоков в башню. За каждую игру можно получить отдельный бесплатный скан раз в день. Рекорды сохраняются, а после достижения цели QRide покажет уведомление.</p></div></details>
+            <details><summary><span class="faq-number">10</span><span>Как получить бесплатный скан за игру?</span></summary><div class="faq-answer"><p id="qride-game-reward-faq">В Q Run набери 2000 очков за раунд, в Q Break — уничтожь 60 блоков, а в Q Stack — поставь 50 блоков в башню. За каждую игру можно получить отдельный бесплатный скан раз в день. Рекорды сохраняются, а после достижения цели QRide покажет уведомление.</p></div></details>
             <details><summary><span class="faq-number">11</span><span>Можно ли оплатить проезд через QRide?</span></summary><div class="faq-answer"><p>Нет. QRide не продаёт билеты, не принимает оплату за проезд и не является платёжным средством. Приложение предназначено для считывания и отображения информации из транспортных QR-кодов.</p></div></details>
             <details><summary><span class="faq-number">12</span><span>Насколько точны данные?</span></summary><div class="faq-answer"><p>QRide показывает данные, полученные от внешнего сервиса, и не гарантирует их постоянную доступность, полноту или точность. Используй приложение на свой страх и риск и самостоятельно проверяй важную информацию. QRide не заменяет официальный билет или подтверждение оплаты.</p></div></details>
             <details><summary><span class="faq-number">13</span><span>Что важно знать о безопасности и ответственности?</span></summary><div class="faq-answer"><p>Не используй отображённую информацию как единственное подтверждение оплаты. За фактическую оплату проезда отвечают официальные транспортные сервисы и перевозчик. QRide — информационный инструмент; использование приложения не создаёт платёжных обязательств и не гарантирует принятие QR-кода перевозчиком.</p></div></details>
@@ -4521,7 +4521,7 @@ body.scan-loading-open { overflow: hidden !important; }
   const toastHost = document.getElementById('roadnote-game-toast-host');
   if (!canvas || !overlay || !overlayTitle || !overlayText || !recordNode) return;
   const launchParams = window.location.search.slice(1);
-  let gameAttempts = 0, gameStreak = 0, gameSessionId = null, startingGame = false;
+  let gameAttempts = 0, gameStreak = 0, gameSessionId = null, startingGame = false, runnerRewardThreshold = 2000;
   const streakDailyRewards = [1, 1, 2, 2, 3, 3, 5];
   const arcadeLock = window.__qrideArcadeLock || (window.__qrideArcadeLock = { game: null });
 
@@ -4703,6 +4703,7 @@ body.scan-loading-open { overflow: hidden !important; }
     if (!state) return;
     gameAttempts = Math.max(0, Number(state.attempts || 0));
     gameStreak = Math.max(0, Number(state.streak || 0));
+    runnerRewardThreshold = Math.max(1, Number(state.rewardThreshold) || 2000);
     const energyNode = document.getElementById('roadnote-game-energy-count');
     if (energyNode) energyNode.textContent = String(gameAttempts);
     if (attemptsNode) attemptsNode.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> ' + gameAttempts;
@@ -4729,15 +4730,17 @@ body.scan-loading-open { overflow: hidden !important; }
       streakDaysNode.replaceChildren(fragment);
       requestAnimationFrame(() => { streakDaysNode.scrollLeft = streakDaysNode.scrollWidth; });
     }
-    if (rewardNode) rewardNode.textContent = state.runnerRewardClaimed ? 'Скан за эту игру уже получен' : '2000 очков = 1 бесплатный скан';
+    if (rewardNode) rewardNode.textContent = state.runnerRewardClaimed ? 'Скан за эту игру уже получен' : runnerRewardThreshold + ' очков = 1 бесплатный скан';
     const runnerRewardTitle = document.querySelector('#roadnote-game .roadnote-game-reward-title');
     const runnerRewardCaption = document.querySelector('#roadnote-game .roadnote-game-reward-caption');
     if (runnerRewardTitle) runnerRewardTitle.textContent = state.runnerRewardClaimed
       ? 'Скан за Q Run на сегодня уже получен'
-      : '2000 очков за раунд → 1 скан';
+      : runnerRewardThreshold + ' очков за раунд → 1 скан';
     if (runnerRewardCaption) runnerRewardCaption.textContent = state.runnerRewardClaimed
       ? 'Новая награда будет доступна завтра'
       : 'Один бесплатный скан в день за эту игру';
+    const rewardFaq = document.getElementById('qride-game-reward-faq');
+    if (rewardFaq) rewardFaq.textContent = 'В Q Run набери ' + runnerRewardThreshold + ' очков за раунд, в Q Break — уничтожь ' + (Number(state.breakerRewardThreshold) || 60) + ' блоков, а в Q Stack — поставь ' + (Number(state.stackRewardThreshold) || 50) + ' блоков в башню. За каждую игру можно получить отдельный бесплатный скан раз в день. Рекорды сохраняются, а после достижения цели QRide покажет уведомление.';
     if (state.bestScore !== undefined) recordNode.textContent = String(Math.max(0, Number(state.bestScore) || 0));
     const stackRecordNode = document.getElementById('qride-stack-record');
     if (stackRecordNode && state.stackBestScore !== undefined) stackRecordNode.textContent = String(Math.max(0, Number(state.stackBestScore) || 0));
@@ -5205,7 +5208,7 @@ body.scan-loading-open { overflow: hidden !important; }
         try { localStorage.setItem(storageKey, String(best)); } catch (_) {}
         if (result.freeScanAwarded) {
           rewardStatus = 'Скан начислен.';
-          showGameToast('Бесплатный скан начислен', 'Награда за 2000 очков', 'award');
+          showGameToast('Бесплатный скан начислен', 'Награда за ' + runnerRewardThreshold + ' очков', 'award');
         } else if (result.runnerRewardClaimed) {
           rewardStatus = 'Скан за Q Run сегодня уже получен.';
         }
@@ -5281,7 +5284,8 @@ body.scan-loading-open { overflow: hidden !important; }
   if (!ctx) return;
 
   const W = canvas.width, H = canvas.height;
-  const TOTAL_BLOCKS = 60, COLS = 8, ROWS = 6;
+  let rewardThreshold = 60;
+  const COLS = 8, ROWS = 6;
   const BLOCK_WIDTH = 64, BLOCK_GAP = 12, BLOCK_STEP = BLOCK_WIDTH + BLOCK_GAP;
   const BALL_RADIUS = 7, PADDLE_Y = 676, PADDLE_HEIGHT = 12;
   const palette = [
@@ -5346,9 +5350,10 @@ body.scan-loading-open { overflow: hidden !important; }
     const energy = document.getElementById('roadnote-game-energy-count');
     if (energy) energy.textContent = String(attempts);
     if (state.breakerBestScore !== undefined) recordNode.textContent = String(Math.max(0, Number(state.breakerBestScore) || 0));
+    rewardThreshold = Math.max(1, Number(state.breakerRewardThreshold) || 60);
     rewardTitle.textContent = state.breakerRewardClaimed
       ? 'Скан за Q Break на сегодня уже получен'
-      : '60 блоков → 1 скан';
+      : rewardThreshold + ' блоков → 1 скан';
     rewardCaption.textContent = state.breakerRewardClaimed
       ? 'Новая награда будет доступна завтра'
       : 'Один бесплатный скан в день за эту игру';
@@ -5586,9 +5591,9 @@ body.scan-loading-open { overflow: hidden !important; }
     finished = true;
     running = false;
     cancelAnimationFrame(raf);
-    const rewardEligible = destroyed >= TOTAL_BLOCKS;
+    const rewardEligible = destroyed >= rewardThreshold;
     taptic(rewardEligible ? 'medium' : 'light');
-    let rewardStatus = 'Для скана нужно уничтожить 60 блоков.';
+    let rewardStatus = 'Для скана нужно уничтожить ' + rewardThreshold + ' блоков.';
     if (sessionId) {
       const currentSession = sessionId;
       sessionId = null;
@@ -5602,13 +5607,13 @@ body.scan-loading-open { overflow: hidden !important; }
         renderState(result);
         if (rewardEligible && result.freeScanAwarded) {
           rewardStatus = 'Скан начислен.';
-          showToast('Бесплатный скан начислен', 'Награда за 60 блоков', true);
+          showToast('Бесплатный скан начислен', 'Награда за ' + rewardThreshold + ' блоков', true);
         } else if (rewardEligible && result.breakerRewardClaimed) {
           rewardStatus = 'Скан за Q Break сегодня уже получен.';
         } else if (rewardEligible) {
           rewardStatus = 'Условие награды выполнено.';
         } else {
-          rewardStatus = 'Для скана нужно уничтожить 60 блоков.';
+          rewardStatus = 'Для скана нужно уничтожить ' + rewardThreshold + ' блоков.';
         }
       } catch (error) {
         rewardStatus = 'Не удалось сохранить результат: ' + error.message + '.';
@@ -5825,7 +5830,7 @@ body.scan-loading-open { overflow: hidden !important; }
   const START_X = (W - START_WIDTH) / 2;
   const MIN_OVERLAP = 12;
   const PERFECT_TOLERANCE = 5;
-  const REWARD_TARGET = 50;
+  let rewardTarget = 50;
   const palette = [
     { fill:'#2c83ef', edge:'#145ec2', light:'#8dc2ff' },
     { fill:'#42a5ee', edge:'#2379c1', light:'#a7d9ff' },
@@ -5909,13 +5914,14 @@ body.scan-loading-open { overflow: hidden !important; }
     if (!state) return;
     attempts = Math.max(0, Number(state.attempts) || 0);
     rewardClaimedToday = Boolean(state.stackRewardClaimed);
+    rewardTarget = Math.max(1, Number(state.stackRewardThreshold) || 50);
     if (energyNode) energyNode.textContent = String(attempts);
     if (state.stackBestScore !== undefined && recordNode) {
       recordNode.textContent = String(Math.max(0, Number(state.stackBestScore) || 0));
     }
     if (rewardTitle) rewardTitle.textContent = state.stackRewardClaimed
       ? 'Скан за Q Stack на сегодня уже получен'
-      : '50 блоков → 1 скан';
+      : rewardTarget + ' блоков → 1 скан';
     if (rewardCaption) rewardCaption.textContent = state.stackRewardClaimed
       ? 'Новая награда будет доступна завтра'
       : 'Один бесплатный скан в день за эту игру';
@@ -6146,7 +6152,7 @@ body.scan-loading-open { overflow: hidden !important; }
     taptic('medium');
 
     const finalScore = score;
-    let rewardStatus = finalScore >= REWARD_TARGET ? 'Условие награды выполнено.' : 'До скана не хватило ' + (REWARD_TARGET - finalScore) + ' блоков.';
+    let rewardStatus = finalScore >= rewardTarget ? 'Условие награды выполнено.' : 'До скана не хватило ' + (rewardTarget - finalScore) + ' блоков.';
     if (sessionId) {
       const currentSession = sessionId;
       sessionId = null;
@@ -6159,11 +6165,11 @@ body.scan-loading-open { overflow: hidden !important; }
         renderState(result);
         if (result.freeScanAwarded) {
           rewardStatus = 'Скан начислен!';
-          showToast('Бесплатный скан начислен', 'Награда за 50 блоков в Q Stack', true);
-        } else if (finalScore >= REWARD_TARGET && result.stackRewardClaimed) {
+          showToast('Бесплатный скан начислен', 'Награда за ' + rewardTarget + ' блоков в Q Stack', true);
+        } else if (finalScore >= rewardTarget && result.stackRewardClaimed) {
           rewardStatus = 'Скан за Q Stack сегодня уже получен.';
-        } else if (finalScore < REWARD_TARGET) {
-          rewardStatus = 'До скана не хватило ' + (REWARD_TARGET - finalScore) + ' блоков.';
+        } else if (finalScore < rewardTarget) {
+          rewardStatus = 'До скана не хватило ' + (rewardTarget - finalScore) + ' блоков.';
         }
       } catch (error) {
         rewardStatus = 'Не удалось сохранить результат: ' + error.message + '.';
