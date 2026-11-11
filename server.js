@@ -427,6 +427,9 @@ const listUsers = db.prepare(`
   SELECT u.vk_id, u.first_name, u.last_name, u.photo_url, u.first_seen, u.last_seen, u.visit_count,
          u.scan_balance, u.subscription_until, u.unlimited, u.last_scan_at, u.last_transport_number,
          u.game_attempts, u.welcome_bonus_granted, u.daily_scan_date, u.daily_scan_available,
+         u.game_best_score AS runner_best_score,
+         (SELECT COALESCE(MAX(gs.score), 0) FROM game_sessions gs WHERE gs.vk_id = u.vk_id AND gs.game_id = 'breaker') AS breaker_best_score,
+         (SELECT COALESCE(MAX(gs.score), 0) FROM game_sessions gs WHERE gs.vk_id = u.vk_id AND gs.game_id = 'stack') AS stack_best_score,
          CASE WHEN u.daily_scan_date = date('now', '+5 hours') AND COALESCE(u.daily_scan_available, 0) = 1 THEN 1 ELSE 0 END AS daily_scan_is_current,
          (SELECT COUNT(*) FROM scan_history sh WHERE sh.vk_id = u.vk_id) AS scan_count,
          (SELECT sh.transport_type FROM scan_history sh WHERE sh.vk_id = u.vk_id ORDER BY sh.scanned_at DESC, sh.id DESC LIMIT 1) AS last_transport_type,
@@ -1371,12 +1374,23 @@ async function handleAdminMessageEvent(event) {
 
 // QRide Arcade: streak-based energy, server-backed sessions and daily rewards per game.
 const GAME_DAILY_REWARDS = [1, 1, 2, 2, 3, 3, 5];
+const GAME_REWARD_DEFAULTS = Object.freeze({ runner: 2000, breaker: 60, stack: 50 });
+function getGameRewardThresholds() {
+  const result = {};
+  for (const [gameId, fallback] of Object.entries(GAME_REWARD_DEFAULTS)) {
+    const row = db.prepare('SELECT setting_value FROM app_settings WHERE setting_key = ?').get('game_reward_threshold_' + gameId);
+    const value = Number(row?.setting_value);
+    result[gameId] = Number.isSafeInteger(value) && value >= 1 && value <= 100000 ? value : fallback;
+  }
+  return result;
+}
 function gamePublicState(userId) {
   const row = db.prepare('SELECT game_attempts, game_streak, game_last_login_day, game_reward_day, game_total_score, game_best_score FROM users WHERE vk_id = ?').get(userId);
   const today = yekaterinburgDayKey();
   const claims = new Set(db.prepare('SELECT game_id FROM game_reward_daily_claims WHERE vk_id = ? AND day_key = ?').all(userId, today).map(item => item.game_id));
   const breakerBestScore = Number(db.prepare("SELECT COALESCE(MAX(score), 0) AS score FROM game_sessions WHERE vk_id = ? AND game_id = 'breaker'").get(userId)?.score || 0);
   const stackBestScore = Number(db.prepare("SELECT COALESCE(MAX(score), 0) AS score FROM game_sessions WHERE vk_id = ? AND game_id = 'stack'").get(userId)?.score || 0);
+  const thresholds = getGameRewardThresholds();
   return {
     attempts: Math.max(0, Number(row?.game_attempts || 0)),
     streak: Math.max(0, Number(row?.game_streak || 0)),
@@ -1389,8 +1403,9 @@ function gamePublicState(userId) {
     bestScore: Math.max(0, Number(row?.game_best_score || 0)),
     breakerBestScore,
     stackBestScore,
-    rewardThreshold: 2000,
-    stackRewardThreshold: 50
+    rewardThreshold: thresholds.runner,
+    breakerRewardThreshold: thresholds.breaker,
+    stackRewardThreshold: thresholds.stack
   };
 }
 function sendLiveGameState(userId) {
@@ -1492,7 +1507,8 @@ app.post('/api/game/finish', (req, res) => {
     return res.status(400).json({ error: 'Результат не прошёл проверку.' });
   }
   if (gameId === 'breaker') {
-    if ((completed && (score < 60 || elapsedSeconds < 25)) || (!completed && score >= 60)) {
+    const breakerThreshold = getGameRewardThresholds().breaker;
+    if ((completed && (score < breakerThreshold || elapsedSeconds < 25)) || (!completed && score >= breakerThreshold)) {
       return res.status(400).json({ error: 'Результат не прошёл проверку.' });
     }
   }
@@ -1508,11 +1524,11 @@ app.post('/api/game/finish', (req, res) => {
     if (marked.changes !== 1) return;
     if (gameId === 'runner') {
       db.prepare('UPDATE users SET game_total_score = COALESCE(game_total_score, 0) + ?, game_best_score = MAX(COALESCE(game_best_score, 0), ?) WHERE vk_id = ?').run(score, score, userId);
-      if (score >= 2000) {
+      if (score >= getGameRewardThresholds().runner) {
         const claim = db.prepare("INSERT OR IGNORE INTO game_reward_daily_claims (vk_id, game_id, day_key, claimed_at) VALUES (?, 'runner', ?, ?)").run(userId, today, creditedAt);
         if (claim.changes === 1) {
           db.prepare('UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + 1, game_reward_day = ? WHERE vk_id = ?').run(today, userId);
-          recordScanCredit.run(userId, creditedAt, 1, 'game_reward', 'Бесплатный скан за 2000 очков в Q Run');
+          recordScanCredit.run(userId, creditedAt, 1, 'game_reward', 'Бесплатный скан за достижение порога в Q Run');
           freeScanAwarded = true;
         }
       }
@@ -1523,11 +1539,11 @@ app.post('/api/game/finish', (req, res) => {
         recordScanCredit.run(userId, creditedAt, 1, 'game_reward', 'Бесплатный скан за прохождение Q Break');
         freeScanAwarded = true;
       }
-    } else if (gameId === 'stack' && score >= 50) {
+    } else if (gameId === 'stack' && score >= getGameRewardThresholds().stack) {
       const claim = db.prepare("INSERT OR IGNORE INTO game_reward_daily_claims (vk_id, game_id, day_key, claimed_at) VALUES (?, 'stack', ?, ?)").run(userId, today, creditedAt);
       if (claim.changes === 1) {
         db.prepare('UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + 1 WHERE vk_id = ?').run(userId);
-        recordScanCredit.run(userId, creditedAt, 1, 'game_reward', 'Бесплатный скан за 50 блоков в Q Stack');
+        recordScanCredit.run(userId, creditedAt, 1, 'game_reward', 'Бесплатный скан за достижение порога в Q Stack');
         freeScanAwarded = true;
       }
     }
@@ -2661,6 +2677,37 @@ app.delete('/api/admin/promocodes/:id', requireAdmin, (req, res) => {
     db.prepare("UPDATE promo_code_applications SET status = 'cancelled', tariff_request_id = NULL WHERE promo_code_id = ? AND status = 'selected' AND (tariff_request_id IS NULL OR tariff_request_id IN (SELECT id FROM tariff_requests WHERE status NOT IN ('awaiting_payment','awaiting_review')))").run(id);
   })();
   return res.json({ ok: true });
+});
+
+app.get('/api/admin/game-rewards', requireAdmin, (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  return res.json({ thresholds: getGameRewardThresholds() });
+});
+app.post('/api/admin/game-rewards', requireAdmin, (req, res) => {
+  const input = req.body?.thresholds;
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    return res.status(400).json({ error: 'Передайте пороги наград для всех трёх игр.' });
+  }
+  const thresholds = {};
+  for (const gameId of Object.keys(GAME_REWARD_DEFAULTS)) {
+    const value = Number(input[gameId]);
+    if (!Number.isSafeInteger(value) || value < 1 || value > 100000) {
+      return res.status(400).json({ error: 'Для каждой игры укажите целое число от 1 до 100000.' });
+    }
+    thresholds[gameId] = value;
+  }
+  const now = new Date().toISOString();
+  const save = db.transaction(() => {
+    for (const [gameId, value] of Object.entries(thresholds)) {
+      db.prepare(`
+        INSERT INTO app_settings (setting_key, setting_value, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value, updated_at = excluded.updated_at
+      `).run('game_reward_threshold_' + gameId, String(value), now);
+    }
+  });
+  save();
+  return res.json({ ok: true, thresholds: getGameRewardThresholds() });
 });
 
 app.get('/api/admin/paytags', requireAdmin, (req, res) => {
