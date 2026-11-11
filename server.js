@@ -329,6 +329,11 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_game_sessions_user_time ON game_sessions(vk_id, started_at DESC);
 `);
 const gameSessionColumns = db.pragma('table_info(game_sessions)');
+if (!gameSessionColumns.some(column => column.name === 'activity_at')) {
+  db.exec('ALTER TABLE game_sessions ADD COLUMN activity_at INTEGER DEFAULT NULL');
+}
+db.exec('UPDATE game_sessions SET activity_at = started_at WHERE activity_at IS NULL AND finished_at IS NULL');
+
 if (!gameSessionColumns.some(column => column.name === 'game_id')) {
   db.exec("ALTER TABLE game_sessions ADD COLUMN game_id TEXT NOT NULL DEFAULT 'runner'");
 }
@@ -1420,6 +1425,17 @@ app.post('/api/game/state', (req, res) => {
   })();
   return res.json({ ok: true, ...gamePublicState(userId), awarded, streak });
 });
+app.post('/api/game/heartbeat', (req, res) => {
+  let userId;
+  try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
+  catch { return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' }); }
+  const sessionId = String(req.body?.sessionId || '');
+  if (!/^[0-9a-f-]{36}$/i.test(sessionId)) return res.status(400).json({ error: 'Некорректная игровая сессия.' });
+  const updated = db.prepare('UPDATE game_sessions SET activity_at = ? WHERE id = ? AND vk_id = ? AND finished_at IS NULL')
+    .run(Date.now(), sessionId, userId);
+  if (updated.changes !== 1) return res.status(404).json({ error: 'Игровая сессия больше не активна.' });
+  return res.json({ ok: true });
+});
 app.post('/api/game/start', (req, res) => {
   let userId;
   try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
@@ -1431,13 +1447,13 @@ app.post('/api/game/start', (req, res) => {
   let started = false;
   let alreadyPlaying = false;
   db.transaction(() => {
-    db.prepare('UPDATE game_sessions SET finished_at = ?, score = COALESCE(score, 0) WHERE vk_id = ? AND finished_at IS NULL AND started_at <= ?')
-      .run(now, userId, now - 30 * 60 * 1000);
+    db.prepare('UPDATE game_sessions SET finished_at = ?, score = COALESCE(score, 0) WHERE vk_id = ? AND finished_at IS NULL AND COALESCE(activity_at, started_at) <= ?')
+      .run(now, userId, now - 90 * 1000);
     const active = db.prepare('SELECT id FROM game_sessions WHERE vk_id = ? AND finished_at IS NULL LIMIT 1').get(userId);
     if (active) { alreadyPlaying = true; return; }
     const spend = db.prepare('UPDATE users SET game_attempts = game_attempts - 1 WHERE vk_id = ? AND game_attempts > 0').run(userId);
     if (spend.changes !== 1) return;
-    db.prepare('INSERT INTO game_sessions (id, vk_id, started_at, game_id) VALUES (?, ?, ?, ?)').run(sessionId, userId, now, gameId);
+    db.prepare('INSERT INTO game_sessions (id, vk_id, started_at, game_id, activity_at) VALUES (?, ?, ?, ?, ?)').run(sessionId, userId, now, gameId, now);
     started = true;
   })();
   if (alreadyPlaying) return res.status(409).json({ error: 'Сначала заверши уже начатую игру.', ...gamePublicState(userId) });
