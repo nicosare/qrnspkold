@@ -1365,7 +1365,7 @@
          .qride-breaker-card.is-playing #qride-breaker-speed { display:none!important; }
         #qride-breaker-progress { font-variant-numeric:tabular-nums; }
          #qride-stack-card { margin:0; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
-         .qride-stack-canvas { touch-action:manipulation!important; height:auto!important; min-height:0; aspect-ratio:8/9; }
+         #qride-stack-canvas { touch-action:manipulation!important; height:auto!important; min-height:0; aspect-ratio:8/9; }
          #qride-stack-card.is-playing .roadnote-game-record { display:none; }
         .game-streak-days{grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:0}
         .game-streak-day{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:66px;padding:8px 2px;border:1px solid #e3e8ef;border-radius:12px;background:#f2f3f4;text-align:center}
@@ -5958,6 +5958,12 @@ body.scan-loading-open { overflow: hidden !important; }
       const y = FLOOR_Y - (index + 1) * BLOCK_H + cam;
       drawBlock(block.x, y, block.width, BLOCK_H, index, 1);
     });
+    if (!running && !tower.length && score === 0) {
+      drawBlock(START_X + 5, FLOOR_Y - 2 * BLOCK_H + cam, START_WIDTH - 10, BLOCK_H, 0, .9);
+      drawBlock(START_X + 16, FLOOR_Y - 3 * BLOCK_H + cam, START_WIDTH - 32, BLOCK_H, 1, .95);
+      drawBlock(START_X + 27, FLOOR_Y - 4 * BLOCK_H + cam, START_WIDTH - 54, BLOCK_H, 2, 1);
+      drawBlock(START_X + 45, FLOOR_Y - 5 * BLOCK_H + cam, START_WIDTH - 90, BLOCK_H, 3, .92);
+    }
   }
 
   function drawMovingBlock() {
