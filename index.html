@@ -4694,6 +4694,12 @@ body.scan-loading-open { overflow: hidden !important; }
       ? 'Новая награда будет доступна завтра'
       : 'Один бесплатный скан в день за эту игру';
     if (state.bestScore !== undefined) recordNode.textContent = String(Math.max(0, Number(state.bestScore) || 0));
+    const stackRecordNode = document.getElementById('qride-stack-record');
+    if (stackRecordNode && state.stackBestScore !== undefined) stackRecordNode.textContent = String(Math.max(0, Number(state.stackBestScore) || 0));
+    const stackRewardTitle = document.getElementById('qride-stack-reward-title');
+    const stackRewardCaption = document.getElementById('qride-stack-reward-caption');
+    if (stackRewardTitle) stackRewardTitle.textContent = state.stackRewardClaimed ? 'Скан за Q Stack на сегодня уже получен' : '50 блоков → 1 скан';
+    if (stackRewardCaption) stackRewardCaption.textContent = state.stackRewardClaimed ? 'Новая награда будет доступна завтра' : 'Один бесплатный скан в день за эту игру';
   }
   window.addEventListener('qride:game-state', (event) => {
     const amount = Number(event.detail && event.detail.attempts);
@@ -5733,6 +5739,469 @@ body.scan-loading-open { overflow: hidden !important; }
 
   createLevel();
   draw();
+})();
+</script>
+<script>
+(function () {
+  'use strict';
+
+  const canvas = document.getElementById('qride-stack-canvas');
+  const card = document.getElementById('qride-stack-card');
+  const overlay = document.getElementById('qride-stack-overlay');
+  const overlayTitle = document.getElementById('qride-stack-overlay-title');
+  const overlayText = document.getElementById('qride-stack-overlay-text');
+  const startButton = document.getElementById('qride-stack-start');
+  const recordNode = document.getElementById('qride-stack-record');
+  const hud = document.getElementById('qride-stack-hud');
+  const scoreNode = document.getElementById('qride-stack-score');
+  const targetNode = document.getElementById('qride-stack-target');
+  const rewardTitle = document.getElementById('qride-stack-reward-title');
+  const rewardCaption = document.getElementById('qride-stack-reward-caption');
+  const energyNode = document.getElementById('roadnote-game-energy-count');
+  const toastHost = document.getElementById('roadnote-game-toast-host');
+  if (!canvas || !card || !overlay || !startButton) return;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const W = canvas.width;
+  const H = canvas.height;
+  const BLOCK_H = 18;
+  const FLOOR_Y = 660;
+  const TOP_MARGIN = 118;
+  const START_WIDTH = 210;
+  const START_X = (W - START_WIDTH) / 2;
+  const MIN_OVERLAP = 12;
+  const PERFECT_TOLERANCE = 5;
+  const REWARD_TARGET = 50;
+  const palette = [
+    { fill:'#2c83ef', edge:'#145ec2', light:'#8dc2ff' },
+    { fill:'#42a5ee', edge:'#2379c1', light:'#a7d9ff' },
+    { fill:'#68b5d8', edge:'#3e8eae', light:'#b8e6f7' },
+    { fill:'#f1ad55', edge:'#c47b29', light:'#ffe0a9' },
+    { fill:'#6cae94', edge:'#42836a', light:'#b8e1cf' },
+    { fill:'#8c8bd0', edge:'#5f5ca6', light:'#cecdf4' }
+  ];
+
+  const pathname = window.location.pathname;
+  const apiBase = pathname.endsWith('/') ? pathname :
+    (pathname.slice(pathname.lastIndexOf('/') + 1).includes('.') ? pathname.slice(0, pathname.lastIndexOf('/') + 1) : pathname + '/');
+  const launchParams = window.location.search.slice(1);
+  const arcadeLock = window.__qrideArcadeLock || (window.__qrideArcadeLock = { game:null });
+
+  let attempts = 0;
+  let sessionId = null;
+  let starting = false;
+  let running = false;
+  let finishing = false;
+  let raf = 0;
+  let lastFrame = 0;
+  let score = 0;
+  let speed = 250;
+  let moving = null;
+  let tower = [];
+  let debris = [];
+  let lastDropAt = 0;
+
+  async function gameRequest(path, payload) {
+    const response = await fetch(apiBase + path.replace(/^\//, ''), {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify({ launchParams, ...(payload || {}) }),
+      cache:'no-store',
+      credentials:'omit'
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Не удалось обновить игровой результат.');
+    return data;
+  }
+
+  function taptic(style) {
+    try {
+      if (window.vkBridge && typeof window.vkBridge.send === 'function') {
+        Promise.resolve(window.vkBridge.send('VKWebAppTapticImpactOccurred', { style })).catch(() => {
+          if (navigator.vibrate) navigator.vibrate(style === 'medium' ? 28 : 10);
+        });
+        return;
+      }
+    } catch (_) {}
+    if (navigator.vibrate) navigator.vibrate(style === 'medium' ? 28 : 10);
+  }
+
+  function showToast(title, message, award) {
+    if (!toastHost) return;
+    const toast = document.createElement('div');
+    toast.className = 'roadnote-game-toast';
+    const icon = document.createElement('span');
+    icon.className = 'roadnote-game-toast-icon';
+    icon.innerHTML = award
+      ? '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="m8.5 13-1 9 4.5-2.5 4.5 2.5-1-9"/></svg>'
+      : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg>';
+    const body = document.createElement('div');
+    body.style.minWidth = '0';
+    const heading = document.createElement('strong');
+    heading.textContent = title;
+    const detail = document.createElement('small');
+    detail.textContent = message;
+    body.append(heading, detail);
+    toast.append(icon, body);
+    toastHost.append(toast);
+    window.setTimeout(() => {
+      toast.classList.add('is-leaving');
+      window.setTimeout(() => toast.remove(), 220);
+    }, 3600);
+  }
+
+  function renderState(state) {
+    if (!state) return;
+    attempts = Math.max(0, Number(state.attempts) || 0);
+    if (energyNode) energyNode.textContent = String(attempts);
+    if (state.stackBestScore !== undefined && recordNode) {
+      recordNode.textContent = String(Math.max(0, Number(state.stackBestScore) || 0));
+    }
+    if (rewardTitle) rewardTitle.textContent = state.stackRewardClaimed
+      ? 'Скан за Q Stack на сегодня уже получен'
+      : '50 блоков → 1 скан';
+    if (rewardCaption) rewardCaption.textContent = state.stackRewardClaimed
+      ? 'Новая награда будет доступна завтра'
+      : 'Один бесплатный скан в день за эту игру';
+  }
+
+  function roundedRect(x, y, width, height, radius) {
+    const r = Math.min(radius, width / 2, height / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + width, y, x + width, y + height, r);
+    ctx.arcTo(x + width, y + height, x, y + height, r);
+    ctx.arcTo(x, y + height, x, y, r);
+    ctx.arcTo(x, y, x + width, y, r);
+    ctx.closePath();
+  }
+
+  function drawBlock(x, y, width, height, colorIndex, alpha) {
+    if (y > H || y + height < 0 || width <= 0) return;
+    const color = palette[colorIndex % palette.length];
+    ctx.save();
+    ctx.globalAlpha = alpha == null ? 1 : alpha;
+    ctx.shadowColor = 'rgba(22,63,112,.15)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 3;
+    ctx.fillStyle = color.fill;
+    roundedRect(x, y, width, height, 4);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = alpha == null ? 1 : alpha;
+    ctx.strokeStyle = color.edge;
+    ctx.lineWidth = 2;
+    roundedRect(x + 1, y + 1, Math.max(0, width - 2), height - 2, 4);
+    ctx.stroke();
+    ctx.fillStyle = color.light;
+    roundedRect(x + 5, y + 3, Math.max(0, width - 10), 3, 1.5);
+    ctx.fill();
+    if (width > 34) {
+      ctx.fillStyle = 'rgba(255,255,255,.35)';
+      ctx.fillRect(x + 10, y + height - 5, Math.max(0, width - 20), 1);
+    }
+    ctx.restore();
+  }
+
+  function cameraOffset() {
+    const top = FLOOR_Y - (score + 1) * BLOCK_H;
+    return Math.max(0, TOP_MARGIN - top);
+  }
+
+  function drawBackground() {
+    const gradient = ctx.createLinearGradient(0, 0, 0, H);
+    gradient.addColorStop(0, '#eaf5ff');
+    gradient.addColorStop(.72, '#f7fbff');
+    gradient.addColorStop(1, '#e8f1fb');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.globalAlpha = .36;
+    ctx.fillStyle = '#fff';
+    for (let i = 0; i < 5; i++) {
+      const x = 68 + i * 132;
+      const y = 82 + (i % 2) * 68;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 30, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = .18;
+    ctx.strokeStyle = '#7aa9d8';
+    ctx.lineWidth = 1;
+    for (let x = 42; x < W; x += 64) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    const cam = cameraOffset();
+    ctx.fillStyle = '#d9e8f7';
+    ctx.fillRect(0, FLOOR_Y + BLOCK_H + cam, W, 3);
+  }
+
+  function drawTower() {
+    const cam = cameraOffset();
+    drawBlock(START_X - 13, FLOOR_Y + cam, START_WIDTH + 26, BLOCK_H, 5, 1);
+    drawBlock(START_X - 5, FLOOR_Y + BLOCK_H + cam, START_WIDTH + 10, 12, 5, .76);
+
+    tower.forEach((block, index) => {
+      const y = FLOOR_Y - (index + 1) * BLOCK_H + cam;
+      drawBlock(block.x, y, block.width, BLOCK_H, index, 1);
+    });
+  }
+
+  function drawMovingBlock() {
+    if (!moving || !running) return;
+    const cam = cameraOffset();
+    const y = FLOOR_Y - (score + 1) * BLOCK_H + cam;
+    drawBlock(moving.x, y, moving.width, BLOCK_H, score, 1);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,82,238,.23)';
+    ctx.setLineDash([5, 7]);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, y + BLOCK_H + 8);
+    ctx.lineTo(W, y + BLOCK_H + 8);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawDebris(dt) {
+    debris.forEach(item => {
+      item.vy += 760 * dt;
+      item.x += item.vx * dt;
+      item.y += item.vy * dt;
+      item.rotation += item.spin * dt;
+      item.life -= dt;
+      ctx.save();
+      ctx.translate(item.x + item.width / 2, item.y + BLOCK_H / 2);
+      ctx.rotate(item.rotation);
+      drawBlock(-item.width / 2, -BLOCK_H / 2, item.width, BLOCK_H, item.color, Math.max(0, item.life / .7));
+      ctx.restore();
+    });
+    debris = debris.filter(item => item.life > 0 && item.y < H + 80);
+  }
+
+  function draw() {
+    const now = performance.now();
+    const dt = lastFrame ? Math.min((now - lastFrame) / 1000, .03) : 0;
+    drawBackground();
+    drawTower();
+    drawDebris(dt);
+    drawMovingBlock();
+    if (scoreNode) scoreNode.textContent = 'Блоки: ' + score;
+    if (targetNode) targetNode.textContent = score >= REWARD_TARGET ? 'Цель достигнута!' : (REWARD_TARGET - score) + ' до скана';
+  }
+
+  function resetRound() {
+    tower = [];
+    debris = [];
+    score = 0;
+    speed = 250;
+    lastDropAt = 0;
+    moving = { x:0, width:START_WIDTH, direction:1 };
+    if (scoreNode) scoreNode.textContent = 'Блоки: 0';
+    if (targetNode) targetNode.textContent = '50 блоков → 1 скан';
+    draw();
+  }
+
+  function createDebris(x, width, direction, colorIndex) {
+    if (width < 3) return;
+    debris.push({
+      x:x, y:FLOOR_Y - (score + 1) * BLOCK_H + cameraOffset(),
+      width:width, vx:direction * (90 + Math.random() * 55),
+      vy:-40, rotation:0, spin:direction * (1.4 + Math.random()),
+      life:.85, color:colorIndex
+    });
+  }
+
+  function placeBlock() {
+    if (!running || !moving || finishing) return;
+    const now = performance.now();
+    if (now - lastDropAt < 120) return;
+    lastDropAt = now;
+
+    const previous = tower.length ? tower[tower.length - 1] : { x:START_X, width:START_WIDTH };
+    const movingLeft = moving.x;
+    const movingRight = moving.x + moving.width;
+    const previousRight = previous.x + previous.width;
+    const left = Math.max(movingLeft, previous.x);
+    const right = Math.min(movingRight, previousRight);
+    let overlap = right - left;
+    if (overlap < MIN_OVERLAP) {
+      taptic('medium');
+      endGame();
+      return;
+    }
+
+    const perfect = Math.abs(movingLeft - previous.x) <= PERFECT_TOLERANCE;
+    const placedX = perfect ? previous.x : left;
+    const placedWidth = perfect ? previous.width : overlap;
+    if (!perfect) {
+      if (movingLeft < previous.x) createDebris(movingLeft, previous.x - movingLeft, -1, score);
+      else if (movingRight > previousRight) createDebris(previousRight, movingRight - previousRight, 1, score);
+    }
+
+    tower.push({ x:placedX, width:placedWidth });
+    score += 1;
+    speed = Math.min(760, 250 + score * 8.2);
+    taptic(perfect ? 'medium' : 'light');
+
+    const nextDirection = -moving.direction;
+    moving = {
+      x: nextDirection > 0 ? 0 : W - placedWidth,
+      width:placedWidth,
+      direction:nextDirection
+    };
+    draw();
+  }
+
+  async function startGame() {
+    if (starting || running || finishing) return;
+    if (arcadeLock.game) {
+      showToast('Сначала заверши текущую игру', 'Одновременно можно играть только в одну игру', false);
+      return;
+    }
+    starting = true;
+    arcadeLock.game = 'stack';
+    try {
+      const state = await gameRequest('/api/game/start', { gameId:'stack' });
+      sessionId = state.sessionId;
+      renderState(state);
+      resetRound();
+      running = true;
+      finishing = false;
+      lastFrame = 0;
+      card.classList.add('is-playing');
+      hud.classList.remove('is-hidden');
+      overlay.hidden = true;
+      startButton.textContent = 'Играть';
+      taptic('light');
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(frame);
+    } catch (error) {
+      showToast('Не удалось начать игру', error.message, false);
+      await refreshState();
+    } finally {
+      starting = false;
+      if (!running && arcadeLock.game === 'stack') arcadeLock.game = null;
+    }
+  }
+
+  async function endGame() {
+    if (!running || finishing) return;
+    running = false;
+    finishing = true;
+    cancelAnimationFrame(raf);
+    taptic('medium');
+
+    const finalScore = score;
+    let endingText = 'Высота башни: ' + finalScore + ' блоков.';
+    if (sessionId) {
+      const currentSession = sessionId;
+      sessionId = null;
+      try {
+        const result = await gameRequest('/api/game/finish', {
+          sessionId:currentSession,
+          score:finalScore
+        });
+        renderState(result);
+        if (result.freeScanAwarded) {
+          endingText += ' Ты получил бесплатный скан!';
+          showToast('Бесплатный скан начислен', 'Награда за 50 блоков в Q Stack', true);
+        } else if (finalScore >= REWARD_TARGET && result.stackRewardClaimed) {
+          endingText += ' Скан за Q Stack на сегодня уже получен — можно играть ради рекорда.';
+        } else if (finalScore < REWARD_TARGET) {
+          endingText += ' До скана не хватило ' + (REWARD_TARGET - finalScore) + ' блоков.';
+        }
+      } catch (error) {
+        endingText += ' Не удалось сохранить результат: ' + error.message + '. Проверь соединение.';
+      }
+    }
+
+    hud.classList.add('is-hidden');
+    card.classList.remove('is-playing');
+    if (arcadeLock.game === 'stack') arcadeLock.game = null;
+    overlayTitle.textContent = 'Башня завершена';
+    overlayText.textContent = endingText + ' Осталось попыток: ' + attempts + '.';
+    overlay.hidden = false;
+    startButton.textContent = 'Играть ещё';
+    finishing = false;
+    draw();
+  }
+
+  function frame(now) {
+    if (!running) return;
+    if (document.hidden) {
+      lastFrame = 0;
+      raf = requestAnimationFrame(frame);
+      return;
+    }
+    const dt = lastFrame ? Math.min((now - lastFrame) / 1000, .03) : 0;
+    lastFrame = now;
+    moving.x += moving.direction * speed * dt;
+    if (moving.x <= 0) {
+      moving.x = 0;
+      moving.direction = 1;
+    } else if (moving.x + moving.width >= W) {
+      moving.x = W - moving.width;
+      moving.direction = -1;
+    }
+    debris.forEach(item => {
+      item.vy += 760 * dt;
+      item.x += item.vx * dt;
+      item.y += item.vy * dt;
+      item.rotation += item.spin * dt;
+      item.life -= dt;
+    });
+    debris = debris.filter(item => item.life > 0 && item.y < H + 80);
+    draw();
+    raf = requestAnimationFrame(frame);
+  }
+
+  async function refreshState() {
+    try {
+      renderState(await gameRequest('/api/game/state', {}));
+    } catch (error) {
+      console.warn('[QRide Stack state]', error.message);
+    }
+  }
+
+  startButton.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    startGame();
+  });
+  canvas.addEventListener('pointerdown', event => {
+    if (!running) return;
+    event.preventDefault();
+    placeBlock();
+  }, { passive:false });
+  document.addEventListener('keydown', event => {
+    if (!running || event.code !== 'Space') return;
+    event.preventDefault();
+    placeBlock();
+  });
+  window.addEventListener('qride:game-state', event => {
+    const amount = Number(event.detail && event.detail.attempts);
+    if (!Number.isSafeInteger(amount)) return;
+    attempts = Math.max(0, amount);
+    if (energyNode) energyNode.textContent = String(attempts);
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshState();
+    else lastFrame = 0;
+  });
+
+  resetRound();
+  refreshState();
 })();
 </script>
 <script src="qride-mascot.js"></script>
