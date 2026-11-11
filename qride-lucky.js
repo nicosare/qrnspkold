@@ -8,13 +8,8 @@
   const windowNode = document.getElementById('qride-lucky-window');
   const spinButton = document.getElementById('qride-lucky-spin');
   const costNode = document.getElementById('qride-lucky-cost');
-  const balanceNode = document.getElementById('qride-lucky-balance');
   const freeStatusNode = document.getElementById('qride-lucky-free-status');
   const statusNode = document.getElementById('qride-lucky-status');
-  const oddsButton = document.getElementById('qride-lucky-info');
-  const oddsLink = document.getElementById('qride-lucky-odds-link');
-  const oddsModal = document.getElementById('qride-lucky-odds-modal');
-  const oddsList = document.getElementById('qride-lucky-odds-list');
   const resultModal = document.getElementById('qride-lucky-result-modal');
   const resultIcon = document.getElementById('qride-lucky-result-icon');
   const resultTitle = document.getElementById('qride-lucky-result-title');
@@ -46,6 +41,7 @@
   let closeTimer = 0;
   let touchStartY = 0;
   let touchStartX = 0;
+  let freeCountdownTimer = 0;
 
   function escapeHtml(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
@@ -101,8 +97,9 @@
     const type = String(prize.rewardType || 'energy');
     const className = 'qride-lucky-card qride-lucky-card--' + (['energy','scans','subscription'].includes(type) ? type : 'energy');
     return '<div class="' + className + '" data-lucky-prize="' + escapeHtml(prize.id) + '">' +
-      '<span class="qride-lucky-card-icon" aria-hidden="true">' + typeIcon(type) + '</span>' +
-      '<span class="qride-lucky-card-title">' + escapeHtml(prize.title) + '</span></div>';
+      '<span class="qride-lucky-card-top"><span class="qride-lucky-card-icon" aria-hidden="true">' + typeIcon(type) + '</span>' +
+      '<span class="qride-lucky-card-type">' + escapeHtml(typeLabel(type)) + '</span></span>' +
+      '<strong class="qride-lucky-card-title">' + escapeHtml(prize.title) + '</strong></div>';
   }
   function renderIdleRail() {
     const prizes = sortedAttractive(getPrizes());
@@ -137,19 +134,38 @@
     statusNode.textContent = message || '';
     statusNode.classList.toggle('is-error', Boolean(isError));
   }
+  function freeSpinAvailable() {
+    if (!state) return false;
+    const availableAt = Date.parse(state.freeSpinAvailableAt || '');
+    return Number.isFinite(availableAt)
+      ? Date.now() >= availableAt
+      : Number(state.freeSpinsRemaining || 0) > 0;
+  }
+  function formatRemainingTime(milliseconds) {
+    const totalSeconds = Math.max(0, Math.ceil(Number(milliseconds || 0) / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (hours > 0) return hours + ' ч ' + minutes + ' мин';
+    if (minutes > 0) return minutes + ' мин ' + seconds + ' сек';
+    return seconds + ' сек';
+  }
+  function updateFreeSpinStatus() {
+    if (!state) return;
+    const free = freeSpinAvailable();
+    const availableAt = Date.parse(state.freeSpinAvailableAt || '');
+    const cost = Number(state.spinCostScans || 1);
+    costNode.textContent = free ? 'Бесплатно' : cost + ' ' + scanWord(cost);
+    freeStatusNode.textContent = free
+      ? 'Бесплатная попытка доступна'
+      : Number.isFinite(availableAt)
+        ? 'Следующая бесплатная попытка через ' + formatRemainingTime(availableAt - Date.now())
+        : 'Бесплатная попытка доступна';
+  }
   function updateControls() {
     if (!state) return;
-    const free = Number(state.freeSpinsRemaining || 0) > 0;
-    const cost = Number(state.spinCostScans || 1);
     spinButton.querySelector('span').textContent = 'Испытать удачу';
-    costNode.textContent = free ? 'Бесплатно' : cost + ' ' + scanWord(cost);
-    balanceNode.textContent = 'Баланс: ' + Number(state.scanBalance || 0) + ' ' + scanWord(state.scanBalance || 0) +
-      (state.subscriptionActive ? '\nБезлимит активен' : '');
-    balanceNode.style.whiteSpace = 'pre-line';
-    const freeRemaining = Number(state.freeSpinsRemaining || 0);
-    freeStatusNode.textContent = free
-      ? (freeRemaining === 1 ? 'Бесплатная попытка доступна' : 'Бесплатных попыток: ' + freeRemaining)
-      : Number(state.freeSpinsPerDay || 0) > 0 ? 'Следующая бесплатная попытка — завтра' : 'Бесплатные попытки отключены';
+    updateFreeSpinStatus();
     spinButton.disabled = spinning || Boolean(state.pendingResult);
     if (state.pendingResult) setStatus('У тебя есть неоткрытая награда. Забери её, чтобы продолжить.', false);
   }
@@ -232,21 +248,23 @@
     resultIcon.classList.toggle('is-subscription', spin.rewardType === 'subscription');
     resultTitle.textContent = spin.title || 'Награда получена';
     resultDetail.textContent = amountDetail(spin);
-    resultMeta.textContent = (spin.isFree ? 'Бесплатная попытка' : 'Потрачено: ' + Number(spin.scanCost || 0) + ' ' + scanWord(spin.scanCost || 0)) +
-      ' · Шанс этой награды: ' + Number(spin.probability || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + '%';
+    resultMeta.textContent = spin.isFree
+      ? 'Бесплатная попытка'
+      : 'Потрачено: ' + Number(spin.scanCost || 0) + ' ' + scanWord(spin.scanCost || 0);
     if (restored) setStatus('Прокрутка завершилась, пока приложение было закрыто. Награда уже начислена.', false);
     openModal(resultModal);
   }
-  function openOdds() {
+  function renderFaqPrizes() {
+    const faqNode = document.getElementById('qride-lucky-faq-prizes');
+    if (!faqNode) return;
     const prizes = sortedAttractive(getPrizes());
-    oddsList.innerHTML = prizes.map(function (prize) {
-      const rare = prize.rewardType === 'subscription' || Number(prize.probability || 0) <= 1;
-      return '<div class="qride-lucky-odds-row' + (rare ? ' is-rare' : '') + '">' +
-        '<div class="qride-lucky-odds-main"><span class="qride-lucky-odds-icon">' + typeIcon(prize.rewardType) + '</span>' +
-        '<span class="qride-lucky-odds-title">' + escapeHtml(prize.title) + '</span></div>' +
-        '<span class="qride-lucky-odds-probability">' + Number(prize.probability).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%</span></div>';
+    faqNode.innerHTML = prizes.map(function (prize) {
+      const probability = Number(prize.probability || 0).toLocaleString('ru-RU', {
+        minimumFractionDigits: 2, maximumFractionDigits: 2
+      });
+      return '<div class="qride-lucky-faq-prize"><span>' + escapeHtml(prize.title) +
+        '</span><strong>' + probability + '%</strong></div>';
     }).join('');
-    openModal(oddsModal);
   }
   function weightedPrize() {
     const prizes = getPrizes();
@@ -288,37 +306,38 @@
     return new Promise(function (resolve) {
       const startPrize = nearestVisiblePrize();
       const sequence = [startPrize];
-      for (let i = 0; i < 29; i += 1) sequence.push(weightedPrize());
+      const travelCards = 38;
+      for (let i = 0; i < travelCards; i += 1) sequence.push(weightedPrize());
       sequence.push(prize);
+      const targetIndex = sequence.length - 1;
+      // Cards after the winning one remain visible, as if the wheel stopped mid-run.
+      for (let i = 0; i < 4; i += 1) sequence.push(weightedPrize());
+
       rail.innerHTML = sequence.map(cardMarkup).join('');
       rail.style.transition = 'none';
       const startOffset = centerOffset(0);
-      const targetIndex = sequence.length - 1;
       const targetOffset = centerOffset(targetIndex);
       rail.style.transform = 'translate3d(' + (-startOffset) + 'px,0,0)';
       void rail.offsetWidth;
-      const duration = reduceMotion ? 450 : 4650;
+
+      const duration = reduceMotion ? 650 : 7800;
       const startedAt = performance.now();
-      let lastPassed = 0;
-      let tickCount = 0;
+      let centeredIndex = 0;
       function frame(now) {
         if (animationToken !== spinAnimationToken) { resolve(false); return; }
         const progress = Math.min(1, (now - startedAt) / duration);
-        const eased = progress < 0.5
-          ? 4 * progress * progress * progress
-          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        const eased = 1 - Math.pow(1 - progress, 4);
         const offset = startOffset + (targetOffset - startOffset) * eased;
         rail.style.transform = 'translate3d(' + (-offset) + 'px,0,0)';
-        const passed = Math.max(0, Math.floor((offset - startOffset) / 124));
-        if (passed > lastPassed) {
-          tickCount += passed - lastPassed;
-          lastPassed = passed;
-          if (tickCount % 3 === 0) triggerHaptic('light');
+
+        while (centeredIndex < targetIndex && offset >= centerOffset(centeredIndex + 1)) {
+          centeredIndex += 1;
+          if (!reduceMotion) triggerHaptic('light');
         }
+
         if (progress < 1) requestAnimationFrame(frame);
         else {
           rail.style.transform = 'translate3d(' + (-targetOffset) + 'px,0,0)';
-          triggerHaptic('medium');
           resolve(true);
         }
       }
@@ -328,20 +347,14 @@
   function renderPackages() {
     const offers = ['scans_9', 'scans_29', 'scans_49'];
     packagesNode.innerHTML = offers.map(function (id) {
-      const card = document.querySelector('.start-offer[data-offer-id="' + id + '"]');
-      const count = card && card.querySelector('.start-offer-count');
-      const price = card && card.querySelector('.start-offer-current-price');
-      return '<button class="qride-lucky-package" type="button" data-lucky-package="' + id + '">' +
-        '<strong>' + escapeHtml(count ? count.textContent.trim() : (id === 'scans_9' ? '9' : id === 'scans_29' ? '29' : '49')) + '</strong>' +
-        '<span>сканов</span><small>' + escapeHtml(price ? price.textContent.trim() : 'Выбрать пакет') + '</small></button>';
+      const original = document.querySelector('.start-offer[data-offer-id="' + id + '"]');
+      return original ? original.outerHTML : '';
     }).join('');
   }
   function openInsufficient(data) {
     const required = Number(data && data.requiredScans || state && state.spinCostScans || 1);
-    const balance = Number(data && data.scanBalance != null ? data.scanBalance : state && state.scanBalance || 0);
-    insufficientCopy.textContent = 'Для следующей прокрутки нужен ' + required + ' ' +
-      (required === 1 ? 'скан' : required >= 2 && required <= 4 ? 'скана' : 'сканов') +
-      '. Сейчас доступно: ' + balance + '. Выбери пакет, чтобы продолжить.';
+    insufficientCopy.textContent = 'Для прокрутки нужно ' + required + ' ' +
+      scanWord(required) + '. Выбери пакет сканирований, чтобы продолжить.';
     renderPackages();
     openModal(insufficientModal);
   }
@@ -409,6 +422,7 @@
       updateControls();
       if (next.pendingResult && !activeSpin) showResult(next.pendingResult, true);
       else startIdle();
+      renderFaqPrizes();
       setStatus('', false);
     } catch (error) {
       console.warn('[QRide lucky state]', error.message);
@@ -416,26 +430,24 @@
   }
 
   spinButton.addEventListener('click', runSpin);
-  oddsButton.addEventListener('click', openOdds);
-  oddsLink.addEventListener('click', openOdds);
   packagesNode.addEventListener('click', function (event) {
-    const button = event.target.closest('[data-lucky-package]');
+    const button = event.target.closest('.start-offer-details[data-offer-id]');
     if (!button) return;
-    const offer = document.querySelector('.start-offer[data-offer-id="' + button.dataset.luckyPackage + '"] .start-offer-details');
+    const offer = document.querySelector('.start-offer[data-offer-id="' + button.dataset.offerId + '"] .start-offer-details');
     if (!offer) return;
     closeModal(insufficientModal, false);
     window.setTimeout(function () { offer.click(); }, 240);
   });
   document.addEventListener('click', function (event) {
     const closeButton = event.target.closest('[data-lucky-close]');
-    if (closeButton) { closeModal(closeButton.closest('.qride-lucky-modal'), false); return; }
+    if (closeButton) { closeModal(closeButton.closest('.qride-collect-info'), false); return; }
     if (event.target.closest('[data-lucky-result-close]')) {
       closeModal(resultModal, true);
       return;
     }
   });
-  [oddsModal, resultModal, insufficientModal].forEach(function (modal) {
-    const sheet = modal.querySelector('.qride-lucky-sheet');
+  [resultModal, insufficientModal].forEach(function (modal) {
+    const sheet = modal.querySelector('.qride-collect-info-sheet');
     if (sheet) {
       sheet.addEventListener('touchstart', function (event) {
         if (!event.touches || event.touches.length !== 1) return;
@@ -470,5 +482,6 @@
     }, { rootMargin: '80px' });
     observer.observe(section);
   }
+  if (!freeCountdownTimer) freeCountdownTimer = window.setInterval(updateFreeSpinStatus, 1000);
   refreshState();
 })();
