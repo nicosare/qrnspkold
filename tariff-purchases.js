@@ -18,6 +18,8 @@
   let busy = false;
   let activePurchase = null;
   let lockedScrollY = 0;
+  let backgroundScrollLocked = false;
+  let modalCloseTimer = null;
   let touchStartY = 0;
   let touchStartX = 0;
   const statusTimers = new WeakMap();
@@ -207,23 +209,34 @@
     modalStatus.classList.toggle('is-error', Boolean(isError));
   }
   function lockBackgroundScroll() {
+    if (backgroundScrollLocked) return;
+    backgroundScrollLocked = true;
     lockedScrollY = window.scrollY || window.pageYOffset || 0;
     document.body.classList.add('start-overlay-open');
     document.body.style.position = 'fixed'; document.body.style.top = '-' + lockedScrollY + 'px';
     document.body.style.left = '0'; document.body.style.right = '0'; document.body.style.width = '100%';
   }
   function unlockBackgroundScroll() {
+    if (!backgroundScrollLocked) return;
+    backgroundScrollLocked = false;
     document.body.classList.remove('start-overlay-open');
     document.body.style.position = ''; document.body.style.top = ''; document.body.style.left = '';
     document.body.style.right = ''; document.body.style.width = '';
     window.scrollTo(0, lockedScrollY);
   }
   function closeModal() {
-    if (!modal) return;
-    modal.hidden = true;
-    unlockBackgroundScroll();
-    activePurchase = null;
-    setModalStatus('', false);
+    if (!modal || modal.hidden || modal.classList.contains('is-closing')) return;
+    modal.classList.remove('is-opening');
+    modal.classList.add('is-closing');
+    if (modalCloseTimer) clearTimeout(modalCloseTimer);
+    modalCloseTimer = window.setTimeout(function () {
+      modal.hidden = true;
+      modal.classList.remove('is-opening', 'is-closing');
+      modalCloseTimer = null;
+      unlockBackgroundScroll();
+      activePurchase = null;
+      setModalStatus('', false);
+    }, 220);
   }
   function renderModal() {
     if (!activePurchase || !modalContent) return;
@@ -253,11 +266,19 @@
   }
   function openModal(purchase) {
     if (!modal || !purchase) return;
+    if (modalCloseTimer) clearTimeout(modalCloseTimer);
+    modalCloseTimer = null;
+    modal.classList.remove('is-opening', 'is-closing');
     activePurchase = purchase;
     setModalStatus('', false);
     renderModal();
+    if (modal.hidden) lockBackgroundScroll();
     modal.hidden = false;
-    lockBackgroundScroll();
+    void modal.offsetWidth;
+    modal.classList.add('is-opening');
+    window.requestAnimationFrame(function () {
+      if (modal && !modal.hidden) modal.classList.remove('is-opening');
+    });
   }
   async function createPurchase(card) {
     if (busy) return;
