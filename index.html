@@ -5196,7 +5196,7 @@ body.scan-loading-open { overflow: hidden !important; }
       else obstacles.push({x:W+15,kind:4,w:27,h:24,speedFactor:.94+Math.random()*.12});
       spawnIn=Math.max(.48,1.25+Math.random()*.65-(speed-230)/850);
     }
-    obstacles.forEach(o=>o.x-=speed*(o.speedFactor||1)*dt);obstacles=obstacles.filter(o=>o.x>-45);
+    for (let i = obstacles.length - 1; i >= 0; i--) { const obstacle = obstacles[i]; obstacle.x -= speed * (obstacle.speedFactor || 1) * dt; if (obstacle.x <= -45) obstacles.splice(i, 1); }
     for(const o of obstacles){
       const ow=o.w||(o.kind===0?22:o.kind===3?31:o.kind===4?27:29), oh=o.h||(o.kind===0?26:o.kind===3?50:o.kind===4?24:31);
       const ox=o.x, oy=o.kind===2?o.y:ground+4-oh;
@@ -5646,7 +5646,7 @@ body.scan-loading-open { overflow: hidden !important; }
       rowSpawnProgress -= 20;
       addRow(18, rowIndex++);
     }
-    blocks = blocks.filter(block => block.hp > 0 || block.y < H + 30);
+    for (let i = blocks.length - 1; i >= 0; i--) { const block = blocks[i]; if (block.hp <= 0 && block.y >= H + 30) blocks.splice(i, 1); }
     if (blocks.some(block => block.hp > 0 && block.y + block.h >= PADDLE_Y - 18)) { finishGame(); return; }
 
     const oldX = ball.x, oldY = ball.y;
@@ -5688,12 +5688,13 @@ body.scan-loading-open { overflow: hidden !important; }
 
     trail.push({ x: ball.x, y: ball.y });
     if (trail.length > 7) trail.shift();
-    particles.forEach(particle => {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const particle = particles[i];
       particle.x += particle.vx * dt;
       particle.y += particle.vy * dt;
       particle.life -= dt;
-    });
-    particles = particles.filter(particle => particle.life > 0);
+      if (particle.life <= 0) particles.splice(i, 1);
+    }
   }
 
   function frame(now) {
