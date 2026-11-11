@@ -1436,6 +1436,18 @@ app.post('/api/game/heartbeat', (req, res) => {
   if (updated.changes !== 1) return res.status(404).json({ error: 'Игровая сессия больше не активна.' });
   return res.json({ ok: true });
 });
+app.post('/api/game/abandon', (req, res) => {
+  let userId;
+  try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
+  catch { return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' }); }
+  const sessionId = String(req.body?.sessionId || '');
+  if (!/^[0-9a-f-]{36}$/i.test(sessionId)) return res.status(400).json({ error: 'Некорректная игровая сессия.' });
+  const now = Date.now();
+  const abandoned = db.prepare(
+    'UPDATE game_sessions SET finished_at = ?, score = 0 WHERE id = ? AND vk_id = ? AND finished_at IS NULL'
+  ).run(now, sessionId, userId);
+  return res.json({ ok: true, abandoned: abandoned.changes === 1 });
+});
 app.post('/api/game/start', (req, res) => {
   let userId;
   try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
