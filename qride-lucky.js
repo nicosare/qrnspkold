@@ -394,6 +394,9 @@
     try {
       const next = await apiPost('api/lucky/state', {});
       state = next;
+      if (!next.pendingResult) {
+        try { sessionStorage.removeItem(storageKey); } catch (_) {}
+      }
       if (!state.enabled || !Array.isArray(state.prizes) || !state.prizes.length) {
         section.hidden = true;
         stopIdle();

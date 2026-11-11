@@ -1733,7 +1733,10 @@ app.post('/api/lucky/spin', (req, res) => {
     outcome = db.transaction(() => {
       const existing = db.prepare('SELECT * FROM lucky_spins WHERE vk_id = ? AND request_id = ?')
         .get(userId, requestId);
-      if (existing) return { spin: existing, duplicate: true };
+      if (existing) {
+        if (existing.acknowledged_at) return { error: 'REQUEST_ALREADY_USED' };
+        return { spin: existing, duplicate: true };
+      }
       const pending = db.prepare('SELECT * FROM lucky_spins WHERE vk_id = ? AND acknowledged_at IS NULL ORDER BY id DESC LIMIT 1').get(userId);
       if (pending) return { error: 'PENDING_RESULT', spin: pending };
 
@@ -1814,6 +1817,9 @@ app.post('/api/lucky/spin', (req, res) => {
     return res.status(500).json({ error: 'Не удалось выполнить прокрутку. Попробуй ещё раз.' });
   }
 
+  if (outcome.error === 'REQUEST_ALREADY_USED') {
+    return res.status(409).json({ code: 'REQUEST_ALREADY_USED', error: 'Эта попытка уже завершена. Нажми кнопку ещё раз для новой прокрутки.' });
+  }
   if (outcome.error === 'PENDING_RESULT') {
     return res.status(409).json({
       code: 'PENDING_RESULT',
