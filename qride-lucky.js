@@ -304,7 +304,9 @@
       function frame(now) {
         if (animationToken !== spinAnimationToken) { resolve(false); return; }
         const progress = Math.min(1, (now - startedAt) / duration);
-        const eased = 1 - Math.pow(1 - progress, 4.2);
+        const eased = progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
         const offset = startOffset + (targetOffset - startOffset) * eased;
         rail.style.transform = 'translate3d(' + (-offset) + 'px,0,0)';
         const passed = Math.max(0, Math.floor((offset - startOffset) / 124));
