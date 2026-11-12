@@ -591,8 +591,10 @@
     const guideHeight = state.guide.getBoundingClientRect().height;
     const gap = 14;
     const canCenter = targetRect.height + guideHeight + gap <= bounds.height - 20;
+    // Center the complete composition (guide + spotlight), not just the
+    // target: this leaves enough room for Q without pinning the card to top.
     const desiredTargetTop = canCenter
-      ? bounds.top + (bounds.height - targetRect.height) / 2
+      ? bounds.top + (bounds.height - (targetRect.height + guideHeight + gap)) / 2 + guideHeight + gap
       : bounds.top + 18;
     const desiredTop = startOverlay.scrollTop + targetRect.top - desiredTargetTop;
     const maxScroll = Math.max(0, startOverlay.scrollHeight - startOverlay.clientHeight);
