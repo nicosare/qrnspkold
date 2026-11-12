@@ -672,6 +672,18 @@
             stroke-linecap: round;
         }
         .daily-free-scan-note strong { color: #fff; font-weight: 800; }
+        .start-balance-topup-row { display:flex; justify-content:flex-start; margin-top:13px; }
+        .start-balance-topup {
+            display:inline-flex; align-items:center; justify-content:center; gap:7px;
+            min-height:39px; padding:8px 13px; border:1px solid #ffffff55;
+            border-radius:12px; background:#fff; color:#0052EE;
+            font:inherit; font-size:13px; font-weight:800; line-height:1.2;
+            cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+            transition:transform .16s ease, opacity .16s ease;
+        }
+        .start-balance-topup svg { display:block; width:15px; height:15px; flex:0 0 15px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; }
+        .start-balance-topup:active:not(:disabled) { transform:scale(.97); }
+        .start-balance-topup:disabled { opacity:.55; cursor:wait; }
 
         .start-offers-section {
             margin: 0;
@@ -2241,6 +2253,12 @@ body.scan-loading-open { overflow: hidden !important; }
                 <div class="start-card-eyebrow">ТВОЙ БАЛАНС</div>
                 <span id="scan-balance-extra" class="scan-balance-extra" hidden></span>
                 <div id="scan-balance-status" class="scan-balance-status" role="status" aria-live="polite">Проверяем баланс…</div>
+                <div class="start-balance-topup-row">
+                    <button class="start-balance-topup" id="start-balance-topup" type="button" disabled>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                        <span>Пополнить</span>
+                    </button>
+                </div>
                 <div class="daily-free-scan-note"><span class="daily-free-scan-note-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 5v14M5 12h14"/></svg></span><span><strong>1 бесплатный скан каждый день</strong> — доступен при нуле на балансе.</span></div>
             </div>
 
@@ -2337,7 +2355,7 @@ body.scan-loading-open { overflow: hidden !important; }
                     <div><div class="qride-lucky-kicker">QRIDE PLUS</div><h4 id="qride-scan-tariffs-title">Пополнить баланс</h4></div>
                     <button class="qride-collect-info-close" type="button" data-scan-tariffs-close aria-label="Закрыть">×</button>
                 </div>
-                <p class="qride-collect-info-copy">Выбери подходящий тариф, чтобы продолжить сканирование.</p>
+                <p class="qride-collect-info-copy" id="qride-scan-tariffs-copy">Выбери подходящий тариф, чтобы продолжить сканирование.</p>
                 <div id="qride-scan-tariffs-groups" class="qride-scan-tariffs-groups"></div>
                 <button class="qride-collect-info-action qride-lucky-secondary" type="button" data-scan-tariffs-close>Не сейчас</button>
             </div>
