@@ -452,7 +452,9 @@
       top = clamp(top, bounds.top, Math.max(bounds.top, bounds.bottom - guideHeight));
       state.guide.style.transform = 'translate3d(' + Math.round(left) + 'px,' + Math.round(top) + 'px,0)';
       setHighlight(state, isWelcome ? null : rect);
-      window.setTimeout(function () {
+      if (state.revealTimer) clearTimeout(state.revealTimer);
+      state.revealTimer = window.setTimeout(function () {
+        state.revealTimer = 0;
         if (!tour || tour !== state || state.closing) return;
         state.guide.style.opacity = '1';
       }, reduceMotion ? 0 : 430);
@@ -502,6 +504,10 @@
     state.index = index;
     state.currentStep = step;
     state.guide.style.opacity = '0';
+    if (state.revealTimer) {
+      clearTimeout(state.revealTimer);
+      state.revealTimer = 0;
+    }
     clearHighlight(state);
     setMessage(step.title, step.copy);
 
@@ -579,6 +585,10 @@
   function finishTour(state, completed) {
     if (!tour || tour !== state || state.finishing) return;
     state.finishing = true;
+    if (state.revealTimer) {
+      clearTimeout(state.revealTimer);
+      state.revealTimer = 0;
+    }
     state.guide.classList.add('is-finishing');
 
     const skipButton = state.controls.querySelector('.qride-tour-skip');
@@ -642,7 +652,8 @@
       guide: null,
       controls: null,
       highlightFrame: 0,
-      highlightRect: null
+      highlightRect: null,
+      revealTimer: 0
     };
 
     const ui = createLayer();
