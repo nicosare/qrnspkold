@@ -749,10 +749,16 @@ function getLuckyPublicState(userId, config = getLuckyConfig()) {
   const pendingRow = db.prepare(
     'SELECT * FROM lucky_spins WHERE vk_id = ? AND acknowledged_at IS NULL ORDER BY id DESC LIMIT 1'
   ).get(String(userId));
+  const successfulScanCount = Number(db.prepare(
+    'SELECT COUNT(*) AS count FROM scan_history WHERE vk_id = ?'
+  ).get(String(userId))?.count || 0);
+  const rouletteEligible = successfulScanCount >= 2;
   const subscriptionActive = Boolean(user?.subscription_until && Date.parse(user.subscription_until) > now.getTime())
     || Number(user?.unlimited || 0) === 1;
   return {
     enabled: config.enabled,
+    rouletteEligible,
+    successfulScanCount,
     configVersion: config.version,
     freeSpinsRemaining: freeSpinReady ? 1 : 0,
     freeSpinAvailableAt: freeSpinReady ? null : freeSpinAvailableAt,
@@ -1752,6 +1758,11 @@ app.post('/api/lucky/spin', (req, res) => {
       const pending = db.prepare('SELECT * FROM lucky_spins WHERE vk_id = ? AND acknowledged_at IS NULL ORDER BY id DESC LIMIT 1').get(userId);
       if (pending) return { error: 'PENDING_RESULT', spin: pending };
 
+      const successfulScanCount = Number(db.prepare(
+        'SELECT COUNT(*) AS count FROM scan_history WHERE vk_id = ?'
+      ).get(userId)?.count || 0);
+      if (successfulScanCount < 2) return { error: 'SCAN_REQUIREMENT', successfulScanCount };
+
       const user = db.prepare(
         'SELECT scan_balance, subscription_until, unlimited, daily_scan_date, daily_scan_available FROM users WHERE vk_id = ?'
       ).get(userId);
@@ -1818,6 +1829,14 @@ app.post('/api/lucky/spin', (req, res) => {
       code: 'PENDING_RESULT',
       error: 'Сначала забери уже полученную награду.',
       spin: serializeLuckySpin(outcome.spin),
+      ...getLuckyPublicState(userId, config)
+    });
+  }
+  if (outcome.error === 'SCAN_REQUIREMENT') {
+    return res.status(403).json({
+      code: 'SCAN_REQUIREMENT',
+      error: '«Билет удачи» откроется после двух успешных сканирований.',
+      successfulScanCount: Number(outcome.successfulScanCount || 0),
       ...getLuckyPublicState(userId, config)
     });
   }
