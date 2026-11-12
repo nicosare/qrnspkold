@@ -4108,6 +4108,8 @@ body.scan-loading-open { overflow: hidden !important; }
         });
 
         let moodTypingTimer = null;
+        let moodTypingNode = null;
+        let moodTypingFullText = '';
         function renderRoadnoteMoodMessage() {
             const moodMessage = document.getElementById('start-mood-message');
             if (!moodMessage) return;
@@ -4138,6 +4140,8 @@ body.scan-loading-open { overflow: hidden !important; }
                 clearInterval(moodTypingTimer);
                 moodTypingTimer = null;
             }
+            moodTypingNode = null;
+            moodTypingFullText = '';
 
             const hour = new Date().getHours();
             const greeting = window.qridePersonalGreeting || (hour >= 5 && hour < 11
@@ -4158,6 +4162,8 @@ body.scan-loading-open { overflow: hidden !important; }
 
             const textNode = moodMessage.querySelector('.mood-message-text');
             const characters = Array.from(selected.text);
+            moodTypingNode = textNode;
+            moodTypingFullText = selected.text;
             let position = 0;
             const typingSpeed = 24;
             moodTypingTimer = window.setInterval(function () {
@@ -4166,6 +4172,8 @@ body.scan-loading-open { overflow: hidden !important; }
                 if (position >= characters.length) {
                     clearInterval(moodTypingTimer);
                     moodTypingTimer = null;
+                    moodTypingNode = null;
+                    moodTypingFullText = '';
                 }
             }, typingSpeed);
         }
@@ -4174,6 +4182,9 @@ body.scan-loading-open { overflow: hidden !important; }
             if (moodTypingTimer) {
                 clearInterval(moodTypingTimer);
                 moodTypingTimer = null;
+                if (moodTypingNode) moodTypingNode.textContent = moodTypingFullText;
+                moodTypingNode = null;
+                moodTypingFullText = '';
             }
         };
         renderRoadnoteMoodMessage();
