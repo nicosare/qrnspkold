@@ -421,7 +421,13 @@
     document.body.classList.add('qride-tour-open');
     window.qrideOnboardingActive = true;
     tour = state;
+    state.guide.style.transition = 'none';
     showStep(state, 0);
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        if (tour === state) state.guide.style.transition = '';
+      });
+    });
     return true;
   }
 
