@@ -43,6 +43,7 @@
   let touchStartY = 0;
   let touchStartX = 0;
   let freeCountdownTimer = 0;
+  let spinAgainAfterResult = false;
 
   function escapeHtml(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
@@ -284,8 +285,14 @@
       closeTimer = 0;
       if (activeModal === target) activeModal = null;
       if (!activeModal) unlockBackground();
-      if (acknowledge && activeSpin) acknowledgeSpin(activeSpin.id);
-      else if (!activeModal) startIdle();
+      if (acknowledge && activeSpin) {
+        acknowledgeSpin(activeSpin.id).then(function (success) {
+          if (success && spinAgainAfterResult) {
+            spinAgainAfterResult = false;
+            runSpin();
+          }
+        });
+      } else if (!activeModal) startIdle();
     }, 220);
   }
   async function revealSpin(spin) {
@@ -312,7 +319,7 @@
       setStatus('Не удалось подтвердить начисление. Награда сохранена — попробуй закрыть это окно ещё раз.', true);
       openModal(resultModal);
       activeRevealPromise = Promise.resolve(false);
-      return;
+      return false;
     }
     activeSpin = null;
     activeRevealPromise = null;
@@ -322,6 +329,7 @@
     setStatus('', false);
     // The winning card and the cards after it stay in the same continuous rail.
     startIdle();
+    return true;
   }
   function iconForResult(type) { return typeIcon(type); }
   function burstRewardConfetti(type) {
@@ -369,6 +377,7 @@
       resultIcon.innerHTML = iconForResult(spin.rewardType);
       resultIcon.classList.toggle('is-subscription', spin.rewardType === 'subscription');
       resultIcon.classList.toggle('is-energy', spin.rewardType === 'energy');
+      resultIcon.classList.toggle('is-scans', spin.rewardType === 'scans');
       burstRewardConfetti(spin.rewardType);
       resultTitle.textContent = spin.title || 'Награда получена';
       resultDetail.textContent = 'Начисляем награду…';
@@ -625,7 +634,15 @@
   document.addEventListener('click', function (event) {
     const closeButton = event.target.closest('[data-lucky-close]');
     if (closeButton) { closeModal(closeButton.closest('.qride-collect-info'), false); return; }
+    if (event.target.closest('[data-lucky-result-again]')) {
+      event.preventDefault();
+      event.stopPropagation();
+      spinAgainAfterResult = true;
+      closeModal(resultModal, true);
+      return;
+    }
     if (event.target.closest('[data-lucky-result-close]')) {
+      spinAgainAfterResult = false;
       closeModal(resultModal, true);
       return;
     }
