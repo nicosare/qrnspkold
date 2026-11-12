@@ -112,33 +112,34 @@
   let railPrizeSignature = '';
   let railCycleLength = 0;
   function makeRandomRailCycle(prizes) {
-    // Four copies of every prize are shuffled together. This keeps the display
-    // visually varied without changing the server-side weighted prize draw.
-    const pool = [];
-    prizes.forEach(function (prize) {
-      for (let i = 0; i < 4; i += 1) pool.push(prize);
-    });
+    // Each deck contains every prize once, but in a new random order.
+    // Eight decks form one seamless cycle; the server still decides the winner.
     const cycle = [];
-    while (pool.length) {
+    for (let deckNumber = 0; deckNumber < 8; deckNumber += 1) {
+      const deck = prizes.slice();
+      for (let i = deck.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const value = deck[i];
+        deck[i] = deck[j];
+        deck[j] = value;
+      }
       const previousId = cycle.length ? String(cycle[cycle.length - 1].id) : null;
-      const candidates = [];
-      for (let i = 0; i < pool.length; i += 1) {
-        if (previousId === null || String(pool[i].id) !== previousId) candidates.push(i);
+      if (deck.length > 1 && previousId !== null && String(deck[0].id) === previousId) {
+        const replacement = deck.findIndex(function (item) { return String(item.id) !== previousId; });
+        if (replacement > 0) {
+          const value = deck[0];
+          deck[0] = deck[replacement];
+          deck[replacement] = value;
+        }
       }
-      const selected = candidates.length
-        ? candidates[Math.floor(Math.random() * candidates.length)]
-        : Math.floor(Math.random() * pool.length);
-      cycle.push(pool.splice(selected, 1)[0]);
+      cycle.push.apply(cycle, deck);
     }
-    // Make the repeating seam look continuous as well.
+    // Rotate the cycle to a boundary where the last and first cards differ.
     if (cycle.length > 1 && String(cycle[0].id) === String(cycle[cycle.length - 1].id)) {
-      const cuts = [];
-      for (let i = 1; i < cycle.length; i += 1) {
-        if (String(cycle[i - 1].id) !== String(cycle[i].id)) cuts.push(i);
-      }
-      if (cuts.length) {
-        const cut = cuts[Math.floor(Math.random() * cuts.length)];
-        return cycle.slice(cut).concat(cycle.slice(0, cut));
+      for (let cut = 1; cut < cycle.length; cut += 1) {
+        if (String(cycle[cut - 1].id) !== String(cycle[cut].id)) {
+          return cycle.slice(cut).concat(cycle.slice(0, cut));
+        }
       }
     }
     return cycle;
