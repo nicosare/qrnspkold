@@ -141,6 +141,17 @@ db.exec(`
     disabled INTEGER NOT NULL DEFAULT 0 CHECK(disabled IN (0, 1)),
     updated_at TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS analytics_events (
+    event_key TEXT PRIMARY KEY,
+    vk_id TEXT NOT NULL,
+    event_name TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    properties_json TEXT NOT NULL DEFAULT '{}'
+  );
+  CREATE INDEX IF NOT EXISTS idx_analytics_events_name_time
+    ON analytics_events(event_name, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_analytics_events_user_time
+    ON analytics_events(vk_id, created_at DESC);
 `);
 // Persistent transport metadata cache. Price rules remain separate so admins can
 // change the default fare without invalidating the transport lookup cache.
@@ -585,6 +596,26 @@ function getReferralPromptState(userId, successfulScanCount) {
     hasInvitedFriend,
     referralPromptDue: !disabled && scanCount > 0 && scanCount % interval === 0
   };
+}
+const analyticsEventNames = new Set([
+  'app_open', 'tariffs_viewed', 'tariff_buy_click', 'tariff_request_created',
+  'payment_confirmed', 'scan_completed', 'lucky_spin_created'
+]);
+const insertAnalyticsEvent = db.prepare(
+  'INSERT OR IGNORE INTO analytics_events (event_key, vk_id, event_name, created_at, properties_json) VALUES (?, ?, ?, ?, ?)'
+);
+function recordAnalyticsEvent(userId, eventName, properties = {}, eventKey, createdAt = new Date().toISOString()) {
+  const id = String(userId || '');
+  const name = String(eventName || '');
+  if (!/^[0-9]{1,20}$/.test(id) || (adminVkId && id === adminVkId) || !analyticsEventNames.has(name)) return false;
+  const key = String(eventKey || '');
+  if (!key || key.length > 180) return false;
+  let json = '{}';
+  try {
+    json = JSON.stringify(properties && typeof properties === 'object' ? properties : {});
+    if (json.length > 2000) json = '{}';
+  } catch (_) {}
+  return insertAnalyticsEvent.run(key, id, name, String(createdAt || new Date().toISOString()), json).changes === 1;
 }
 const getUserExists = db.prepare('SELECT 1 FROM users WHERE vk_id = ?');
 const userCount = db.prepare('SELECT COUNT(*) AS count FROM users');
