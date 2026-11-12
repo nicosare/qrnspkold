@@ -330,6 +330,9 @@
     state.finishing = true;
     state.guide.classList.add('is-finishing');
     state.controls.querySelectorAll('button').forEach(function (button) { button.disabled = true; });
+    // Skipping the whole tour should not immediately trigger a second hint
+    // for a roulette that was already available during the skipped tour.
+    if (!completed && state.mode !== 'lucky' && luckyAvailable) storageSet(luckySeenKey);
     const title = completed ? 'На этом всё!' : 'Хорошего дня!';
     const copy = completed
       ? 'Теперь ты знаешь, где что находится. Если что-то забудется, знакомство всегда можно повторить в FAQ. Приятных поездок!'
