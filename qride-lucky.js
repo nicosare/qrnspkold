@@ -110,11 +110,45 @@
       '<strong class="qride-lucky-card-title">' + escapeHtml(prize.title) + '</strong></div>';
   }
   let railPrizeSignature = '';
+  let railCycleLength = 0;
+  function makeRandomRailCycle(prizes) {
+    // Four copies of every prize are shuffled together. This keeps the display
+    // visually varied without changing the server-side weighted prize draw.
+    const pool = [];
+    prizes.forEach(function (prize) {
+      for (let i = 0; i < 4; i += 1) pool.push(prize);
+    });
+    const cycle = [];
+    while (pool.length) {
+      const previousId = cycle.length ? String(cycle[cycle.length - 1].id) : null;
+      const candidates = [];
+      for (let i = 0; i < pool.length; i += 1) {
+        if (previousId === null || String(pool[i].id) !== previousId) candidates.push(i);
+      }
+      const selected = candidates.length
+        ? candidates[Math.floor(Math.random() * candidates.length)]
+        : Math.floor(Math.random() * pool.length);
+      cycle.push(pool.splice(selected, 1)[0]);
+    }
+    // Make the repeating seam look continuous as well.
+    if (cycle.length > 1 && String(cycle[0].id) === String(cycle[cycle.length - 1].id)) {
+      const cuts = [];
+      for (let i = 1; i < cycle.length; i += 1) {
+        if (String(cycle[i - 1].id) !== String(cycle[i].id)) cuts.push(i);
+      }
+      if (cuts.length) {
+        const cut = cuts[Math.floor(Math.random() * cuts.length)];
+        return cycle.slice(cut).concat(cycle.slice(0, cut));
+      }
+    }
+    return cycle;
+  }
   function renderIdleRail() {
-    const prizes = sortedAttractive(getPrizes());
+    const prizes = getPrizes();
     if (!prizes.length) {
       rail.innerHTML = '';
       railPrizeSignature = '';
+      railCycleLength = 0;
       idleCycleWidth = 0;
       idleOffset = 0;
       return;
@@ -122,21 +156,22 @@
     const signature = prizes.map(function (item) {
       return [item.id, item.rewardType, item.amount, item.title].join(':');
     }).join('|');
-    // Keep the same physical cards for idle motion, spinning and the stopped result.
-    // Only rebuild when the actual prize set changes.
+    // A randomized multi-deck cycle is repeated physically so the rail can
+    // spin for several full turns and still stop on the server-selected prize.
+    const physicalCopies = 6;
     if (signature !== railPrizeSignature || !rail.children.length) {
-      const copies = 12;
+      const cycle = makeRandomRailCycle(prizes);
+      railCycleLength = cycle.length;
       const items = [];
-      for (let i = 0; i < copies; i += 1) items.push.apply(items, prizes);
+      for (let i = 0; i < physicalCopies; i += 1) items.push.apply(items, cycle);
       rail.innerHTML = items.map(cardMarkup).join('');
       railPrizeSignature = signature;
-      idleCycleWidth = rail.children[prizes.length].offsetLeft - rail.children[0].offsetLeft;
-      idleOffset = idleCycleWidth ? idleOffset % idleCycleWidth : 0;
-    } else {
-      idleCycleWidth = rail.children.length > prizes.length
-        ? rail.children[prizes.length].offsetLeft - rail.children[0].offsetLeft
-        : (rail.children[0].offsetWidth + 9);
     }
+    const nextCycleCard = rail.children[railCycleLength];
+    idleCycleWidth = nextCycleCard && rail.children[0]
+      ? nextCycleCard.offsetLeft - rail.children[0].offsetLeft
+      : 0;
+    idleOffset = idleCycleWidth ? idleOffset % idleCycleWidth : 0;
     rail.style.transition = 'none';
     rail.style.transform = 'translate3d(' + (-idleOffset) + 'px,0,0)';
   }
@@ -161,6 +196,10 @@
   function setStatus(message, isError) {
     statusNode.textContent = message || '';
     statusNode.classList.toggle('is-error', Boolean(isError));
+    const actionable = Boolean(message && !isError && state && state.pendingResult);
+    statusNode.classList.toggle('is-action', actionable);
+    if (actionable) statusNode.tabIndex = 0;
+    else statusNode.removeAttribute('tabindex');
   }
   function freeSpinAvailable() {
     if (!state) return false;
@@ -195,7 +234,8 @@
     spinButton.querySelector('span').textContent = 'Испытать удачу';
     updateFreeSpinStatus();
     spinButton.disabled = spinning || Boolean(state.pendingResult);
-    if (state.pendingResult) setStatus('У тебя есть неоткрытая награда. Забери её, чтобы продолжить.', false);
+    if (state.pendingResult) setStatus('Награда уже ждёт тебя. Нажми здесь, чтобы открыть её.', false);
+    else if (statusNode.classList.contains('is-action')) setStatus('', false);
   }
   function openModal(modal) {
     if (!modal) return;
@@ -286,21 +326,31 @@
   }
   function iconForResult(type) { return typeIcon(type); }
   function showResult(spin, restored) {
-    if (!spin || (activeSpin && Number(activeSpin.id) === Number(spin.id))) return;
-    activeSpin = spin;
-    resultIcon.innerHTML = iconForResult(spin.rewardType);
-    resultIcon.classList.toggle('is-subscription', spin.rewardType === 'subscription');
-    resultTitle.textContent = spin.title || 'Награда получена';
-    resultDetail.textContent = 'Начисляем награду…';
-    resultMeta.textContent = '';
-    resultMeta.hidden = true;
-    if (restored) setStatus('Прокрутка завершилась. Сейчас завершим начисление награды.', false);
+    if (!spin) return;
+    const sameSpin = activeSpin && Number(activeSpin.id) === Number(spin.id);
+    if (sameSpin && !resultModal.hidden) return;
+    if (!sameSpin) {
+      activeSpin = spin;
+      resultIcon.innerHTML = iconForResult(spin.rewardType);
+      resultIcon.classList.toggle('is-subscription', spin.rewardType === 'subscription');
+      resultTitle.textContent = spin.title || 'Награда получена';
+      resultDetail.textContent = 'Начисляем награду…';
+      resultMeta.textContent = '';
+      resultMeta.hidden = true;
+      if (restored) setStatus('Прокрутка завершилась. Сейчас завершим начисление награды.', false);
+      activeRevealPromise = revealSpin(spin).catch(function (error) {
+        console.warn('[QRide lucky reveal]', error.message);
+        setStatus('Не удалось начислить награду. Она сохранена — попробуй закрыть это окно ещё раз.', true);
+        return false;
+      });
+    }
+    // If the sheet was dismissed without a successful acknowledgement, it can
+    // always be reopened from the pending-reward status.
     openModal(resultModal);
-    activeRevealPromise = revealSpin(spin).catch(function (error) {
-      console.warn('[QRide lucky reveal]', error.message);
-      setStatus('Не удалось начислить награду. Она сохранена — попробуй закрыть это окно ещё раз.', true);
-      return false;
-    });
+  }
+  function resumePendingResult() {
+    if (!state || !state.pendingResult || spinning) return;
+    showResult(state.pendingResult, true);
   }
   function renderFaqPrizes() {
     const faqNode = document.getElementById('qride-lucky-faq-prizes');
@@ -355,12 +405,17 @@
       renderIdleRail();
       if (!rail.children.length || !idleCycleWidth) { resolve(false); return; }
 
+      // The spin response has its own row ID and a separate prizeId.
+      // Cards are keyed by the prize configuration ID, never by the spin row ID.
+      const targetPrizeId = prize && prize.prizeId != null ? prize.prizeId : prize && prize.id;
+      if (targetPrizeId == null) { resolve(false); return; }
+
       // Continue from the exact offset where the idle rail was moving.
       const startOffset = idleOffset;
       const startCenter = startOffset + windowNode.clientWidth / 2;
-      const minimumTravel = idleCycleWidth * 5;
-      const targetIndex = Array.from(rail.children).findIndex(function (card, index) {
-        return card.dataset.luckyPrize === String(prize.id) &&
+      const minimumTravel = idleCycleWidth * 1.25;
+      const targetIndex = Array.from(rail.children).findIndex(function (card) {
+        return card.dataset.luckyPrize === String(targetPrizeId) &&
           card.offsetLeft + card.offsetWidth / 2 >= startCenter + minimumTravel;
       });
       if (targetIndex < 0) { resolve(false); return; }
@@ -371,7 +426,7 @@
 
       rail.style.transition = 'none';
       void rail.offsetWidth;
-      const duration = reduceMotion ? 650 : 7800;
+      const duration = reduceMotion ? 650 : 8400;
       const startedAt = performance.now();
       let centeredIndex = Array.from(rail.children).findIndex(function (card) {
         return card.offsetLeft + card.offsetWidth / 2 >= startCenter;
@@ -436,18 +491,19 @@
     try {
       const data = await apiPost('api/lucky/spin', { requestId: requestId });
       state = data;
+      // The server also returns this spin as pendingResult because it has not
+      // been acknowledged yet. Keep it local-only after the animation completes.
+      state.pendingResult = null;
       window.dispatchEvent(new CustomEvent('qride:entitlement-state', { detail: data }));
       updateControls();
       setStatus('', false);
       if (data.spin) {
         const animationCompleted = await animateToPrize(data.spin);
+        state.pendingResult = data.spin;
         if (animationCompleted) {
           showResult(data.spin, false);
         } else {
-          // A suspended WebView may pause requestAnimationFrame. Keep the
-          // result pending; never reveal it as if the wheel had stopped.
-          state.pendingResult = data.spin;
-          setStatus('Прокрутка приостановлена. Вернись в приложение, чтобы продолжить.', true);
+          setStatus('Прокрутка не завершилась. Нажми здесь, чтобы открыть сохранённую награду.', false);
           updateControls();
         }
       }
@@ -476,9 +532,12 @@
     if (!launchParams || document.visibilityState === 'hidden') return;
     try {
       const next = await apiPost('api/lucky/state', {});
+      const pendingFromServer = next.pendingResult || null;
       state = next;
+      // A background refresh must not interrupt an animation already in progress.
+      if (spinning && pendingFromServer) state.pendingResult = null;
       renderFaqPrizes();
-      if (!next.pendingResult) {
+      if (!pendingFromServer) {
         try { sessionStorage.removeItem(storageKey); } catch (_) {}
       }
       if (!state.enabled || !Array.isArray(state.prizes) || !state.prizes.length) {
@@ -489,15 +548,27 @@
       section.hidden = false;
       renderIdleRail();
       updateControls();
-      if (next.pendingResult && !activeSpin) showResult(next.pendingResult, true);
-      else startIdle();
-      setStatus('', false);
+      if (pendingFromServer && !spinning) {
+        state.pendingResult = pendingFromServer;
+        showResult(pendingFromServer, true);
+        setStatus('Награда уже ждёт тебя. Нажми здесь, чтобы открыть её.', false);
+      } else {
+        if (!pendingFromServer) setStatus('', false);
+        startIdle();
+      }
     } catch (error) {
       console.warn('[QRide lucky state]', error.message);
     }
   }
 
   spinButton.addEventListener('click', runSpin);
+  statusNode.addEventListener('click', resumePendingResult);
+  statusNode.addEventListener('keydown', function (event) {
+    if ((event.key === 'Enter' || event.key === ' ') && state && state.pendingResult) {
+      event.preventDefault();
+      resumePendingResult();
+    }
+  });
   packagesNode.addEventListener('click', function (event) {
     const card = event.target.closest('.start-offer[data-offer-id]');
     if (!card || !packagesNode.contains(card)) return;
