@@ -2261,6 +2261,20 @@ body.scan-loading-open { overflow: hidden !important; }
             </div>
         </section>
 
+        <section class="qride-collect-info" id="qride-scan-tariffs-modal" role="dialog" aria-modal="true" aria-labelledby="qride-scan-tariffs-title" hidden>
+            <button class="qride-collect-info-backdrop" type="button" data-scan-tariffs-close aria-label="Закрыть"></button>
+            <div class="qride-collect-info-sheet qride-scan-tariffs-sheet">
+                <div class="qride-collect-info-grabber" aria-hidden="true"></div>
+                <div class="qride-collect-info-top">
+                    <div><div class="qride-lucky-kicker">QRIDE PLUS</div><h4 id="qride-scan-tariffs-title">Пополнить баланс</h4></div>
+                    <button class="qride-collect-info-close" type="button" data-scan-tariffs-close aria-label="Закрыть">×</button>
+                </div>
+                <p class="qride-collect-info-copy">Выбери подходящий тариф, чтобы продолжить сканирование.</p>
+                <div id="qride-scan-tariffs-groups" class="qride-scan-tariffs-groups"></div>
+                <button class="qride-collect-info-action qride-lucky-secondary" type="button" data-scan-tariffs-close>Не сейчас</button>
+            </div>
+        </section>
+
         <section class="qride-collect" id="qride-collect" aria-labelledby="qride-collect-title">
             <div class="qride-collect-heading">
                 <div>
@@ -2918,8 +2932,7 @@ body.scan-loading-open { overflow: hidden !important; }
 
 
     function refreshScanButton() {
-        const balanceIsEmpty = scanBalanceAssigned && currentScanBalance <= 0 && !scanAccessUnlimited;
-        startScanButton.disabled = !scanSessionReady || scanProcessing || balanceIsEmpty;
+        startScanButton.disabled = !scanSessionReady || scanProcessing;
     }
 
     function animateStartValue(element) {
@@ -3975,7 +3988,53 @@ body.scan-loading-open { overflow: hidden !important; }
         loadFromLocalStorage();
         loadTimer();
 
-        startScanButton.addEventListener('click', scanWithVkBridge);
+        const scanTariffsModal = document.getElementById('qride-scan-tariffs-modal');
+        const scanTariffsGroups = document.getElementById('qride-scan-tariffs-groups');
+        function closeScanTariffsModal() {
+            if (!scanTariffsModal) return;
+            scanTariffsModal.hidden = true;
+            document.body.classList.remove('qride-lucky-open');
+            document.body.style.overflow = '';
+        }
+        function openScanTariffsModal() {
+            const source = document.getElementById('start-offers-groups');
+            if (source && scanTariffsGroups) scanTariffsGroups.innerHTML = source.innerHTML;
+            if (!scanTariffsModal) return;
+            scanTariffsModal.hidden = false;
+            document.body.classList.add('qride-lucky-open');
+            document.body.style.overflow = 'hidden';
+        }
+        startScanButton.addEventListener('click', function () {
+            if (scanBalanceAssigned && currentScanBalance <= 0 && !scanAccessUnlimited) {
+                openScanTariffsModal();
+                return;
+            }
+            scanWithVkBridge();
+        });
+        if (scanTariffsModal) {
+            scanTariffsModal.addEventListener('click', function (event) {
+                if (event.target === scanTariffsModal || event.target.closest('[data-scan-tariffs-close]')) {
+                    closeScanTariffsModal(); return;
+                }
+                const purchase = event.target.closest('.start-offer-details[data-offer-id]');
+                if (!purchase) return;
+                const original = document.querySelector('#start-offers-groups .start-offer[data-offer-id="' + purchase.dataset.offerId + '"] .start-offer-details');
+                closeScanTariffsModal();
+                if (original) window.setTimeout(function () { original.click(); }, 240);
+            });
+            const tariffSheet = scanTariffsModal.querySelector('.qride-collect-info-sheet');
+            let tariffTouchY = 0, tariffTouchX = 0;
+            tariffSheet.addEventListener('touchstart', function (event) {
+                if (!event.touches || event.touches.length !== 1) return;
+                tariffTouchY = event.touches[0].clientY; tariffTouchX = event.touches[0].clientX;
+            }, { passive: true });
+            tariffSheet.addEventListener('touchend', function (event) {
+                if (!event.changedTouches || event.changedTouches.length !== 1 || scanTariffsModal.hidden) return;
+                const dy = event.changedTouches[0].clientY - tariffTouchY;
+                const dx = event.changedTouches[0].clientX - tariffTouchX;
+                if (dy > 90 && Math.abs(dx) < 70 && tariffSheet.scrollTop <= 0) closeScanTariffsModal();
+            }, { passive: true });
+        }
         continueCurrentScanButton.addEventListener('click', showCurrentTicket);
         refreshScanButton();
 
