@@ -125,12 +125,11 @@
       }
       const previousId = cycle.length ? String(cycle[cycle.length - 1].id) : null;
       if (deck.length > 1 && previousId !== null && String(deck[0].id) === previousId) {
-        const replacement = deck.findIndex(function (item) { return String(item.id) !== previousId; });
-        if (replacement > 0) {
-          const value = deck[0];
-          deck[0] = deck[replacement];
-          deck[replacement] = value;
-        }
+        // Swapping the first two cards preserves the deck's unique order and
+        // avoids creating a new duplicate next to the swapped card.
+        const value = deck[0];
+        deck[0] = deck[1];
+        deck[1] = value;
       }
       cycle.push.apply(cycle, deck);
     }
