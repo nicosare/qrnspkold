@@ -62,6 +62,7 @@
       {
         id: 'scan',
         selector: '#start-quickbar',
+        compactSelectors: ['.start-card-eyebrow', '.scan-balance-status'],
         title: 'Сканирование и билет',
         copy: 'Чтобы считать транспортный QR-код, нажми «Сканировать новый QR-код». Готовый билет можно открыть кнопкой «К текущему билету». Здесь же виден баланс сканов и доступно пополнение.',
         reaction: 'curious'
@@ -78,7 +79,8 @@
     if (luckySection && isVisible(luckySection)) {
       steps.push({
         id: 'lucky',
-        selector: '#qride-lucky-machine',
+        selector: '#qride-lucky',
+        compactSelectors: ['.qride-lucky-heading', '.qride-lucky-lead'],
         title: 'Билет удачи',
         copy: 'Здесь можно прокрутить рулетку и получить одну из наград. Доступность бесплатной попытки и стоимость следующей указаны под рулеткой.',
         reaction: 'curious'
@@ -88,35 +90,40 @@
     steps.push(
       {
         id: 'collect',
-        selector: '.qride-collect-heading',
+        selector: '#qride-collect',
+        compactSelectors: ['.qride-collect-heading', '.qride-collect-lead'],
         title: 'Коллекция',
         copy: 'Здесь собираются карточки транспорта по маршрутам. После поездок с подходящим QR-кодом новые карточки появляются в коллекции.',
         reaction: 'happy'
       },
       {
         id: 'plus',
-        selector: '.start-offers-section-heading',
+        selector: '.start-offers-section',
+        compactSelectors: ['.start-offers-section-heading', '.start-offers-lead'],
         title: 'QRide Plus',
         copy: 'В этом блоке собраны пакеты сканирований и подписки. Выбирай подходящий вариант — условия и срок указаны на карточках.',
         reaction: 'wink'
       },
       {
         id: 'arcade',
-        selector: '#roadnote-game .roadnote-game-head',
+        selector: '#roadnote-game',
+        compactSelectors: ['.roadnote-game-head'],
         title: 'QRide Arcade',
         copy: 'Здесь находятся игры QRide. За достижения можно получать дополнительные сканы, а рекорды сохраняются.',
         reaction: 'happy'
       },
       {
         id: 'referral',
-        selector: '.start-referral-actions',
+        selector: '.start-referral',
+        compactSelectors: ['.start-referral-title', '.start-referral-description'],
         title: 'Пригласи друга',
         copy: 'Нажми «Поделиться», чтобы отправить приглашение. Рядом можно скопировать ссылку или открыть её QR-код. За первое успешное сканирование друга начислят бонусные сканы.',
         reaction: 'wink'
       },
       {
         id: 'promo',
-        selector: '#start-promo-form',
+        selector: '.start-promo',
+        compactSelectors: ['.start-promo-title', '.start-promo-description'],
         title: 'Промокод',
         copy: 'Если у тебя есть промокод, введи его в это поле и нажми «Применить».',
         reaction: 'curious'
@@ -138,7 +145,8 @@
   function buildLuckyStep() {
     return [{
       id: 'lucky',
-      selector: '#qride-lucky-machine',
+      selector: '#qride-lucky',
+      compactSelectors: ['.qride-lucky-heading', '.qride-lucky-lead'],
       title: 'Билет удачи',
       copy: 'Рулетка уже доступна. Здесь можно прокрутить ленту и получить одну из наград. Условия попытки указаны прямо под ней.',
       reaction: 'curious'
@@ -247,7 +255,7 @@
     ].join(' ');
   }
 
-  function setHighlight(state, rect) {
+  function renderHighlight(state, rect) {
     const width = Math.max(1, window.innerWidth);
     const height = Math.max(1, window.innerHeight);
     const pad = 5;
@@ -260,23 +268,61 @@
     const radius = Math.min(19, boxHeight / 2, boxWidth / 2);
     const path = roundedRectPath(left, top, boxWidth, boxHeight, radius);
     const viewport = 'M 0 0 H ' + width + ' V ' + height + ' H 0 Z ';
-
     state.svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
     state.svg.setAttribute('width', width);
     state.svg.setAttribute('height', height);
     state.shade.setAttribute('d', viewport + path);
     state.blueFrame.setAttribute('d', path);
     state.whiteFrame.setAttribute('d', path);
-
     Object.assign(state.hole.style, {
-      left: left + 'px',
-      top: top + 'px',
-      width: boxWidth + 'px',
-      height: boxHeight + 'px',
-      borderRadius: radius + 'px'
+      left: left + 'px', top: top + 'px', width: boxWidth + 'px',
+      height: boxHeight + 'px', borderRadius: radius + 'px'
     });
   }
 
+  function setHighlight(state, rect) {
+    if (state.highlightFrame) cancelAnimationFrame(state.highlightFrame);
+    const target = { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
+    const from = state.highlightRect || target;
+    const startedAt = performance.now();
+    const duration = reduceMotion ? 0 : 380;
+    function tick(now) {
+      if (!tour || tour !== state || state.closing) return;
+      const raw = duration ? Math.min(1, (now - startedAt) / duration) : 1;
+      const eased = 1 - Math.pow(1 - raw, 3);
+      const current = {};
+      ['left', 'top', 'right', 'bottom'].forEach(function (key) {
+        current[key] = from[key] + (target[key] - from[key]) * eased;
+      });
+      renderHighlight(state, current);
+      if (raw < 1) state.highlightFrame = requestAnimationFrame(tick);
+      else { state.highlightFrame = 0; state.highlightRect = target; }
+    }
+    state.highlightFrame = requestAnimationFrame(tick);
+  }
+
+  function getStepFocusRect(step, target, guideHeight, bounds) {
+    if (!target) return null;
+    const fullRect = target.getBoundingClientRect();
+    const gap = 14;
+    if (fullRect.height + guideHeight + gap <= bounds.height - 20) return fullRect;
+    const selectors = step && step.compactSelectors;
+    if (selectors && selectors.length) {
+      const parts = selectors.map(function (selector) {
+        return target.querySelector(selector);
+      }).filter(isVisible);
+      if (parts.length) {
+        const rects = parts.map(function (part) { return part.getBoundingClientRect(); });
+        return {
+          left: Math.min.apply(null, rects.map(function (r) { return r.left; })),
+          top: Math.min.apply(null, rects.map(function (r) { return r.top; })),
+          right: Math.max.apply(null, rects.map(function (r) { return r.right; })),
+          bottom: Math.max.apply(null, rects.map(function (r) { return r.bottom; }))
+        };
+      }
+    }
+    return fullRect;
+  }
   function rectForWelcome(state) {
     const a = state.brandPlaceholder.getBoundingClientRect();
     const b = state.introPlaceholder.getBoundingClientRect();
@@ -350,7 +396,7 @@
       const guideHeight = state.guide.getBoundingClientRect().height;
       const bounds = viewportBounds();
       const gap = 14;
-      let rect = isWelcome ? rectForWelcome(state) : (target ? target.getBoundingClientRect() : null);
+      let rect = isWelcome ? rectForWelcome(state) : getStepFocusRect(state.currentStep, target, guideHeight, bounds);
       let top;
 
       if (isWelcome) {
@@ -571,7 +617,9 @@
       whiteFrame: null,
       hole: null,
       guide: null,
-      controls: null
+      controls: null,
+      highlightFrame: 0,
+      highlightRect: null
     };
 
     const ui = createLayer();
