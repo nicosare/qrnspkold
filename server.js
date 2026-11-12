@@ -3111,8 +3111,7 @@ app.get('/api/admin/lucky', requireAdmin, (_req, res) => {
       paid: Number(stats.paid || 0),
       scansSpent: Number(stats.scansSpent || 0)
     },
-    prizeStats,
-    recent
+    prizeStats
   });
 });
 
