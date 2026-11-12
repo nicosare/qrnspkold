@@ -2606,6 +2606,7 @@ body.scan-loading-open { overflow: hidden !important; }
     const scanLoadingTransportChipElement = document.getElementById('scan-loading-transport-chip');
     const scanBalanceElement = document.getElementById('scan-balance-status');
     const scanBalanceExtraElement = document.getElementById('scan-balance-extra');
+    const topupButton = document.getElementById('start-balance-topup');
     const startOverlayElement = document.getElementById('start-overlay');
     const startScanButton = document.getElementById('start-scan-new');
     const continueCurrentScanButton = document.getElementById('continue-current-scan');
@@ -4175,19 +4176,115 @@ body.scan-loading-open { overflow: hidden !important; }
 
         const scanTariffsModal = document.getElementById('qride-scan-tariffs-modal');
         const scanTariffsGroups = document.getElementById('qride-scan-tariffs-groups');
+        const scanTariffsTitle = document.getElementById('qride-scan-tariffs-title');
+        const scanTariffsCopy = document.getElementById('qride-scan-tariffs-copy');
+        let qrideTopupPromptUserId = '';
+
+        function qrideTariffPromptDayKey() {
+            const parts = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Asia/Yekaterinburg', year: 'numeric', month: '2-digit', day: '2-digit'
+            }).formatToParts(new Date());
+            const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+            return values.year + '-' + values.month + '-' + values.day;
+        }
+        function qrideTariffPromptStorageKey() {
+            if (!qrideTopupPromptUserId) return '';
+            return 'qride:tariff-prompt:' + qrideTopupPromptUserId + ':' + qrideTariffPromptDayKey();
+        }
+        function qrideTariffPromptWasSeen() {
+            const key = qrideTariffPromptStorageKey();
+            if (!key) return false;
+            try { if (window.localStorage.getItem(key) === '1') return true; } catch (_) {}
+            try { if (window.sessionStorage.getItem(key) === '1') return true; } catch (_) {}
+            return false;
+        }
+        function markQrideTariffPromptSeen() {
+            const key = qrideTariffPromptStorageKey();
+            if (!key) return;
+            try { window.localStorage.setItem(key, '1'); } catch (_) {}
+            try { window.sessionStorage.setItem(key, '1'); } catch (_) {}
+        }
+
+        function maybeShowDailyTariffPrompt(session) {
+            if (!session || session.isAdmin === true || session.unlimited === true) return;
+            const now = Date.now();
+            const expiry = Date.parse(session.subscriptionUntil || '');
+            const activeSubscription = session.subscriptionActive === true && Number.isFinite(expiry) && expiry > now;
+            let prompt = null;
+
+            if (activeSubscription && expiry <= now + 3 * 86400000) {
+                const daysLeft = Math.max(1, Math.ceil((expiry - now) / 86400000));
+                const dayLabel = daysLeft === 1 ? 'день' : daysLeft < 5 ? 'дня' : 'дней';
+                prompt = {
+                    title: 'Продли QRide Plus',
+                    copy: 'Подписка действует ещё ' + daysLeft + ' ' + dayLabel +
+                        '. Продли её заранее — новый срок добавится к текущему.',
+                    subscriptionFirst: true
+                };
+            } else if (!activeSubscription) {
+                const paidBalance = Number(session.paidScanBalance);
+                if (Number.isFinite(paidBalance) && paidBalance <= 2) {
+                    prompt = paidBalance <= 0
+                        ? {
+                            title: 'Сканы в пакете закончились',
+                            copy: 'Пополнить запас можно в пару касаний. Ежедневный бесплатный скан останется доступен.',
+                            subscriptionFirst: false
+                        }
+                        : {
+                            title: 'Сканы заканчиваются',
+                            copy: 'В пакете осталось ' + paidBalance + (paidBalance === 1 ? ' скан' : ' скана') +
+                                '. Пополни запас заранее или выбери безлимит.',
+                            subscriptionFirst: false
+                        };
+                }
+            }
+
+            if (!prompt) return;
+            qrideTopupPromptUserId = String(session.vkUserId || '');
+            if (!qrideTopupPromptUserId || qrideTariffPromptWasSeen()) return;
+
+            let attempts = 0;
+            const tryShow = () => {
+                if (qrideTariffPromptWasSeen()) return;
+                if (document.visibilityState === 'hidden' || !startOverlayElement || startOverlayElement.hidden) return;
+                const anotherDialogOpen = Array.from(document.querySelectorAll('[role="dialog"]')).some(element =>
+                    element !== startOverlayElement && element !== scanTariffsModal && !element.hidden
+                );
+                if (anotherDialogOpen) {
+                    attempts += 1;
+                    if (attempts < 16) window.setTimeout(tryShow, 500);
+                    return;
+                }
+                openScanTariffsModal(prompt);
+            };
+            window.setTimeout(tryShow, 850);
+        }
+
         function closeScanTariffsModal() {
             if (!scanTariffsModal) return;
             scanTariffsModal.hidden = true;
             document.body.classList.remove('qride-lucky-open');
             document.body.style.overflow = '';
         }
-        function openScanTariffsModal() {
+        function openScanTariffsModal(options = {}) {
             const source = document.getElementById('start-offers-groups');
             if (source && scanTariffsGroups) scanTariffsGroups.innerHTML = source.innerHTML;
             if (!scanTariffsModal) return;
+            if (scanTariffsTitle) scanTariffsTitle.textContent = options.title || 'Пополнить баланс';
+            if (scanTariffsCopy) scanTariffsCopy.textContent = options.copy || 'Выбери подходящий тариф, чтобы продолжить сканирование.';
+            if (options.subscriptionFirst && scanTariffsGroups) {
+                const subscriptionGroup = scanTariffsGroups.querySelector('.start-subscription-group');
+                if (subscriptionGroup) scanTariffsGroups.prepend(subscriptionGroup);
+            }
             scanTariffsModal.hidden = false;
+            markQrideTariffPromptSeen();
             document.body.classList.add('qride-lucky-open');
             document.body.style.overflow = 'hidden';
+        }
+        if (topupButton) {
+            topupButton.addEventListener('click', function () {
+                openScanTariffsModal();
+            });
         }
         startScanButton.addEventListener('click', function () {
             if (scanBalanceAssigned && currentScanBalance <= 0 && !scanAccessUnlimited) {
@@ -4497,6 +4594,9 @@ body.scan-loading-open { overflow: hidden !important; }
       }
       scanSessionReady = true;
       updateScanBalance(session.scanBalance, session.subscriptionUntil, session.unlimited, session.subscriptionActive);
+      qrideTopupPromptUserId = String(session.vkUserId || '');
+      if (topupButton) topupButton.disabled = false;
+      maybeShowDailyTariffPrompt(session);
       updateContinueTicketButton(session.scanCount);
       restoreLatestTicketFromHistory(session.lastScan);
 
