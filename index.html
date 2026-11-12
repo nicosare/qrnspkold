@@ -6,6 +6,7 @@
     <title>QRide — Транспортные данные</title>
     <link rel="stylesheet" href="qride-collect.css?v=20261108-2">
     <link rel="stylesheet" href="qride-lucky.css?v=20261112-4">
+    <link rel="stylesheet" href="qride-onboarding.css?v=20261112-1">
     <script>
     (function () {
         var params = new URLSearchParams(window.location.search);
@@ -4169,6 +4170,12 @@ body.scan-loading-open { overflow: hidden !important; }
             }, typingSpeed);
         }
         window.refreshRoadnoteMoodMessage = renderRoadnoteMoodMessage;
+        window.qridePauseMoodMessage = function () {
+            if (moodTypingTimer) {
+                clearInterval(moodTypingTimer);
+                moodTypingTimer = null;
+            }
+        };
         renderRoadnoteMoodMessage();
 
         loadFromLocalStorage();
@@ -4264,9 +4271,9 @@ body.scan-loading-open { overflow: hidden !important; }
                     const anotherDialogOpen = Array.from(document.querySelectorAll('[role="dialog"]')).some(element =>
                         element !== startOverlayElement && element !== scanTariffsModal && !element.hidden
                     );
-                    if (anotherDialogOpen) {
+                    if (anotherDialogOpen || window.qrideOnboardingActive) {
                         attempts += 1;
-                        if (attempts < 16) window.setTimeout(tryShow, 500);
+                        if (attempts < 120) window.setTimeout(tryShow, 500);
                         return;
                     }
                     openScanTariffsModal(prompt);
@@ -6687,6 +6694,7 @@ body.scan-loading-open { overflow: hidden !important; }
 </script>
 <script src="qride-mascot.js"></script>
 <script src="qride-collect.js?v=20261108-2"></script>
+<script src="qride-onboarding.js?v=20261112-1"></script>
 <script src="qride-lucky.js?v=20261112-3"></script>
 
 
