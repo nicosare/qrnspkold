@@ -1401,6 +1401,14 @@ function decideTariffRequest(requestId, decision) {
         'UPDATE users SET game_attempts = COALESCE(game_attempts, 0) + ? WHERE vk_id = ?'
       ).run(energyBonus, String(request.vk_id));
       if (energyGrant.changes !== 1) throw new Error('Не удалось начислить бонус энергии.');
+      recordAnalyticsEvent(String(request.vk_id), 'payment_confirmed', {
+        offerId: String(request.offer_id || ''),
+        offerName: String(request.offer_name || ''),
+        offerKind: String(request.offer_kind || ''),
+        quantity: Number(request.quantity) || 0,
+        priceRub: Number(request.price_rub) || 0,
+        paymentMethod: 'manual_review'
+      }, 'purchase:' + request.id, nowIso);
     }
 
     return { ok: true, request: { ...request, status: nextStatus }, subscriptionUntil, energyBonus };
@@ -2236,6 +2244,10 @@ app.post('/api/tariffs/request', async (req, res) => {
       );
       requestId = Number(created.lastInsertRowid);
       db.prepare('UPDATE tariff_requests SET payment_label = ? WHERE id = ?').run('roadnote-request-' + requestId, requestId);
+      recordAnalyticsEvent(userId, 'tariff_request_created', {
+        offerId: offer.id, offerName: offer.name, offerKind: offer.kind,
+        quantity: offer.quantity, priceRub
+      }, 'tariff-request:' + requestId, nowIso);
       if (selectedPromo) db.prepare("UPDATE promo_code_applications SET tariff_request_id = ? WHERE id = ? AND vk_id = ? AND status = 'selected'").run(requestId, selectedPromo.applicationId, userId);
     })();
   } catch (error) {
@@ -2486,6 +2498,14 @@ app.post('/api/yoomoney/notification', (req, res) => {
           "UPDATE tariff_requests SET status = 'approved', payment_operation_id = ?, payment_confirmed_at = ?, updated_at = ?, completed_at = ? WHERE id = ? AND status = 'awaiting_payment'"
         ).run(operationId, nowIso, nowIso, nowIso, requestId);
         if (marked.changes !== 1) throw new Error('Purchase state changed during YooMoney processing');
+        recordAnalyticsEvent(String(request.vk_id), 'payment_confirmed', {
+          offerId: String(request.offer_id || ''),
+          offerName: String(request.offer_name || ''),
+          offerKind: String(request.offer_kind || ''),
+          quantity: Number(request.quantity) || 0,
+          priceRub: Number(request.price_rub) || 0,
+          paymentMethod: 'yoomoney'
+        }, 'purchase:' + request.id, nowIso);
         if (request.promo_application_id) {
           db.prepare("UPDATE promo_code_applications SET status = 'used', used_at = ?, tariff_request_id = ? WHERE id = ? AND vk_id = ? AND status = 'selected'")
             .run(nowIso, requestId, Number(request.promo_application_id), String(request.vk_id));
@@ -2833,9 +2853,13 @@ app.post('/api/paytag', async (req, res) => {
         Date.parse(currentEntitlement.subscription_until) > Date.now()
       );
       const currentUnlimited = Number(currentEntitlement?.unlimited || 0) === 1 || currentSubscriptionActive;
+      let scanBillingSource = currentUnlimited
+        ? (currentSubscriptionActive ? 'subscription' : 'unlimited')
+        : 'daily';
 
       if (!currentUnlimited) {
         const currentPaidBalance = Math.max(0, Number(currentEntitlement?.scan_balance || 0));
+        if (currentPaidBalance > 0) scanBillingSource = 'package';
         const spent = currentPaidBalance > 0
           ? spendUserScan.run(userId)
           : spendDailyScan.run(userId, rewardDayKey);
@@ -2857,6 +2881,11 @@ app.post('/api/paytag', async (req, res) => {
         String(data.vehicleNumber || ''),
         Number.isFinite(data.price) ? data.price : null
       );
+      recordAnalyticsEvent(userId, 'scan_completed', {
+        scanSource: scanBillingSource,
+        transportType: String(data.transportType || '').slice(0, 40),
+        routeNumber: String(data.routeNumber || '').slice(0, 24)
+      }, userId + ':scan:' + scanRequestId, scannedAt);
 
       // A successful trip today makes the daily fallback unavailable for the rest of the day,
       // even when this particular trip used a paid scan or subscription.
@@ -2988,6 +3017,9 @@ app.post('/api/session', (req, res) => {
         }
       })();
     }
+    if (req.body?.refreshOnly !== true) {
+      recordAnalyticsEvent(userId, 'app_open', {}, 'app-open:' + userId + ':' + crypto.randomBytes(12).toString('hex'));
+    }
     ensureDailyScan(userId);
     const balanceRow = getUserScanBalance.get(userId);
     const scanBalance = getDisplayedScanBalance(balanceRow);
@@ -3024,6 +3056,29 @@ app.post('/api/referral-prompt/disable', (req, res) => {
   try {
     const { userId } = parseLaunchParams(req.body?.launchParams);
     disableReferralPrompts.run(userId, new Date().toISOString());
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(401).json({ error: 'VK authentication failed' });
+  }
+});
+
+app.post('/api/analytics/event', (req, res) => {
+  try {
+    const { userId } = parseLaunchParams(req.body?.launchParams);
+    const eventName = String(req.body?.eventName || '');
+    const allowedClientEvents = new Set(['tariffs_viewed', 'tariff_buy_click']);
+    if (!allowedClientEvents.has(eventName)) {
+      return res.status(400).json({ error: 'Unsupported analytics event.' });
+    }
+    const eventId = String(req.body?.eventId || '');
+    if (!/^[A-Za-z0-9_-]{12,100}$/.test(eventId)) {
+      return res.status(400).json({ error: 'Invalid analytics event ID.' });
+    }
+    const input = req.body?.properties && typeof req.body.properties === 'object' ? req.body.properties : {};
+    const properties = {};
+    if (typeof input.offerId === 'string' && /^[a-z0-9_]{2,40}$/i.test(input.offerId)) properties.offerId = input.offerId;
+    if (typeof input.entryPoint === 'string') properties.entryPoint = input.entryPoint.slice(0, 32);
+    recordAnalyticsEvent(userId, eventName, properties, userId + ':client:' + eventId);
     return res.json({ ok: true });
   } catch (error) {
     return res.status(401).json({ error: 'VK authentication failed' });
