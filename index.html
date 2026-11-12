@@ -1264,6 +1264,46 @@
             .info-overlay, #faq-overlay .faq-sheet, #game-streak-overlay .game-streak-sheet { transition:none !important; }
         }
 
+        #referral-prompt-overlay { z-index:18000; opacity:1; transition:opacity .18s ease; }
+        #referral-prompt-overlay[hidden] { display:none !important; opacity:0; }
+        #referral-prompt-overlay.referral-prompt-opening,
+        #referral-prompt-overlay.referral-prompt-closing { opacity:0; }
+        #referral-prompt-overlay.referral-prompt-closing { pointer-events:none; }
+        #referral-prompt-overlay .referral-prompt-sheet {
+            position:relative; box-sizing:border-box; width:min(100%,520px);
+            max-height:min(80dvh,620px); padding:10px 21px calc(22px + env(safe-area-inset-bottom));
+            overflow-y:auto; overscroll-behavior-y:contain; touch-action:pan-y;
+            border:1px solid rgba(255,255,255,.82); border-bottom:0;
+            border-radius:25px 25px 0 0; background:#fff;
+            box-shadow:0 -12px 36px rgba(13,30,52,.16);
+            opacity:1; transform:translateY(0);
+            transition:transform .22s cubic-bezier(.2,.75,.25,1),opacity .18s ease;
+            will-change:transform,opacity;
+        }
+        #referral-prompt-overlay.referral-prompt-opening .referral-prompt-sheet { transform:translateY(18px); opacity:.6; }
+        #referral-prompt-overlay.referral-prompt-closing .referral-prompt-sheet { transform:translateY(24px); opacity:0; }
+        .referral-prompt-body { display:flex; flex-direction:column; align-items:stretch; gap:10px; text-align:center; }
+        .referral-prompt-lead { margin:0 0 5px; color:#647386; font-size:14px; line-height:1.55; }
+        .referral-prompt-reward {
+            box-sizing:border-box; width:100%; padding:15px 16px;
+            border:1px solid #dce8f8; border-radius:16px; background:#f2f7ff;
+            color:#253c5b; font-size:14px; line-height:1.45; text-align:center;
+        }
+        .referral-prompt-reward strong { display:block; margin-bottom:4px; color:#0052EE; font-size:19px; font-weight:900; }
+        .referral-prompt-secondary, .referral-prompt-never {
+            width:100%; min-height:42px; border:0; border-radius:12px;
+            background:#f1f4f8; color:#53647a; font:inherit; font-size:13px; font-weight:750;
+            cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+        }
+        .referral-prompt-never { min-height:34px; background:transparent; color:#8a95a3; font-size:12px; font-weight:600; }
+        .referral-prompt-secondary:active, .referral-prompt-never:active { transform:scale(.985); }
+        @media(max-width:540px) {
+            #referral-prompt-overlay .referral-prompt-sheet { width:100%; padding:10px 17px calc(22px + env(safe-area-inset-bottom)); }
+        }
+        @media(prefers-reduced-motion:reduce) {
+            #referral-prompt-overlay, #referral-prompt-overlay .referral-prompt-sheet { transition:none !important; }
+        }
+
         /* The start screen is available immediately; only changed data gets a small reveal. */
         .start-balance-card {
             transition: box-shadow .22s ease, transform .22s cubic-bezier(.2,.75,.25,1);
@@ -2104,6 +2144,30 @@ body.scan-loading-open { overflow: hidden !important; }
     </div>
 </section>
 
+<section class="info-overlay" id="referral-prompt-overlay" role="dialog" aria-modal="true" aria-labelledby="referral-prompt-title" hidden>
+    <div class="referral-prompt-sheet">
+        <div class="info-sheet-grabber" aria-hidden="true"></div>
+        <header class="info-sheet-header">
+            <div>
+                <span class="faq-kicker">QRIDE · ПРИГЛАШЕНИЕ</span>
+                <h2 class="info-sheet-title" id="referral-prompt-title">Поездка оформлена!</h2>
+                <p class="info-sheet-subtitle">Поделись QRide с другом — за его первое успешное сканирование ты получишь бонус.</p>
+            </div>
+            <button class="info-sheet-close" id="referral-prompt-close" type="button" aria-label="Закрыть">×</button>
+        </header>
+        <div class="referral-prompt-body">
+            <p class="referral-prompt-lead">Приглашай друзей, чтобы вместе пользоваться QRide и получать дополнительные сканы.</p>
+            <div class="referral-prompt-reward">
+                <strong>+3 скана</strong>
+                Когда приглашённый друг впервые успешно отсканирует QR-код
+            </div>
+            <button class="game-streak-modal-cta" id="referral-prompt-invite" type="button">Пригласить друга</button>
+            <button class="referral-prompt-secondary" id="referral-prompt-later" type="button">Не сейчас</button>
+            <button class="referral-prompt-never" id="referral-prompt-never" type="button">Больше не показывать</button>
+        </div>
+    </div>
+</section>
+
 <section class="admin-panel-overlay" id="admin-panel-overlay" role="dialog" aria-modal="true" aria-labelledby="admin-panel-title" hidden>
     <header class="admin-panel-header">
         <button class="admin-panel-back" id="admin-panel-back" type="button" aria-label="Вернуться в QRide">‹</button>
@@ -2532,8 +2596,102 @@ body.scan-loading-open { overflow: hidden !important; }
     const referralShareButton = document.getElementById('start-referral-share');
     const referralCopyButton = document.getElementById('start-referral-copy');
     const referralStatus = document.getElementById('start-referral-status');
+    const referralPromptOverlay = document.getElementById('referral-prompt-overlay');
+    const referralPromptInviteButton = document.getElementById('referral-prompt-invite');
+    const referralPromptLaterButton = document.getElementById('referral-prompt-later');
+    const referralPromptNeverButton = document.getElementById('referral-prompt-never');
+    const referralPromptCloseButton = document.getElementById('referral-prompt-close');
+    const referralPromptPendingKey = 'qride:referral-prompt-pending';
+    const referralPromptDisabledKey = 'qride:referral-prompt-disabled';
+    let pendingReferralPrompt = false;
+    let referralPromptTimer = null;
     let currentReferralLink = '';
     const pageBody = document.body;
+
+    function rememberReferralPrompt(scanData) {
+        if (!scanData || scanData.referralPromptDue !== true) return;
+        pendingReferralPrompt = true;
+        try { window.sessionStorage.setItem(referralPromptPendingKey, '1'); } catch (_) {}
+    }
+
+    function hasPendingReferralPrompt() {
+        if (pendingReferralPrompt) return true;
+        try { return window.sessionStorage.getItem(referralPromptPendingKey) === '1'; } catch (_) { return false; }
+    }
+
+    function clearPendingReferralPrompt() {
+        pendingReferralPrompt = false;
+        try { window.sessionStorage.removeItem(referralPromptPendingKey); } catch (_) {}
+    }
+
+    function closeReferralPrompt() {
+        if (!referralPromptOverlay || referralPromptOverlay.hidden) return;
+        referralPromptOverlay.classList.add('referral-prompt-closing');
+        pageBody.classList.remove('referral-prompt-open');
+        window.setTimeout(() => {
+            referralPromptOverlay.hidden = true;
+            referralPromptOverlay.classList.remove('referral-prompt-closing', 'referral-prompt-opening');
+        }, 230);
+    }
+
+    function showPendingReferralPrompt() {
+        if (referralPromptTimer) window.clearTimeout(referralPromptTimer);
+        if (!hasPendingReferralPrompt() || !referralPromptOverlay) return;
+        referralPromptTimer = window.setTimeout(() => {
+            referralPromptTimer = null;
+            if (!hasPendingReferralPrompt() || startOverlayElement.hidden || !referralPromptOverlay.hidden) return;
+            try {
+                if (window.localStorage.getItem(referralPromptDisabledKey) === '1') {
+                    clearPendingReferralPrompt();
+                    return;
+                }
+            } catch (_) {}
+            clearPendingReferralPrompt();
+            pageBody.classList.add('referral-prompt-open');
+            referralPromptOverlay.hidden = false;
+            referralPromptOverlay.classList.remove('referral-prompt-closing');
+            referralPromptOverlay.classList.add('referral-prompt-opening');
+            window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+                if (referralPromptOverlay && !referralPromptOverlay.hidden) {
+                    referralPromptOverlay.classList.remove('referral-prompt-opening');
+                }
+            }));
+        }, 360);
+    }
+
+    function disableReferralPromptForever() {
+        try { window.localStorage.setItem(referralPromptDisabledKey, '1'); } catch (_) {}
+        clearPendingReferralPrompt();
+        closeReferralPrompt();
+        const pathname = window.location.pathname;
+        const appBase = pathname.endsWith('/')
+            ? pathname
+            : (pathname.slice(pathname.lastIndexOf('/') + 1).includes('.')
+                ? pathname.slice(0, pathname.lastIndexOf('/') + 1)
+                : pathname + '/');
+        fetch(new URL(appBase + 'api/referral-prompt/disable', window.location.origin), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ launchParams: window.location.search.slice(1) }),
+            cache: 'no-store',
+            credentials: 'omit'
+        }).catch(error => console.warn('[QRide referral prompt] Could not save preference:', error));
+    }
+
+    if (referralPromptInviteButton) {
+        referralPromptInviteButton.addEventListener('click', () => {
+            closeReferralPrompt();
+            if (referralShareButton && !referralShareButton.disabled) referralShareButton.click();
+        });
+    }
+    if (referralPromptLaterButton) referralPromptLaterButton.addEventListener('click', closeReferralPrompt);
+    if (referralPromptCloseButton) referralPromptCloseButton.addEventListener('click', closeReferralPrompt);
+    if (referralPromptNeverButton) referralPromptNeverButton.addEventListener('click', disableReferralPromptForever);
+    if (referralPromptOverlay) {
+        referralPromptOverlay.addEventListener('click', event => {
+            if (event.target === referralPromptOverlay) closeReferralPrompt();
+        });
+    }
 
     function ensureScanLoadingMascot() {
         if (!scanLoadingMascotElement || scanLoadingMascotElement.querySelector('svg')) return;
@@ -3432,7 +3590,10 @@ body.scan-loading-open { overflow: hidden !important; }
             scanBalance: Object.prototype.hasOwnProperty.call(payload, 'scanBalance') ? payload.scanBalance : null,
             subscriptionUntil: payload.subscriptionUntil || null,
             unlimited: payload.unlimited === true,
-            subscriptionActive: payload.subscriptionActive === true
+            subscriptionActive: payload.subscriptionActive === true,
+            successfulScanCount: Number(payload.successfulScanCount) || 0,
+            hasInvitedFriend: payload.hasInvitedFriend === true,
+            referralPromptDue: payload.referralPromptDue === true
         };
     }
 
@@ -3473,6 +3634,7 @@ body.scan-loading-open { overflow: hidden !important; }
             if (!data.vehicleType || !data.routeNumber || !data.vehicleNumber) {
                 throw new Error('Сервер НСПК не вернул все данные транспорта: тип, маршрут и номер Т/С.');
             }
+            rememberReferralPrompt(data);
 
             const route = String(data.routeNumber || '').replace(/^№\s*/, '').trim();
             const transportLabel = (data.vehicleType || 'Транспорт') + (route ? ' №' + route : '');
@@ -3565,6 +3727,7 @@ body.scan-loading-open { overflow: hidden !important; }
         resetStartOverlayScrollToTop();
         if (typeof window.refreshRoadnoteMoodMessage === 'function') window.refreshRoadnoteMoodMessage();
         refreshScanButton();
+        showPendingReferralPrompt();
     }
 
     window.addEventListener('popstate', function (event) {
@@ -4134,6 +4297,7 @@ body.scan-loading-open { overflow: hidden !important; }
     if (referralShareButton) referralShareButton.disabled = !currentReferralLink;
     if (referralCopyButton) referralCopyButton.disabled = !currentReferralLink;
     if (referralQrToggle) referralQrToggle.disabled = !currentReferralLink;
+    if (referralPromptInviteButton) referralPromptInviteButton.disabled = !currentReferralLink;
     if (referralQrElement) {
       referralQrElement.replaceChildren();
       if (referralQrToggle) {
