@@ -29,6 +29,7 @@
   let state = null;
   let activeModal = null;
   let activeSpin = null;
+  let activeRevealPromise = null;
   let spinning = false;
   let spinAnimationToken = 0;
   let idleFrame = 0;
@@ -248,18 +249,34 @@
       else if (!activeModal) startIdle();
     }, 220);
   }
+  async function revealSpin(spin) {
+    const data = await apiPost('api/lucky/reveal', { spinId: spin.id });
+    if (data.entitlement) window.dispatchEvent(new CustomEvent('qride:entitlement-state', { detail: data.entitlement }));
+    if (data.gameState) window.dispatchEvent(new CustomEvent('qride:game-state', { detail: data.gameState }));
+    resultDetail.textContent = amountDetail(spin);
+    return true;
+  }
   async function acknowledgeSpin(spinId) {
     const completedSpin = activeSpin;
     try {
+      if (!completedSpin || Number(completedSpin.id) !== Number(spinId)) {
+        throw new Error('Не удалось определить награду. Закрой и снова открой «Билет удачи».');
+      }
+      // Never acknowledge a spin until its reward is durably credited.
+      let revealed = activeRevealPromise ? await activeRevealPromise : false;
+      if (!revealed) revealed = await revealSpin(completedSpin);
+      if (!revealed) throw new Error('Награда ещё не начислена.');
       await apiPost('api/lucky/ack', { spinId: spinId });
     } catch (error) {
       console.warn('[QRide lucky acknowledgement]', error.message);
-      activeSpin = null;
       if (state && completedSpin) state.pendingResult = completedSpin;
-      if (completedSpin) showResult(completedSpin, true);
+      setStatus('Не удалось подтвердить начисление. Награда сохранена — попробуй закрыть это окно ещё раз.', true);
+      openModal(resultModal);
+      activeRevealPromise = Promise.resolve(false);
       return;
     }
     activeSpin = null;
+    activeRevealPromise = null;
     try { sessionStorage.removeItem(storageKey); } catch (_) {}
     if (state) state.pendingResult = null;
     updateControls();
@@ -274,16 +291,15 @@
     resultIcon.innerHTML = iconForResult(spin.rewardType);
     resultIcon.classList.toggle('is-subscription', spin.rewardType === 'subscription');
     resultTitle.textContent = spin.title || 'Награда получена';
-    resultDetail.textContent = amountDetail(spin);
+    resultDetail.textContent = 'Начисляем награду…';
     resultMeta.textContent = '';
     resultMeta.hidden = true;
-    if (restored) setStatus('Прокрутка завершилась, пока приложение было закрыто. Награда уже начислена.', false);
+    if (restored) setStatus('Прокрутка завершилась. Сейчас завершим начисление награды.', false);
     openModal(resultModal);
-    apiPost('api/lucky/reveal', { spinId: spin.id }).then(function (data) {
-      if (data.entitlement) window.dispatchEvent(new CustomEvent('qride:entitlement-state', { detail: data.entitlement }));
-      if (data.gameState) window.dispatchEvent(new CustomEvent('qride:game-state', { detail: data.gameState }));
-    }).catch(function (error) {
+    activeRevealPromise = revealSpin(spin).catch(function (error) {
       console.warn('[QRide lucky reveal]', error.message);
+      setStatus('Не удалось начислить награду. Она сохранена — попробуй закрыть это окно ещё раз.', true);
+      return false;
     });
   }
   function renderFaqPrizes() {
@@ -425,7 +441,9 @@
       setStatus('', false);
       if (data.spin) {
         const animationCompleted = await animateToPrize(data.spin);
-        if (animationCompleted) showResult(data.spin, false);
+        // If the WebView suspends or interrupts requestAnimationFrame, do not
+        // leave the user with a disabled button and a hidden pending reward.
+        showResult(data.spin, !animationCompleted);
       }
     } catch (error) {
       if (error.status === 402 && error.data && error.data.code === 'INSUFFICIENT_SCANS') {
