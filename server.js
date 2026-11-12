@@ -3153,7 +3153,6 @@ app.get('/api/admin/analytics', requireAdmin, (req, res) => {
     'WHERE event_name = ? AND created_at >= ? AND created_at < ?' + (adminVkId ? ' AND vk_id <> ?' : '') +
     ' ORDER BY created_at ASC'
   ).all(...paymentParams);
-  const purchasesByUser = new Map();
   const offerMap = new Map();
   let revenueRub = 0;
   for (const row of paymentRows) {
@@ -3161,7 +3160,6 @@ app.get('/api/admin/analytics', requireAdmin, (req, res) => {
     try { props = JSON.parse(row.properties_json || '{}'); } catch (_) {}
     const price = Math.max(0, Number(props.priceRub) || 0);
     revenueRub += price;
-    purchasesByUser.set(row.vk_id, (purchasesByUser.get(row.vk_id) || 0) + 1);
     const offerId = String(props.offerId || 'unknown');
     const current = offerMap.get(offerId) || {
       offerId, offerName: String(props.offerName || offerId), purchases: 0, revenueRub: 0
@@ -3170,9 +3168,19 @@ app.get('/api/admin/analytics', requireAdmin, (req, res) => {
     current.revenueRub += price;
     offerMap.set(offerId, current);
   }
-  const buyerCounts = Array.from(purchasesByUser.values());
-  const repeatBuyers = buyerCounts.filter(count => count > 1).length;
-  const repeatPurchases = buyerCounts.reduce((sum, count) => sum + Math.max(0, count - 1), 0);
+  const repeatParams = adminVkId
+    ? [startIso, endIso, adminVkId]
+    : [startIso, endIso];
+  const repeatPurchaseStats = db.prepare(
+    'SELECT COUNT(DISTINCT current.vk_id) AS repeat_buyers, COUNT(*) AS repeat_purchases ' +
+    'FROM analytics_events current WHERE current.event_name = ? AND current.created_at >= ? AND current.created_at < ?' +
+    (adminVkId ? ' AND current.vk_id <> ?' : '') +
+    ' AND EXISTS (SELECT 1 FROM analytics_events previous WHERE previous.vk_id = current.vk_id ' +
+    "AND previous.event_name = 'payment_confirmed' AND " +
+    '(previous.created_at < current.created_at OR (previous.created_at = current.created_at AND previous.rowid < current.rowid)))'
+  ).get('payment_confirmed', ...repeatParams);
+  const repeatBuyers = Number(repeatPurchaseStats?.repeat_buyers || 0);
+  const repeatPurchases = Number(repeatPurchaseStats?.repeat_purchases || 0);
 
   const scanParams = adminVkId
     ? ['scan_completed', startIso, endIso, adminVkId]
