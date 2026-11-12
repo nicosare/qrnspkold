@@ -3103,6 +3103,170 @@ app.get('/api/events', (req, res) => {
   });
 });
 
+app.get('/api/admin/analytics', requireAdmin, (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const validDate = value => {
+    const text = String(value || '');
+    if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(text)) return false;
+    const date = new Date(text + 'T00:00:00.000Z');
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === text;
+  };
+  const today = new Date().toISOString().slice(0, 10);
+  const defaultFrom = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
+  const from = validDate(req.query.from) ? String(req.query.from) : defaultFrom;
+  const to = validDate(req.query.to) ? String(req.query.to) : today;
+  if (from > to) return res.status(400).json({ error: 'Начало периода позже конца.' });
+  const startIso = from + 'T00:00:00.000Z';
+  const endIso = new Date(Date.parse(to + 'T00:00:00.000Z') + 86400000).toISOString();
+  const excluded = adminVkId ? ' AND vk_id <> ?' : '';
+  const eventParams = adminVkId ? [startIso, endIso, adminVkId] : [startIso, endIso];
+
+  const eventRows = db.prepare(
+    'SELECT event_name, COUNT(*) AS events, COUNT(DISTINCT vk_id) AS users ' +
+    'FROM analytics_events WHERE created_at >= ? AND created_at < ?' + excluded +
+    ' GROUP BY event_name'
+  ).all(...eventParams);
+  const eventMap = Object.fromEntries(eventRows.map(row => [row.event_name, {
+    events: Number(row.events || 0), users: Number(row.users || 0)
+  }]));
+
+  const funnelNames = [
+    ['app_open', 'Открыли QRide'],
+    ['tariffs_viewed', 'Открыли тарифы'],
+    ['tariff_buy_click', 'Нажали «Купить»'],
+    ['tariff_request_created', 'Создали заявку'],
+    ['payment_confirmed', 'Успешно оплатили']
+  ];
+  const funnel = funnelNames.map(([key, label]) => ({
+    key, label, events: eventMap[key]?.events || 0, users: eventMap[key]?.users || 0
+  }));
+  for (let index = 0; index < funnel.length; index += 1) {
+    const base = index === 0 ? funnel[0].users : funnel[index - 1].users;
+    funnel[index].conversion = base > 0 ? Number((funnel[index].users / base * 100).toFixed(1)) : 0;
+  }
+
+  const paymentParams = adminVkId
+    ? ['payment_confirmed', startIso, endIso, adminVkId]
+    : ['payment_confirmed', startIso, endIso];
+  const paymentRows = db.prepare(
+    'SELECT vk_id, properties_json FROM analytics_events ' +
+    'WHERE event_name = ? AND created_at >= ? AND created_at < ?' + (adminVkId ? ' AND vk_id <> ?' : '') +
+    ' ORDER BY created_at ASC'
+  ).all(...paymentParams);
+  const purchasesByUser = new Map();
+  const offerMap = new Map();
+  let revenueRub = 0;
+  for (const row of paymentRows) {
+    let props = {};
+    try { props = JSON.parse(row.properties_json || '{}'); } catch (_) {}
+    const price = Math.max(0, Number(props.priceRub) || 0);
+    revenueRub += price;
+    purchasesByUser.set(row.vk_id, (purchasesByUser.get(row.vk_id) || 0) + 1);
+    const offerId = String(props.offerId || 'unknown');
+    const current = offerMap.get(offerId) || {
+      offerId, offerName: String(props.offerName || offerId), purchases: 0, revenueRub: 0
+    };
+    current.purchases += 1;
+    current.revenueRub += price;
+    offerMap.set(offerId, current);
+  }
+  const buyerCounts = Array.from(purchasesByUser.values());
+  const repeatBuyers = buyerCounts.filter(count => count > 1).length;
+  const repeatPurchases = buyerCounts.reduce((sum, count) => sum + Math.max(0, count - 1), 0);
+
+  const scanParams = adminVkId
+    ? ['scan_completed', startIso, endIso, adminVkId]
+    : ['scan_completed', startIso, endIso];
+  const scanRows = db.prepare(
+    'SELECT properties_json FROM analytics_events WHERE event_name = ? AND created_at >= ? AND created_at < ?' +
+    (adminVkId ? ' AND vk_id <> ?' : '')
+  ).all(...scanParams);
+  const scanSources = { subscription: 0, unlimited: 0, package: 0, daily: 0, unknown: 0 };
+  for (const row of scanRows) {
+    let props = {};
+    try { props = JSON.parse(row.properties_json || '{}'); } catch (_) {}
+    const source = Object.prototype.hasOwnProperty.call(scanSources, props.scanSource) ? props.scanSource : 'unknown';
+    scanSources[source] += 1;
+  }
+
+  const referralWhere = 'created_at >= ? AND created_at < ?' + (adminVkId ? ' AND inviter_vk_id <> ?' : '');
+  const referralParams = adminVkId ? [startIso, endIso, adminVkId] : [startIso, endIso];
+  const referralStats = db.prepare(
+    'SELECT COUNT(*) AS opened, SUM(CASE WHEN rewarded_at IS NOT NULL THEN 1 ELSE 0 END) AS rewarded ' +
+    'FROM referrals WHERE ' + referralWhere
+  ).get(...referralParams);
+
+  const luckyParams = adminVkId ? [startIso, endIso, adminVkId] : [startIso, endIso];
+  const lucky = db.prepare(
+    'SELECT COUNT(*) AS spins, SUM(CASE WHEN is_free = 1 THEN 1 ELSE 0 END) AS free_spins, ' +
+    'SUM(CASE WHEN is_free = 0 THEN 1 ELSE 0 END) AS paid_spins, COALESCE(SUM(scan_cost), 0) AS scans_spent ' +
+    'FROM lucky_spins WHERE created_at >= ? AND created_at < ?' + (adminVkId ? ' AND vk_id <> ?' : '')
+  ).get(...luckyParams);
+
+  const retentionParams = adminVkId ? [endIso, adminVkId, from, to] : [endIso, from, to];
+  const retentionSql =
+    'WITH first_visits AS (' +
+    ' SELECT vk_id, MIN(date(created_at)) AS cohort_day FROM analytics_events' +
+    ' WHERE event_name = ? AND created_at < ?' + (adminVkId ? ' AND vk_id <> ?' : '') +
+    ' GROUP BY vk_id HAVING cohort_day >= date(?) AND cohort_day <= date(?)' +
+    ') SELECT COUNT(*) AS cohort_users,' +
+    ' SUM(CASE WHEN EXISTS (SELECT 1 FROM analytics_events e WHERE e.vk_id = c.vk_id AND e.event_name = ? AND date(e.created_at) = date(c.cohort_day, \'+1 day\')) THEN 1 ELSE 0 END) AS day1,' +
+    ' SUM(CASE WHEN EXISTS (SELECT 1 FROM analytics_events e WHERE e.vk_id = c.vk_id AND e.event_name = ? AND date(e.created_at) = date(c.cohort_day, \'+7 days\')) THEN 1 ELSE 0 END) AS day7,' +
+    ' SUM(CASE WHEN EXISTS (SELECT 1 FROM analytics_events e WHERE e.vk_id = c.vk_id AND e.event_name = ? AND date(e.created_at) = date(c.cohort_day, \'+30 days\')) THEN 1 ELSE 0 END) AS day30' +
+    ' FROM first_visits c';
+  const retention = db.prepare(retentionSql).get(
+    ...(['app_open', ...retentionParams, 'app_open', 'app_open', 'app_open'])
+  );
+
+  const trend = db.prepare(
+    'SELECT date(created_at) AS day, ' +
+    "SUM(CASE WHEN event_name = 'payment_confirmed' THEN 1 ELSE 0 END) AS purchases, " +
+    "SUM(CASE WHEN event_name = 'scan_completed' THEN 1 ELSE 0 END) AS scans, " +
+    "SUM(CASE WHEN event_name = 'payment_confirmed' THEN CAST(json_extract(properties_json, '$.priceRub') AS REAL) ELSE 0 END) AS revenueRub " +
+    'FROM analytics_events WHERE created_at >= ? AND created_at < ?' + excluded +
+    ' GROUP BY date(created_at) ORDER BY day'
+  ).all(...eventParams).map(row => ({
+    day: row.day, purchases: Number(row.purchases || 0),
+    scans: Number(row.scans || 0), revenueRub: Number(row.revenueRub || 0)
+  }));
+
+  return res.json({
+    period: { from, to },
+    funnel,
+    summary: {
+      activeUsers: eventMap.app_open?.users || 0,
+      appOpens: eventMap.app_open?.events || 0,
+      tariffViews: eventMap.tariffs_viewed?.events || 0,
+      buyClicks: eventMap.tariff_buy_click?.events || 0,
+      requests: eventMap.tariff_request_created?.events || 0,
+      purchases: paymentRows.length,
+      revenueRub: Number(revenueRub.toFixed(2)),
+      repeatBuyers, repeatPurchases
+    },
+    scans: {
+      total: scanRows.length, subscription: scanSources.subscription,
+      unlimited: scanSources.unlimited, package: scanSources.package,
+      daily: scanSources.daily, unknown: scanSources.unknown
+    },
+    referrals: {
+      opened: Number(referralStats?.opened || 0),
+      rewarded: Number(referralStats?.rewarded || 0),
+      rewardConversion: Number(referralStats?.opened || 0) > 0
+        ? Number((Number(referralStats.rewarded || 0) / Number(referralStats.opened) * 100).toFixed(1)) : 0
+    },
+    lucky: {
+      spins: Number(lucky?.spins || 0), freeSpins: Number(lucky?.free_spins || 0),
+      paidSpins: Number(lucky?.paid_spins || 0), scansSpent: Number(lucky?.scans_spent || 0)
+    },
+    retention: {
+      cohortUsers: Number(retention?.cohort_users || 0), day1: Number(retention?.day1 || 0),
+      day7: Number(retention?.day7 || 0), day30: Number(retention?.day30 || 0)
+    },
+    offers: Array.from(offerMap.values()).sort((a, b) => b.purchases - a.purchases),
+    trend
+  });
+});
+
 app.get('/api/admin/promocodes', requireAdmin, (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const now = Date.now();
