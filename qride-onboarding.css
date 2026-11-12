@@ -27,6 +27,11 @@
   pointer-events: none;
 }
 .qride-tour-shade { fill: rgba(12, 23, 38, .68); }
+.qride-tour-frame-blue,
+.qride-tour-frame-white {
+  opacity: 1;
+  transition: opacity .22s ease;
+}
 .qride-tour-frame-blue {
   fill: none;
   stroke: #0052ee;
