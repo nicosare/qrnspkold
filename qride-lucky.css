@@ -83,7 +83,7 @@
 .qride-lucky-result-actions .qride-lucky-result-secondary { border: 1px solid #e2e8f0; background: #fff; color: #536579; box-shadow: none; }
 .qride-lucky-result-actions .qride-lucky-result-secondary:active { transform: scale(.985); }
 .qride-lucky-result-again { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
-.qride-lucky-result-again small { color: #7b8795; font-size: 10px; font-weight: 700; line-height: 1.1; }
+.qride-lucky-result-again small { color: rgba(255,255,255,.88); font-size: 10px; font-weight: 700; line-height: 1.1; }
 .qride-lucky-result-icon.is-subscription { border-color: #f1dfb8; background: linear-gradient(145deg,#fff9eb,#ffefc7); color: #a56b08; }
 .qride-lucky-result-caption { margin-bottom: 5px; color: #8a96a5; font-size: 9px; font-weight: 850; letter-spacing: 1.5px; }
 .qride-lucky-result-sheet h4 { margin: 0 0 8px; color: #202a36; font-size: 23px; line-height: 1.15; font-weight: 850; letter-spacing: -.4px; }
