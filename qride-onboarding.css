@@ -1,6 +1,7 @@
 /* QRide guided onboarding — keeps the real Q mascot and speech bubble. */
 .qride-tour-layer {
   position: fixed;
+  transition: opacity .18s ease;
   inset: 0;
   z-index: 24000;
   pointer-events: none;
