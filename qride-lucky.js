@@ -332,6 +332,7 @@
       activeSpin = spin;
       resultIcon.innerHTML = iconForResult(spin.rewardType);
       resultIcon.classList.toggle('is-subscription', spin.rewardType === 'subscription');
+      resultIcon.classList.toggle('is-energy', spin.rewardType === 'energy');
       resultTitle.textContent = spin.title || 'Награда получена';
       resultDetail.textContent = 'Начисляем награду…';
       resultMeta.textContent = '';
