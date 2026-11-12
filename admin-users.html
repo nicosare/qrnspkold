@@ -217,6 +217,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  <a href="#paytags" data-admin-view="paytags">Paytag</a>
  <a href="#games" data-admin-view="games">Игры</a>
  <a href="#lucky" data-admin-view="lucky">Билет удачи</a>
+ <a href="#analytics" data-admin-view="analytics">Аналитика</a>
 </nav>
 <section class="panel">
  <div id="users-view">
@@ -315,6 +316,38 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
   <div class="foot">Новая конфигурация получает отдельную версию. Уже выполненные прокрутки сохраняют исходную награду, вероятность и версию настроек.</div>
  </div>
 
+  <div id="analytics-view" hidden>
+   <div class="analytics-toolbar">
+    <div class="analytics-period">
+     <label class="analytics-date">С <input id="analytics-from" type="date"></label>
+     <label class="analytics-date">По <input id="analytics-to" type="date"></label>
+     <button class="primary" id="analytics-apply" type="button">Применить</button>
+    </div>
+    <div class="analytics-quick" aria-label="Быстрый период">
+     <button type="button" data-analytics-days="7">7 дней</button>
+     <button type="button" data-analytics-days="30" class="active">30 дней</button>
+     <button type="button" data-analytics-days="90">90 дней</button>
+    </div>
+   </div>
+   <div id="analytics-status" class="analytics-status" role="status" aria-live="polite">Выбери период и нажми «Применить».</div>
+   <div class="analytics-kpis">
+    <div class="analytics-kpi"><span>Активные пользователи</span><strong id="analytics-active-users">—</strong><small>Уникальные открытия приложения</small></div>
+    <div class="analytics-kpi"><span>Выручка</span><strong id="analytics-revenue">—</strong><small>Только подтверждённые покупки</small></div>
+    <div class="analytics-kpi"><span>Покупки</span><strong id="analytics-purchases">—</strong><small>Начисленные тарифы</small></div>
+    <div class="analytics-kpi"><span>Успешные поездки</span><strong id="analytics-scans">—</strong><small>Успешно обработанные QR-коды</small></div>
+    <div class="analytics-kpi"><span>Повторные покупатели</span><strong id="analytics-repeat-buyers">—</strong><small>Пользователи с 2 и более покупками за период</small></div>
+    <div class="analytics-kpi"><span>Заявки на тариф</span><strong id="analytics-requests">—</strong><small>Созданные запросы на покупку</small></div>
+   </div>
+   <div class="analytics-grid">
+    <section class="analytics-card wide"><h3>Воронка покупки</h3><div id="analytics-funnel" class="analytics-funnel"><div class="analytics-empty">Ожидает данных</div></div><p class="analytics-note">Конверсия считается по уникальным пользователям относительно предыдущего этапа.</p></section>
+    <section class="analytics-card"><h3>Использование сканов</h3><div id="analytics-scan-sources" class="analytics-metric-list"><div class="analytics-empty">Ожидает данных</div></div></section>
+    <section class="analytics-card"><h3>Рефералы и «Билет удачи»</h3><div id="analytics-referrals" class="analytics-metric-list"><div class="analytics-empty">Ожидает данных</div></div><div id="analytics-lucky" class="analytics-metric-list"></div></section>
+    <section class="analytics-card"><h3>Возвращаемость</h3><div id="analytics-retention" class="analytics-metric-list"><div class="analytics-empty">Ожидает данных</div></div><p class="analytics-note">D1, D7 и D30 — возврат в точный календарный день после первого зафиксированного открытия. Показатели появятся по мере накопления зрелых когорт.</p></section>
+    <section class="analytics-card"><h3>Тарифы</h3><div id="analytics-offers" class="analytics-table-wrap"><div class="analytics-empty">Ожидает данных</div></div></section>
+    <section class="analytics-card wide"><h3>Динамика по дням</h3><div id="analytics-trend" class="analytics-table-wrap"><div class="analytics-empty">Ожидает данных</div></div></section>
+   </div>
+   <p class="analytics-note">Сбор начинается после установки аналитики. Исторические посещения, клики и оплаты до запуска не восстанавливаются. Администраторские действия исключаются на сервере.</p>
+  </div>
 </section>
 </main>
 <script>
@@ -962,5 +995,6 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  load();
 })();
 </script>
+<script src="analytics-dashboard.js?v=20261112-1"></script>
 </body>
 </html>
