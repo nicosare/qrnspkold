@@ -58,6 +58,23 @@
 .qride-lucky-result-sheet { overflow-y: auto; text-align: center; }
 .qride-lucky-result-icon { position: relative; display: grid; place-items: center; width: 76px; height: 76px; margin: 3px auto 13px; border: 1px solid #d8e7f8; border-radius: 22px; background: linear-gradient(145deg,#f2f7ff,#e7f1ff); color: #176ecb; font-size: 31px; font-weight: 900; box-shadow: 0 7px 18px rgba(44,108,179,.09); animation: qrideLuckyPrizeIn .42s cubic-bezier(.2,.8,.2,1) both; }
 .qride-lucky-result-icon svg { display: block; width: 34px; height: 34px; }
+.qride-lucky-result-icon { overflow: visible; isolation: isolate; }
+.qride-lucky-result-icon svg { position: relative; z-index: 1; }
+.qride-lucky-confetti { position: absolute; z-index: 0; inset: 0; overflow: visible; pointer-events: none; }
+.qride-lucky-confetti-particle { position: absolute; top: 50%; left: 50%; display: block; width: var(--size); height: var(--size); opacity: 0; background: var(--particle-color); animation: qrideLuckyConfettiBurst 920ms cubic-bezier(.12,.72,.25,1) var(--delay) both; }
+.qride-lucky-confetti-particle.is-dot { border-radius: 50%; }
+.qride-lucky-confetti-particle.is-confetti { border-radius: 2px; }
+.qride-lucky-confetti-particle.is-star { width: auto; height: auto; background: none; color: var(--particle-color); font-size: calc(var(--size) * 2); line-height: 1; text-shadow: 0 1px 3px rgba(120,83,20,.12); }
+.qride-lucky-confetti--energy .qride-lucky-confetti-particle { box-shadow: 0 1px 4px rgba(48,133,220,.12); animation-duration: 760ms; }
+.qride-lucky-confetti--scans .qride-lucky-confetti-particle.is-confetti { border-radius: 2px; }
+.qride-lucky-confetti--subscription .qride-lucky-confetti-particle.is-confetti { border-radius: 1px; box-shadow: 0 1px 4px rgba(166,107,8,.18); }
+@keyframes qrideLuckyConfettiBurst {
+  0% { opacity: 0; transform: translate(-50%,-50%) scale(.25) rotate(0deg); }
+  12% { opacity: 1; }
+  72% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.75) rotate(var(--turn)); }
+}
+
 .qride-lucky-result-icon.is-energy svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .qride-lucky-result-icon.is-subscription { border-color: #f1dfb8; background: linear-gradient(145deg,#fff9eb,#ffefc7); color: #a56b08; }
 .qride-lucky-result-caption { margin-bottom: 5px; color: #8a96a5; font-size: 9px; font-weight: 850; letter-spacing: 1.5px; }
