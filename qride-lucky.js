@@ -108,14 +108,34 @@
       '<span class="qride-lucky-card-type">' + escapeHtml(typeLabel(type)) + '</span></span>' +
       '<strong class="qride-lucky-card-title">' + escapeHtml(prize.title) + '</strong></div>';
   }
+  let railPrizeSignature = '';
   function renderIdleRail() {
     const prizes = sortedAttractive(getPrizes());
-    if (!prizes.length) { rail.innerHTML = ''; return; }
-    const items = prizes.concat(prizes, prizes);
-    rail.innerHTML = items.map(cardMarkup).join('');
-    idleCycleWidth = prizes.length > 1 ? rail.children[prizes.length].offsetLeft - rail.children[0].offsetLeft
-      : (rail.children[0].offsetWidth + 8);
-    idleOffset = idleCycleWidth ? idleOffset % idleCycleWidth : 0;
+    if (!prizes.length) {
+      rail.innerHTML = '';
+      railPrizeSignature = '';
+      idleCycleWidth = 0;
+      idleOffset = 0;
+      return;
+    }
+    const signature = prizes.map(function (item) {
+      return [item.id, item.rewardType, item.amount, item.title].join(':');
+    }).join('|');
+    // Keep the same physical cards for idle motion, spinning and the stopped result.
+    // Only rebuild when the actual prize set changes.
+    if (signature !== railPrizeSignature || !rail.children.length) {
+      const copies = 12;
+      const items = [];
+      for (let i = 0; i < copies; i += 1) items.push.apply(items, prizes);
+      rail.innerHTML = items.map(cardMarkup).join('');
+      railPrizeSignature = signature;
+      idleCycleWidth = rail.children[prizes.length].offsetLeft - rail.children[0].offsetLeft;
+      idleOffset = idleCycleWidth ? idleOffset % idleCycleWidth : 0;
+    } else {
+      idleCycleWidth = rail.children.length > prizes.length
+        ? rail.children[prizes.length].offsetLeft - rail.children[0].offsetLeft
+        : (rail.children[0].offsetWidth + 9);
+    }
     rail.style.transition = 'none';
     rail.style.transform = 'translate3d(' + (-idleOffset) + 'px,0,0)';
   }
@@ -244,7 +264,7 @@
     if (state) state.pendingResult = null;
     updateControls();
     setStatus('', false);
-    renderIdleRail();
+    // The winning card and the cards after it stay in the same continuous rail.
     startIdle();
   }
   function iconForResult(type) { return typeIcon(type); }
@@ -316,25 +336,32 @@
   function animateToPrize(prize) {
     const animationToken = ++spinAnimationToken;
     return new Promise(function (resolve) {
-      const startPrize = nearestVisiblePrize();
-      const sequence = [startPrize];
-      const travelCards = 38;
-      for (let i = 0; i < travelCards; i += 1) sequence.push(weightedPrize());
-      sequence.push(prize);
-      const targetIndex = sequence.length - 1;
-      // Cards after the winning one remain visible, as if the wheel stopped mid-run.
-      for (let i = 0; i < 4; i += 1) sequence.push(weightedPrize());
+      renderIdleRail();
+      if (!rail.children.length || !idleCycleWidth) { resolve(false); return; }
 
-      rail.innerHTML = sequence.map(cardMarkup).join('');
-      rail.style.transition = 'none';
-      const startOffset = centerOffset(0);
+      // Continue from the exact offset where the idle rail was moving.
+      const startOffset = idleOffset;
+      const startCenter = startOffset + windowNode.clientWidth / 2;
+      const minimumTravel = idleCycleWidth * 5;
+      const targetIndex = Array.from(rail.children).findIndex(function (card, index) {
+        return card.dataset.luckyPrize === String(prize.id) &&
+          card.offsetLeft + card.offsetWidth / 2 >= startCenter + minimumTravel;
+      });
+      if (targetIndex < 0) { resolve(false); return; }
+
       const targetOffset = centerOffset(targetIndex);
-      rail.style.transform = 'translate3d(' + (-startOffset) + 'px,0,0)';
-      void rail.offsetWidth;
+      const firstAfterTarget = rail.children[targetIndex + 1];
+      if (!firstAfterTarget) { resolve(false); return; }
 
+      rail.style.transition = 'none';
+      void rail.offsetWidth;
       const duration = reduceMotion ? 650 : 7800;
       const startedAt = performance.now();
-      let centeredIndex = 0;
+      let centeredIndex = Array.from(rail.children).findIndex(function (card) {
+        return card.offsetLeft + card.offsetWidth / 2 >= startCenter;
+      });
+      if (centeredIndex < 0) centeredIndex = 0;
+
       function frame(now) {
         if (animationToken !== spinAnimationToken) { resolve(false); return; }
         const progress = Math.min(1, (now - startedAt) / duration);
@@ -342,14 +369,19 @@
         const offset = startOffset + (targetOffset - startOffset) * eased;
         rail.style.transform = 'translate3d(' + (-offset) + 'px,0,0)';
 
-        while (centeredIndex < targetIndex && offset >= centerOffset(centeredIndex + 1)) {
+        while (centeredIndex < targetIndex &&
+          rail.children[centeredIndex + 1] &&
+          offset + windowNode.clientWidth / 2 >= rail.children[centeredIndex + 1].offsetLeft + rail.children[centeredIndex + 1].offsetWidth / 2) {
           centeredIndex += 1;
           if (!reduceMotion) triggerHaptic(centeredIndex === targetIndex ? 'medium' : 'light');
         }
 
         if (progress < 1) requestAnimationFrame(frame);
         else {
-          rail.style.transform = 'translate3d(' + (-targetOffset) + 'px,0,0)';
+          // Normalize by whole cycles. Since the rail is periodic, this is visually
+          // identical and lets idle motion continue without a jump or rebuilding cards.
+          idleOffset = targetOffset % idleCycleWidth;
+          rail.style.transform = 'translate3d(' + (-idleOffset) + 'px,0,0)';
           resolve(true);
         }
       }
