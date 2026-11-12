@@ -76,6 +76,12 @@
 }
 
 .qride-lucky-result-icon.is-energy svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.qride-lucky-result-icon.is-scans { border-color: #cfe8df; background: linear-gradient(145deg,#f0fbf6,#e4f6ed); color: #21845b; }
+.qride-lucky-result-icon.is-scans svg { color: currentColor; }
+.qride-lucky-result-actions { display: flex; gap: 9px; margin-top: 17px; }
+.qride-lucky-result-actions .qride-collect-info-action { flex: 1 1 0; min-width: 0; margin-top: 0; }
+.qride-lucky-result-actions .qride-lucky-result-again { border: 1px solid #e2e8f0; background: #fff; color: #536579; box-shadow: none; }
+.qride-lucky-result-actions .qride-lucky-result-again:active { transform: scale(.985); }
 .qride-lucky-result-icon.is-subscription { border-color: #f1dfb8; background: linear-gradient(145deg,#fff9eb,#ffefc7); color: #a56b08; }
 .qride-lucky-result-caption { margin-bottom: 5px; color: #8a96a5; font-size: 9px; font-weight: 850; letter-spacing: 1.5px; }
 .qride-lucky-result-sheet h4 { margin: 0 0 8px; color: #202a36; font-size: 23px; line-height: 1.15; font-weight: 850; letter-spacing: -.4px; }
