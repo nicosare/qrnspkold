@@ -3172,12 +3172,12 @@ app.get('/api/admin/analytics', requireAdmin, (req, res) => {
     ? [startIso, endIso, adminVkId]
     : [startIso, endIso];
   const repeatPurchaseStats = db.prepare(
-    'SELECT COUNT(DISTINCT current.vk_id) AS repeat_buyers, COUNT(*) AS repeat_purchases ' +
-    'FROM analytics_events current WHERE current.event_name = ? AND current.created_at >= ? AND current.created_at < ?' +
-    (adminVkId ? ' AND current.vk_id <> ?' : '') +
-    ' AND EXISTS (SELECT 1 FROM analytics_events previous WHERE previous.vk_id = current.vk_id ' +
+    'SELECT COUNT(DISTINCT paid.vk_id) AS repeat_buyers, COUNT(*) AS repeat_purchases ' +
+    'FROM analytics_events paid WHERE paid.event_name = ? AND paid.created_at >= ? AND paid.created_at < ?' +
+    (adminVkId ? ' AND paid.vk_id <> ?' : '') +
+    ' AND EXISTS (SELECT 1 FROM analytics_events previous WHERE previous.vk_id = paid.vk_id ' +
     "AND previous.event_name = 'payment_confirmed' AND " +
-    '(previous.created_at < current.created_at OR (previous.created_at = current.created_at AND previous.rowid < current.rowid)))'
+    '(previous.created_at < paid.created_at OR (previous.created_at = paid.created_at AND previous.rowid < paid.rowid)))'
   ).get('payment_confirmed', ...repeatParams);
   const repeatBuyers = Number(repeatPurchaseStats?.repeat_buyers || 0);
   const repeatPurchases = Number(repeatPurchaseStats?.repeat_purchases || 0);
@@ -3197,8 +3197,9 @@ app.get('/api/admin/analytics', requireAdmin, (req, res) => {
     scanSources[source] += 1;
   }
 
-  const referralWhere = 'created_at >= ? AND created_at < ?' + (adminVkId ? ' AND inviter_vk_id <> ?' : '');
-  const referralParams = adminVkId ? [startIso, endIso, adminVkId] : [startIso, endIso];
+  const referralWhere = 'created_at >= ? AND created_at < ?' +
+    (adminVkId ? ' AND inviter_vk_id <> ? AND invitee_vk_id <> ?' : '');
+  const referralParams = adminVkId ? [startIso, endIso, adminVkId, adminVkId] : [startIso, endIso];
   const referralStats = db.prepare(
     'SELECT COUNT(*) AS opened, SUM(CASE WHEN rewarded_at IS NOT NULL THEN 1 ELSE 0 END) AS rewarded ' +
     'FROM referrals WHERE ' + referralWhere
