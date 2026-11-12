@@ -596,9 +596,11 @@
           (!state.rouletteEligible && !state.pendingResult)) {
         section.hidden = true;
         stopIdle();
+        window.dispatchEvent(new CustomEvent('qride:lucky-state-ready', { detail: { available: false } }));
         return;
       }
       section.hidden = false;
+      window.dispatchEvent(new CustomEvent('qride:lucky-state-ready', { detail: { available: true } }));
       renderIdleRail();
       updateControls();
       if (pendingFromServer && !spinning) {
