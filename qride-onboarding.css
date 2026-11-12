@@ -1,0 +1,172 @@
+/* QRide guided onboarding — keeps the real Q mascot and speech bubble. */
+.qride-tour-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 24000;
+  pointer-events: none;
+}
+.qride-tour-layer[hidden] { display: none !important; }
+.qride-tour-panel {
+  position: fixed;
+  z-index: 0;
+  background: rgba(12, 23, 38, .68);
+  pointer-events: auto;
+  touch-action: none;
+  transition: left .28s ease, top .28s ease, width .28s ease, height .28s ease;
+}
+.qride-tour-hole {
+  position: fixed;
+  z-index: 1;
+  border: 2px solid #fff;
+  border-radius: 17px;
+  background: transparent;
+  box-shadow: 0 0 0 3px #0052ee, 0 8px 24px rgba(0, 35, 100, .18);
+  pointer-events: auto;
+  touch-action: none;
+  transition: left .28s ease, top .28s ease, width .28s ease, height .28s ease;
+}
+.qride-tour-guide {
+  position: fixed;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 460px;
+  pointer-events: auto;
+  transform: translate3d(-120vw, -120vh, 0);
+  transition: transform .56s cubic-bezier(.2, .76, .22, 1);
+  will-change: transform;
+}
+.qride-tour-guide .start-brand,
+.qride-tour-guide .start-intro {
+  width: 100%;
+  margin: 0;
+}
+.qride-tour-guide .start-brand-icon { flex-shrink: 0; }
+.qride-tour-guide .q-speech-bubble {
+  padding: 11px 14px 12px;
+  border-color: #dce8f8;
+  box-shadow: 0 9px 28px rgba(8, 35, 76, .16);
+}
+.qride-tour-guide #start-mood-message {
+  gap: 5px;
+  padding: 0;
+}
+.qride-tour-guide .mood-message-icon { display: none !important; }
+.qride-tour-title {
+  display: block;
+  color: #26384b;
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 800;
+}
+.qride-tour-copy {
+  display: block;
+  color: #647386;
+  font-size: 14px;
+  line-height: 1.48;
+}
+.qride-tour-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e8eef6;
+}
+.qride-tour-progress {
+  min-width: 0;
+  color: #8a96a5;
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.qride-tour-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.qride-tour-skip,
+.qride-tour-next {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 11px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.1;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.qride-tour-skip {
+  background: transparent;
+  color: #728095;
+}
+.qride-tour-next {
+  min-width: 92px;
+  background: #0052ee;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 82, 238, .2);
+}
+.qride-tour-next:active,
+.qride-tour-skip:active { transform: scale(.97); }
+.qride-tour-next:disabled,
+.qride-tour-skip:disabled { opacity: .55; cursor: default; }
+.qride-tour-guide.is-finishing .qride-tour-controls { opacity: .72; }
+.qride-tour-placeholder {
+  display: block;
+  flex: 0 0 auto;
+  min-width: 0;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+.qride-tour-faq-replay {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  margin: 0 0 13px;
+  padding: 11px 14px;
+  border: 1px solid #cfe0f8;
+  border-radius: 14px;
+  background: #f2f7ff;
+  color: #1458c9;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.qride-tour-faq-replay::after {
+  content: '→';
+  flex: 0 0 auto;
+  font-family: Arial, sans-serif;
+  font-size: 19px;
+  font-weight: 500;
+}
+.qride-tour-faq-replay:active { transform: scale(.99); background: #eaf2ff; }
+@media (prefers-reduced-motion: reduce) {
+  .qride-tour-guide,
+  .qride-tour-panel,
+  .qride-tour-hole { transition: none !important; }
+  .qride-tour-next:active,
+  .qride-tour-skip:active,
+  .qride-tour-faq-replay:active { transform: none !important; }
+}
