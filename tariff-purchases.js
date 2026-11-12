@@ -306,6 +306,15 @@
       if (button) button.disabled = false;
     }
   }
+  // Shared entry point for tariff cards rendered outside the original offers grid
+  // (for example, inside the lucky-wheel and scan-balance modals).
+  window.qrideOpenTariffById = function (offerId) {
+    const card = cards.find(function (item) { return item.dataset.offerId === String(offerId); });
+    if (!card) return false;
+    createPurchase(card);
+    return true;
+  };
+
   cards.forEach(function (card) {
     const button = card.querySelector('.start-offer-details');
     if (!button) return;
