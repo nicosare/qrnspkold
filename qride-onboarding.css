@@ -1,43 +1,65 @@
-/* QRide guided onboarding — keeps the real Q mascot and speech bubble. */
+/* QRide guided onboarding — one rounded spotlight, the original Q mascot. */
 .qride-tour-layer {
   position: fixed;
-  transition: opacity .18s ease;
   inset: 0;
   z-index: 24000;
   pointer-events: none;
+  opacity: 1;
+  transition: opacity .2s ease;
 }
 .qride-tour-layer[hidden] { display: none !important; }
-.qride-tour-panel {
+.qride-tour-blocker {
   position: fixed;
+  inset: 0;
   z-index: 0;
-  background: rgba(12, 23, 38, .68);
+  background: transparent;
   pointer-events: auto;
   touch-action: none;
-  transition: left .28s ease, top .28s ease, width .28s ease, height .28s ease;
+}
+.qride-tour-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.qride-tour-shade { fill: rgba(12, 23, 38, .68); }
+.qride-tour-frame-blue {
+  fill: none;
+  stroke: #0052ee;
+  stroke-width: 7;
+  stroke-linejoin: round;
+}
+.qride-tour-frame-white {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2;
+  stroke-linejoin: round;
 }
 .qride-tour-hole {
   position: fixed;
-  z-index: 1;
-  border: 2px solid #fff;
-  border-radius: 17px;
+  z-index: 2;
+  border: 0;
   background: transparent;
-  box-shadow: 0 0 0 3px #0052ee, 0 8px 24px rgba(0, 35, 100, .18);
+  box-shadow: none;
   pointer-events: auto;
   touch-action: none;
-  transition: left .28s ease, top .28s ease, width .28s ease, height .28s ease;
 }
 .qride-tour-guide {
   position: fixed;
-  z-index: 2;
+  z-index: 3;
   top: 0;
   left: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   max-width: 460px;
   pointer-events: auto;
   transform: translate3d(-120vw, -120vh, 0);
-  transition: transform .56s cubic-bezier(.2, .76, .22, 1);
+  transition: transform .48s cubic-bezier(.2, .76, .22, 1);
   will-change: transform;
 }
 .qride-tour-guide .start-brand,
@@ -45,11 +67,28 @@
   width: 100%;
   margin: 0;
 }
-.qride-tour-guide .start-brand-icon { flex-shrink: 0; }
+.qride-tour-guide .start-brand {
+  width: auto;
+  align-self: flex-start;
+}
+.qride-tour-guide .start-brand > div:not(.start-brand-icon) {
+  display: none !important;
+}
+.qride-tour-guide .start-brand-icon {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+}
 .qride-tour-guide .q-speech-bubble {
   padding: 11px 14px 12px;
   border-color: #dce8f8;
+  border-radius: 18px;
   box-shadow: 0 9px 28px rgba(8, 35, 76, .16);
+}
+.qride-tour-guide .q-speech-bubble::before {
+  top: -6px;
+  left: 19px;
 }
 .qride-tour-guide #start-mood-message {
   gap: 5px;
@@ -125,7 +164,8 @@
 .qride-tour-skip:active { transform: scale(.97); }
 .qride-tour-next:disabled,
 .qride-tour-skip:disabled { opacity: .55; cursor: default; }
-.qride-tour-guide.is-finishing .qride-tour-controls { opacity: .72; }
+.qride-tour-skip[hidden] { display: none !important; }
+.qride-tour-guide.is-finishing .qride-tour-controls { opacity: 1; }
 .qride-tour-placeholder {
   display: block;
   flex: 0 0 auto;
@@ -164,9 +204,9 @@
 }
 .qride-tour-faq-replay:active { transform: scale(.99); background: #eaf2ff; }
 @media (prefers-reduced-motion: reduce) {
+  .qride-tour-layer,
   .qride-tour-guide,
-  .qride-tour-panel,
-  .qride-tour-hole { transition: none !important; }
+  .qride-tour-mask { transition: none !important; }
   .qride-tour-next:active,
   .qride-tour-skip:active,
   .qride-tour-faq-replay:active { transform: none !important; }
