@@ -114,7 +114,7 @@
       },
       {
         id: 'q-run',
-        selector: '#roadnote-game-stage',
+        selector: '#roadnote-game .roadnote-game-stage',
         title: 'Q Run',
         copy: 'Перепрыгивай препятствия, набирай очки и постарайся побить свой рекорд. За нужное количество очков можно получить скан.',
         reaction: 'wink'
