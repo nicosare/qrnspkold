@@ -392,7 +392,7 @@ const luckyRewardSettlementMarker = 'lucky_reward_settlement_v1';
 if (!db.prepare('SELECT 1 FROM app_settings WHERE setting_key = ?').get(luckyRewardSettlementMarker)) {
   db.transaction(() => {
     db.prepare("UPDATE lucky_spins SET reward_credited_at = created_at WHERE reward_credited_at IS NULL").run();
-    db.prepare('INSERT OR REPLACE INTO app_settings (setting_key, setting_value) VALUES (?, ?)').run(luckyRewardSettlementMarker, new Date().toISOString());
+    db.prepare('INSERT OR REPLACE INTO app_settings (setting_key, setting_value, updated_at) VALUES (?, ?, ?)').run(luckyRewardSettlementMarker, '1', new Date().toISOString());
   })();
 }
 
