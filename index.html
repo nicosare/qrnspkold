@@ -509,6 +509,28 @@
             box-shadow: 0 8px 18px #0052EE2b;
         }
 
+        /* Birthday confetti bursts outward from Q's beacon. */
+        .qride-birthday-confetti {
+            position: fixed;
+            z-index: 10050;
+            width: 7px;
+            height: 10px;
+            pointer-events: none;
+            border-radius: 2px;
+            opacity: 0;
+            will-change: transform, opacity;
+            animation: qrideBirthdayConfettiFly var(--duration, 1.45s) cubic-bezier(.12,.62,.28,1) var(--delay, 0s) forwards;
+        }
+        .qride-birthday-confetti.is-dot { width: 6px; height: 6px; border-radius: 50%; }
+        @keyframes qrideBirthdayConfettiFly {
+            0% { opacity: 0; transform: translate3d(0,0,0) rotate(0deg) scale(.55); }
+            9% { opacity: 1; }
+            100% { opacity: 0; transform: translate3d(var(--dx),var(--dy),0) rotate(var(--spin)) scale(.82); }
+        }
+        @media(prefers-reduced-motion:reduce) {
+            .qride-birthday-confetti { animation: none !important; display: none !important; }
+        }
+
         .start-brand-icon img {
             display: block;
             width: 100%;
@@ -4060,6 +4082,50 @@ body.scan-loading-open { overflow: hidden !important; }
             return { day, month };
         }
 
+        window.qrideCelebrateBirthday = function (profile) {
+            if (window.qrideBirthdayConfettiShown) return;
+            const birthday = getRoadnoteBirthday(profile);
+            if (!birthday) return;
+            const today = getRoadnoteHolidayDate(new Date());
+            if (birthday.month !== today.month || birthday.day !== today.day) return;
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+            const mascot = document.querySelector('.start-brand-icon');
+            if (!mascot) return;
+            const rect = mascot.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+
+            window.qrideBirthdayConfettiShown = true;
+            const colors = ['#0052EE', '#FFC247', '#35B978', '#FF78A8', '#8B7CFF', '#FFFFFF'];
+            const fragment = document.createDocumentFragment();
+            const originX = rect.left + rect.width / 2;
+            const originY = rect.top + 3;
+            const count = 34;
+
+            for (let i = 0; i < count; i++) {
+                const piece = document.createElement('span');
+                const angle = (-165 + Math.random() * 150) * Math.PI / 180;
+                const distance = 65 + Math.random() * 125;
+                const dx = Math.cos(angle) * distance;
+                const dy = 55 + Math.random() * 105;
+                piece.className = 'qride-birthday-confetti' + (Math.random() < 0.28 ? ' is-dot' : '');
+                piece.style.left = originX + 'px';
+                piece.style.top = originY + 'px';
+                piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.setProperty('--dx', dx.toFixed(1) + 'px');
+                piece.style.setProperty('--dy', dy.toFixed(1) + 'px');
+                piece.style.setProperty('--spin', (Math.random() < 0.5 ? -1 : 1) * (240 + Math.random() * 600) + 'deg');
+                piece.style.setProperty('--delay', (Math.random() * 0.18).toFixed(2) + 's');
+                piece.style.setProperty('--duration', (1.15 + Math.random() * 0.65).toFixed(2) + 's');
+                piece.addEventListener('animationend', () => piece.remove(), { once: true });
+                fragment.appendChild(piece);
+            }
+            document.body.appendChild(fragment);
+            window.setTimeout(() => {
+                document.querySelectorAll('.qride-birthday-confetti').forEach(piece => piece.remove());
+            }, 2600);
+        };
+
         const birthdayMoodMessages = [
             'С днём рождения! Желаю тебе побольше счастливых моментов, верных друзей и исполнения желаний. Пусть впереди будет много хорошего!',
             'Сегодня твой день! Желаю, чтобы рядом всегда были люди, с которыми можно разделить самые лучшие моменты жизни.',
@@ -4849,6 +4915,9 @@ body.scan-loading-open { overflow: hidden !important; }
         sex: vkSex === 1 || vkSex === 2 ? vkSex : null,
         bdate: birthDateVisible && typeof info.bdate === 'string' ? info.bdate : ''
       };
+      if (typeof window.qrideCelebrateBirthday === 'function') {
+        window.qrideCelebrateBirthday(window.qrideVkProfile);
+      }
       profile = {
         first_name: info.first_name || '',
         last_name: info.last_name || '',
