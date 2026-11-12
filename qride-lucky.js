@@ -8,6 +8,7 @@
   const windowNode = document.getElementById('qride-lucky-window');
   const spinButton = document.getElementById('qride-lucky-spin');
   const costNode = document.getElementById('qride-lucky-cost');
+  const resultAgainCostNode = document.getElementById('qride-lucky-result-again-cost');
   const freeStatusNode = document.getElementById('qride-lucky-free-status');
   const statusNode = document.getElementById('qride-lucky-status');
   const resultModal = document.getElementById('qride-lucky-result-modal');
@@ -223,6 +224,7 @@
     const availableAt = Date.parse(state.freeSpinAvailableAt || '');
     const cost = Number(state.spinCostScans || 1);
     costNode.textContent = free ? 'Бесплатно' : cost + ' ' + scanWord(cost);
+    if (resultAgainCostNode) resultAgainCostNode.textContent = costNode.textContent;
     freeStatusNode.textContent = free
       ? 'Бесплатная попытка доступна'
       : Number.isFinite(availableAt)
