@@ -136,6 +136,11 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_referrals_inviter
     ON referrals(inviter_vk_id, created_at DESC);
+  CREATE TABLE IF NOT EXISTS referral_prompt_preferences (
+    vk_id TEXT PRIMARY KEY,
+    disabled INTEGER NOT NULL DEFAULT 0 CHECK(disabled IN (0, 1)),
+    updated_at TEXT NOT NULL
+  );
 `);
 // Persistent transport metadata cache. Price rules remain separate so admins can
 // change the default fare without invalidating the transport lookup cache.
@@ -562,6 +567,25 @@ const rewardReferralOnce = db.prepare(
 const grantReferralScans = db.prepare(
   'UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + 3 WHERE vk_id = ?'
 );
+const countUserScans = db.prepare('SELECT COUNT(*) AS count FROM scan_history WHERE vk_id = ?');
+const countReferralsByInviter = db.prepare('SELECT COUNT(*) AS count FROM referrals WHERE inviter_vk_id = ?');
+const getReferralPromptPreference = db.prepare('SELECT disabled FROM referral_prompt_preferences WHERE vk_id = ?');
+const disableReferralPrompts = db.prepare(`
+  INSERT INTO referral_prompt_preferences (vk_id, disabled, updated_at)
+  VALUES (?, 1, ?)
+  ON CONFLICT(vk_id) DO UPDATE SET disabled = 1, updated_at = excluded.updated_at
+`);
+function getReferralPromptState(userId, successfulScanCount) {
+  const inviteeCount = Number(countReferralsByInviter.get(String(userId))?.count || 0);
+  const hasInvitedFriend = inviteeCount > 0;
+  const disabled = Number(getReferralPromptPreference.get(String(userId))?.disabled || 0) === 1;
+  const interval = hasInvitedFriend ? 10 : 3;
+  const scanCount = Math.max(0, Number(successfulScanCount) || 0);
+  return {
+    hasInvitedFriend,
+    referralPromptDue: !disabled && scanCount > 0 && scanCount % interval === 0
+  };
+}
 const getUserExists = db.prepare('SELECT 1 FROM users WHERE vk_id = ?');
 const userCount = db.prepare('SELECT COUNT(*) AS count FROM users');
 const getUserScanBalance = db.prepare('SELECT scan_balance, subscription_until, unlimited, daily_scan_date, daily_scan_available FROM users WHERE vk_id = ?');
@@ -2878,6 +2902,8 @@ app.post('/api/paytag', async (req, res) => {
       finalEntitlement?.subscription_until &&
       Date.parse(finalEntitlement.subscription_until) > Date.now()
     );
+    const successfulScanCount = Number(countUserScans.get(userId)?.count || 0);
+    const referralPromptState = getReferralPromptState(userId, successfulScanCount);
     return res.json({
       ok: true,
       data,
@@ -2888,7 +2914,9 @@ app.post('/api/paytag', async (req, res) => {
       subscriptionUntil: finalEntitlement?.subscription_until || null,
       unlimited: Number(finalEntitlement?.unlimited || 0) === 1,
       energyRewardGranted,
-      subscriptionActive: finalSubscriptionActive
+      subscriptionActive: finalSubscriptionActive,
+      successfulScanCount,
+      ...referralPromptState
     });
   } catch (error) {
     console.error('[api/paytag] ' + paytagid + ': ' + (error?.message || error));
@@ -2956,6 +2984,16 @@ app.post('/api/session', (req, res) => {
       referralLink: 'https://vk.com/app' + appId + '?ref=' + encodeURIComponent(userId),
       eventsToken: makeLiveToken(userId)
     });
+  } catch (error) {
+    return res.status(401).json({ error: 'VK authentication failed' });
+  }
+});
+
+app.post('/api/referral-prompt/disable', (req, res) => {
+  try {
+    const { userId } = parseLaunchParams(req.body?.launchParams);
+    disableReferralPrompts.run(userId, new Date().toISOString());
+    return res.json({ ok: true });
   } catch (error) {
     return res.status(401).json({ error: 'VK authentication failed' });
   }
