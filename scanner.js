@@ -56,7 +56,13 @@
           // Others deliver it as a VKWebAppOpenCodeReaderResult event.
           if (data && typeof data.code_data === 'string') {
             finish(null, data.code_data);
+            return;
           }
+
+          // VK may resolve the request without code_data when the native reader
+          // is dismissed. Treat that response as cancellation so the caller's
+          // finally block can release scanProcessing and re-enable the button.
+          finish(new Error('Сканирование отменено.'));
         }).catch((error) => finish(error));
       } catch (error) {
         finish(error);
