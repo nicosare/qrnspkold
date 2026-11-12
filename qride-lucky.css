@@ -26,7 +26,7 @@
 }
 .qride-lucky-card-top { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .qride-lucky-card-icon { display: grid; flex: 0 0 27px; place-items: center; width: 27px; height: 27px; border-radius: 9px; background: #edf4ff; color: #176ecb; font-size: 16px; font-weight: 900; line-height: 1; }
-.qride-lucky-card-icon svg { display: block; width: 16px; height: 16px; }
+.qride-lucky-card-icon svg { display: block; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .qride-lucky-card-type { min-width: 0; overflow: hidden; color: #8290a0; font-size: 8px; line-height: 1; font-weight: 900; letter-spacing: .8px; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
 .qride-lucky-card-title { display: -webkit-box; max-width: 100%; overflow: hidden; color: #26384d; font-size: 13px; line-height: 1.2; font-weight: 900; overflow-wrap: anywhere; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .qride-lucky-card--energy { border-color: #d4e5fb; background: linear-gradient(155deg,#f0f7ff 0%,#fff 75%); }
