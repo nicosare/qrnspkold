@@ -73,8 +73,15 @@
     const n = Math.abs(Number(value) || 0), last = n % 10, lastTwo = n % 100;
     return lastTwo >= 11 && lastTwo <= 14 ? 'сканов' : last === 1 ? 'скан' : last >= 2 && last <= 4 ? 'скана' : 'сканов';
   }
+  // Reuse the exact SVGs already used by QRide Plus and QRide Arcade.
+  const rewardIconNodes = {
+    scans: document.querySelector('.start-offer-group:not(.start-subscription-group) .start-offer-group-icon svg'),
+    subscription: document.querySelector('.start-subscription-group .start-offer-group-icon svg'),
+    energy: document.querySelector('.roadnote-game-energy svg')
+  };
   function typeIcon(type) {
-    return type === 'subscription' ? '∞' : type === 'scans' ? '▧' : 'ϟ';
+    const icon = rewardIconNodes[type] || rewardIconNodes.energy;
+    return icon ? icon.outerHTML : '';
   }
   function amountDetail(prize) {
     if (prize.rewardType === 'subscription') return 'Безлимитное сканирование на ' + Number(prize.amount) + ' ' +
@@ -244,7 +251,7 @@
   function showResult(spin, restored) {
     if (!spin || (activeSpin && Number(activeSpin.id) === Number(spin.id))) return;
     activeSpin = spin;
-    resultIcon.textContent = iconForResult(spin.rewardType);
+    resultIcon.innerHTML = iconForResult(spin.rewardType);
     resultIcon.classList.toggle('is-subscription', spin.rewardType === 'subscription');
     resultTitle.textContent = spin.title || 'Награда получена';
     resultDetail.textContent = amountDetail(spin);
@@ -363,7 +370,6 @@
     spinning = true;
     stopIdle();
     spinButton.disabled = true;
-    setStatus('Определяем награду…', false);
     let requestId = '';
     try {
       requestId = sessionStorage.getItem(storageKey) || '';
