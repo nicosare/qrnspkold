@@ -577,7 +577,13 @@
     }
   }
   async function refreshState() {
-    if (!launchParams || document.visibilityState === 'hidden') return;
+    if (document.visibilityState === 'hidden') return;
+    if (!launchParams) {
+      section.hidden = true;
+      stopIdle();
+      window.dispatchEvent(new CustomEvent('qride:lucky-state-ready', { detail: { available: false } }));
+      return;
+    }
     try {
       const next = await apiPost('api/lucky/state', {});
       const pendingFromServer = next.pendingResult || null;
@@ -613,6 +619,9 @@
       }
     } catch (error) {
       console.warn('[QRide lucky state]', error.message);
+      window.dispatchEvent(new CustomEvent('qride:lucky-state-ready', {
+        detail: { available: Boolean(section && !section.hidden), error: true }
+      }));
     }
   }
 
