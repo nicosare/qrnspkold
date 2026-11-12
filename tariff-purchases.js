@@ -57,6 +57,43 @@
     }
     return data;
   }
+
+  function trackAnalytics(eventName, properties) {
+    if (!launchParams) return;
+    let eventId = '';
+    try {
+      eventId = window.crypto && typeof window.crypto.randomUUID === 'function'
+        ? window.crypto.randomUUID()
+        : '';
+    } catch (_) {}
+    if (!eventId) {
+      eventId = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2) + '-' + Math.random().toString(36).slice(2);
+    }
+    fetch(apiUrl('api/analytics/event'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(authBody({
+        eventName: eventName,
+        eventId: eventId,
+        properties: properties || {}
+      })),
+      cache: 'no-store',
+      credentials: 'omit'
+    }).catch(function () {});
+  }
+
+  let tariffViewTracked = false;
+  const tariffCatalog = document.getElementById('start-offers-groups');
+  if (tariffCatalog && typeof IntersectionObserver === 'function') {
+    const tariffObserver = new IntersectionObserver(function (entries) {
+      if (tariffViewTracked || !entries.some(entry => entry.isIntersecting && entry.intersectionRatio >= 0.15)) return;
+      tariffViewTracked = true;
+      trackAnalytics('tariffs_viewed', { entryPoint: 'main_catalog' });
+      tariffObserver.disconnect();
+    }, { threshold: [0.15, 0.4] });
+    tariffObserver.observe(tariffCatalog);
+  }
+  window.qrideTrackAnalytics = trackAnalytics;
   function esc(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char];
@@ -287,6 +324,11 @@
       return;
     }
     const offerId = card.dataset.offerId;
+    if (!tariffViewTracked) {
+      tariffViewTracked = true;
+      trackAnalytics('tariffs_viewed', { entryPoint: 'offer_interaction' });
+    }
+    trackAnalytics('tariff_buy_click', { offerId: offerId });
     const matching = state.activeTariffRequests.find(function (item) { return item.offerId === offerId && item.status === 'awaiting_payment'; });
     if (matching) { openModal(matching); return; }
     busy = true;
