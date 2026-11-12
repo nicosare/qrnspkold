@@ -255,9 +255,8 @@
     resultIcon.classList.toggle('is-subscription', spin.rewardType === 'subscription');
     resultTitle.textContent = spin.title || 'Награда получена';
     resultDetail.textContent = amountDetail(spin);
-    resultMeta.textContent = spin.isFree
-      ? 'Бесплатная попытка'
-      : 'Потрачено: ' + Number(spin.scanCost || 0) + ' ' + scanWord(spin.scanCost || 0);
+    resultMeta.textContent = '';
+    resultMeta.hidden = true;
     if (restored) setStatus('Прокрутка завершилась, пока приложение было закрыто. Награда уже начислена.', false);
     openModal(resultModal);
     apiPost('api/lucky/reveal', { spinId: spin.id }).catch(function (error) {
