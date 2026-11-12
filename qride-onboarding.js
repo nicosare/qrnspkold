@@ -1,4 +1,4 @@
-/* QRide onboarding: temporarily moves the actual Q + speech bubble into a guided layer. */
+/* QRide onboarding: the original mascot and speech bubble become the guide. */
 (function () {
   'use strict';
 
@@ -13,17 +13,19 @@
 
   const params = new URLSearchParams(window.location.search);
   const viewerId = params.get('vk_user_id') || params.get('viewer_id') || 'guest';
-  const storageRoot = 'qride:onboarding:v1:' + viewerId + ':';
+  // v2 intentionally offers the updated, visually corrected tour once to users
+  // who completed the first draft of the introduction.
+  const storageRoot = 'qride:onboarding:v2:' + viewerId + ':';
   const seenKey = storageRoot + 'main-seen';
   const luckySeenKey = storageRoot + 'lucky-seen';
   const reduceMotion = Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const svgNs = 'http://www.w3.org/2000/svg';
 
   let tour = null;
   let firstRunTimer = 0;
   let luckyReady = false;
   let luckyAvailable = Boolean(luckySection && !luckySection.hidden);
   let luckyHintTimer = 0;
-  let startObserver = null;
 
   function storageHas(key) {
     try { if (window.localStorage.getItem(key) === '1') return true; } catch (_) {}
@@ -86,14 +88,14 @@
     steps.push(
       {
         id: 'collect',
-        selector: '#qride-collect',
+        selector: '.qride-collect-heading',
         title: 'Коллекция',
         copy: 'Здесь собираются карточки транспорта по маршрутам. После поездок с подходящим QR-кодом новые карточки появляются в коллекции.',
         reaction: 'happy'
       },
       {
         id: 'plus',
-        selector: '.start-offers-section',
+        selector: '.start-offers-section-heading',
         title: 'QRide Plus',
         copy: 'В этом блоке собраны пакеты сканирований и подписки. Выбирай подходящий вариант — условия и срок указаны на карточках.',
         reaction: 'wink'
@@ -107,14 +109,14 @@
       },
       {
         id: 'referral',
-        selector: '.start-referral',
+        selector: '#start-referral-share',
         title: 'Пригласи друга',
-        copy: 'Поделись ссылкой на QRide. Когда приглашённый друг впервые успешно отсканирует QR-код, тебе начислят бонусные сканы.',
+        copy: 'Нажми «Поделиться», чтобы отправить приглашение. Рядом можно скопировать ссылку или открыть её QR-код. За первое успешное сканирование друга начислят бонусные сканы.',
         reaction: 'wink'
       },
       {
         id: 'promo',
-        selector: '.start-promo',
+        selector: '#start-promo-form',
         title: 'Промокод',
         copy: 'Если у тебя есть промокод, введи его в это поле и нажми «Применить».',
         reaction: 'curious'
@@ -143,21 +145,42 @@
     }];
   }
 
+  function createSvgNode(name, attributes) {
+    const node = document.createElementNS(svgNs, name);
+    Object.keys(attributes || {}).forEach(function (key) {
+      node.setAttribute(key, String(attributes[key]));
+    });
+    return node;
+  }
+
   function createLayer() {
     const layer = document.createElement('div');
     layer.className = 'qride-tour-layer';
     layer.hidden = true;
     layer.setAttribute('aria-label', 'Знакомство с QRide');
 
-    const names = ['top', 'left', 'right', 'bottom'];
-    const panels = {};
-    names.forEach(function (name) {
-      const panel = document.createElement('div');
-      panel.className = 'qride-tour-panel qride-tour-panel-' + name;
-      panel.setAttribute('aria-hidden', 'true');
-      layer.appendChild(panel);
-      panels[name] = panel;
+    const blocker = document.createElement('div');
+    blocker.className = 'qride-tour-blocker';
+    blocker.setAttribute('aria-hidden', 'true');
+    layer.appendChild(blocker);
+
+    const svg = createSvgNode('svg', {
+      class: 'qride-tour-mask',
+      'aria-hidden': 'true',
+      focusable: 'false',
+      preserveAspectRatio: 'none'
     });
+    const shade = createSvgNode('path', {
+      class: 'qride-tour-shade',
+      'fill-rule': 'evenodd',
+      'clip-rule': 'evenodd'
+    });
+    const blueFrame = createSvgNode('path', { class: 'qride-tour-frame-blue' });
+    const whiteFrame = createSvgNode('path', { class: 'qride-tour-frame-white' });
+    svg.appendChild(shade);
+    svg.appendChild(blueFrame);
+    svg.appendChild(whiteFrame);
+    layer.appendChild(svg);
 
     const hole = document.createElement('div');
     hole.className = 'qride-tour-hole';
@@ -170,7 +193,16 @@
     guide.setAttribute('aria-label', 'Подсказка от Кью');
     layer.appendChild(guide);
     document.body.appendChild(layer);
-    return { layer: layer, panels: panels, hole: hole, guide: guide };
+
+    return {
+      layer: layer,
+      svg: svg,
+      shade: shade,
+      blueFrame: blueFrame,
+      whiteFrame: whiteFrame,
+      hole: hole,
+      guide: guide
+    };
   }
 
   function createPlaceholder(element, className) {
@@ -197,22 +229,52 @@
     moodMessage.appendChild(copyNode);
   }
 
-  function setPanelRect(panels, hole, rect) {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    const pad = 8;
-    const left = Math.max(8, Math.min(width - 8, rect.left - pad));
-    const top = Math.max(8, Math.min(height - 8, rect.top - pad));
-    const right = Math.max(left + 1, Math.min(width - 8, rect.right + pad));
-    const bottom = Math.max(top + 1, Math.min(height - 8, rect.bottom + pad));
-    const holeWidth = right - left;
-    const holeHeight = bottom - top;
+  function roundedRectPath(left, top, width, height, radius) {
+    const right = left + width;
+    const bottom = top + height;
+    const r = Math.max(0, Math.min(radius, width / 2, height / 2));
+    return [
+      'M', left + r, top,
+      'H', right - r,
+      'Q', right, top, right, top + r,
+      'V', bottom - r,
+      'Q', right, bottom, right - r, bottom,
+      'H', left + r,
+      'Q', left, bottom, left, bottom - r,
+      'V', top + r,
+      'Q', left, top, left + r, top,
+      'Z'
+    ].join(' ');
+  }
 
-    Object.assign(panels.top.style, { left: '0px', top: '0px', width: width + 'px', height: top + 'px' });
-    Object.assign(panels.left.style, { left: '0px', top: top + 'px', width: left + 'px', height: holeHeight + 'px' });
-    Object.assign(panels.right.style, { left: right + 'px', top: top + 'px', width: Math.max(0, width - right) + 'px', height: holeHeight + 'px' });
-    Object.assign(panels.bottom.style, { left: '0px', top: bottom + 'px', width: width + 'px', height: Math.max(0, height - bottom) + 'px' });
-    Object.assign(hole.style, { left: left + 'px', top: top + 'px', width: holeWidth + 'px', height: holeHeight + 'px' });
+  function setHighlight(state, rect) {
+    const width = Math.max(1, window.innerWidth);
+    const height = Math.max(1, window.innerHeight);
+    const pad = 5;
+    const left = Math.max(1, Math.min(width - 1, rect.left - pad));
+    const top = Math.max(1, Math.min(height - 1, rect.top - pad));
+    const right = Math.max(left + 1, Math.min(width - 1, rect.right + pad));
+    const bottom = Math.max(top + 1, Math.min(height - 1, rect.bottom + pad));
+    const boxWidth = right - left;
+    const boxHeight = bottom - top;
+    const radius = Math.min(19, boxHeight / 2, boxWidth / 2);
+    const path = roundedRectPath(left, top, boxWidth, boxHeight, radius);
+    const viewport = 'M 0 0 H ' + width + ' V ' + height + ' H 0 Z ';
+
+    state.svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+    state.svg.setAttribute('width', width);
+    state.svg.setAttribute('height', height);
+    state.shade.setAttribute('d', viewport + path);
+    state.blueFrame.setAttribute('d', path);
+    state.whiteFrame.setAttribute('d', path);
+
+    Object.assign(state.hole.style, {
+      left: left + 'px',
+      top: top + 'px',
+      width: boxWidth + 'px',
+      height: boxHeight + 'px',
+      borderRadius: radius + 'px'
+    });
   }
 
   function rectForWelcome(state) {
@@ -226,37 +288,110 @@
     };
   }
 
-  function positionGuide(state, targetRect, isWelcome) {
+  function viewportBounds() {
+    const vv = window.visualViewport;
+    const top = vv ? Math.max(0, vv.offsetTop) : 0;
+    const height = vv && vv.height ? vv.height : window.innerHeight;
+    return {
+      top: top + 10,
+      bottom: top + height - 10,
+      height: height
+    };
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function scrollTargetForGuide(state, target, rect, guideHeight, bounds) {
+    if (!target || rect.height > bounds.height - guideHeight - 42) return false;
+
+    const gap = 14;
+    const candidates = [
+      { guideTop: bounds.top, targetTop: bounds.top + guideHeight + gap, side: 'above' },
+      { guideTop: bounds.bottom - guideHeight, targetTop: bounds.bottom - guideHeight - gap - rect.height, side: 'below' }
+    ];
+    candidates.sort(function (a, b) {
+      return Math.abs(a.targetTop - rect.top) - Math.abs(b.targetTop - rect.top);
+    });
+
+    const maxScroll = Math.max(0, startOverlay.scrollHeight - startOverlay.clientHeight);
+    for (let i = 0; i < candidates.length; i += 1) {
+      const candidate = candidates[i];
+      const delta = candidate.targetTop - rect.top;
+      const nextScroll = clamp(startOverlay.scrollTop - delta, 0, maxScroll);
+      const actualDelta = startOverlay.scrollTop - nextScroll;
+      const resultingTop = rect.top - actualDelta;
+      const resultingBottom = resultingTop + rect.height;
+      const guideFits = candidate.side === 'above'
+        ? resultingTop >= bounds.top + guideHeight + gap - 2
+        : resultingBottom <= bounds.bottom - guideHeight - gap + 2;
+      if (guideFits && Math.abs(actualDelta) > 2) {
+        startOverlay.scrollTo({
+          top: nextScroll,
+          behavior: reduceMotion ? 'auto' : 'smooth'
+        });
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function positionGuide(state, target, isWelcome, attempt) {
+    if (!tour || tour !== state || state.closing) return;
     const screenRect = startScreen.getBoundingClientRect();
     const width = Math.min(screenRect.width, window.innerWidth - 24);
     state.guide.style.width = width + 'px';
-    const left = Math.max(12, Math.min(window.innerWidth - width - 12, screenRect.left));
+    const left = clamp(screenRect.left, 12, window.innerWidth - width - 12);
+    const retry = Number(attempt || 0);
 
     requestAnimationFrame(function () {
-      if (!tour || tour !== state) return;
+      if (!tour || tour !== state || state.closing) return;
       const guideHeight = state.guide.getBoundingClientRect().height;
-      const safeTop = 8 + (window.visualViewport ? Math.max(0, window.visualViewport.offsetTop) : 0);
-      const safeBottom = 12;
+      const bounds = viewportBounds();
+      const gap = 14;
+      let rect = isWelcome ? rectForWelcome(state) : (target ? target.getBoundingClientRect() : null);
       let top;
 
       if (isWelcome) {
-        top = targetRect.top;
+        top = clamp(rect.top, bounds.top, Math.max(bounds.top, bounds.bottom - guideHeight));
       } else {
-        const above = targetRect.top - guideHeight - 18;
-        const below = targetRect.bottom + 18;
-        if (above >= safeTop) top = above;
-        else if (below + guideHeight <= window.innerHeight - safeBottom) top = below;
-        else top = Math.max(safeTop, Math.min(above, window.innerHeight - guideHeight - safeBottom));
+        const canPlaceAbove = rect.top - guideHeight - gap >= bounds.top;
+        const canPlaceBelow = rect.bottom + gap + guideHeight <= bounds.bottom;
+
+        if (canPlaceAbove && canPlaceBelow) {
+          // Keep the guide on the side with more spare room.
+          const roomAbove = rect.top - bounds.top;
+          const roomBelow = bounds.bottom - rect.bottom;
+          top = roomBelow >= roomAbove ? rect.bottom + gap : rect.top - guideHeight - gap;
+        } else if (canPlaceAbove) {
+          top = rect.top - guideHeight - gap;
+        } else if (canPlaceBelow) {
+          top = rect.bottom + gap;
+        } else if (retry < 2 && scrollTargetForGuide(state, target, rect, guideHeight, bounds)) {
+          window.setTimeout(function () {
+            positionGuide(state, target, false, retry + 1);
+          }, reduceMotion ? 0 : 420);
+          return;
+        } else {
+          // Last-resort safe placement: never put the guide over the focus target.
+          // The target has already been scrolled as far as the viewport allows.
+          if (rect.top >= window.innerHeight / 2) {
+            top = bounds.top;
+          } else {
+            top = bounds.bottom - guideHeight;
+          }
+        }
       }
 
-      top = Math.max(safeTop, Math.min(top, window.innerHeight - guideHeight - safeBottom));
+      top = clamp(top, bounds.top, Math.max(bounds.top, bounds.bottom - guideHeight));
       state.guide.style.transform = 'translate3d(' + Math.round(left) + 'px,' + Math.round(top) + 'px,0)';
-      setPanelRect(state.panels, state.hole, targetRect);
+      setHighlight(state, rect);
     });
   }
 
   function getTarget(step) {
-    if (step.top) return null;
+    if (!step || step.top) return null;
     return document.querySelector(step.selector);
   }
 
@@ -270,8 +405,8 @@
 
     const progress = state.controls.querySelector('.qride-tour-progress');
     const nextButton = state.controls.querySelector('.qride-tour-next');
-    progress.textContent = (state.mode === 'lucky' ? 'Подсказка о рулетке' : 'Знакомство · ' + (index + 1) + ' из ' + state.steps.length);
-    nextButton.textContent = state.mode === 'lucky' ? 'Понятно' : (index === state.steps.length - 1 ? 'Завершить' : 'Далее');
+    progress.textContent = 'Знакомство · ' + (index + 1) + ' из ' + state.steps.length;
+    nextButton.textContent = index === state.steps.length - 1 ? 'Завершить' : 'Далее';
 
     if (step.id === 'lucky') {
       state.sawLucky = true;
@@ -282,8 +417,10 @@
     if (step.top) {
       startOverlay.scrollTo({ top: 0, behavior: 'auto' });
       requestAnimationFrame(function () {
-        if (!tour || tour !== state) return;
-        positionGuide(state, rectForWelcome(state), true);
+        requestAnimationFrame(function () {
+          if (!tour || tour !== state) return;
+          positionGuide(state, null, true, 0);
+        });
       });
       return;
     }
@@ -303,25 +440,37 @@
 
     window.setTimeout(function () {
       if (!tour || tour !== state || state.finishing) return;
-      positionGuide(state, target.getBoundingClientRect(), false);
-    }, reduceMotion ? 0 : 520);
+      positionGuide(state, target, false, 0);
+    }, reduceMotion ? 0 : 460);
+  }
+
+  function restoreOriginalElements(state) {
+    if (state.controls && state.controls.parentNode) state.controls.remove();
+    state.brandPlaceholder.replaceWith(brand);
+    state.introPlaceholder.replaceWith(intro);
+    moodMessage.innerHTML = state.originalMessage;
+    state.layer.remove();
+    document.body.classList.remove('qride-tour-open');
+    window.qrideOnboardingActive = false;
+    tour = null;
+
+    if (state.mode === 'auto' || state.mode === 'replay') storageSet(seenKey);
+    if (state.sawLucky) storageSet(luckySeenKey);
+    startOverlay.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+    maybeShowLuckyHint();
   }
 
   function closeLayer(state) {
+    if (!tour || tour !== state || state.closing) return;
+    state.closing = true;
+    if (state.goodbyeTimer) {
+      clearTimeout(state.goodbyeTimer);
+      state.goodbyeTimer = 0;
+    }
     state.layer.style.opacity = '0';
     window.setTimeout(function () {
-      if (state.controls && state.controls.parentNode) state.controls.remove();
-      state.brandPlaceholder.replaceWith(brand);
-      state.introPlaceholder.replaceWith(intro);
-      moodMessage.innerHTML = state.originalMessage;
-      state.layer.remove();
-      document.body.classList.remove('qride-tour-open');
-      window.qrideOnboardingActive = false;
-      tour = null;
-      startOverlay.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
-      if (state.mode === 'auto' || state.mode === 'replay') storageSet(seenKey);
-      if (state.sawLucky) storageSet(luckySeenKey);
-      maybeShowLuckyHint();
+      if (tour !== state) return;
+      restoreOriginalElements(state);
     }, reduceMotion ? 0 : 190);
   }
 
@@ -329,10 +478,21 @@
     if (!tour || tour !== state || state.finishing) return;
     state.finishing = true;
     state.guide.classList.add('is-finishing');
-    state.controls.querySelectorAll('button').forEach(function (button) { button.disabled = true; });
+
+    const skipButton = state.controls.querySelector('.qride-tour-skip');
+    const nextButton = state.controls.querySelector('.qride-tour-next');
+    const progress = state.controls.querySelector('.qride-tour-progress');
+    if (skipButton) skipButton.hidden = true;
+    if (progress) progress.textContent = 'Знакомство завершено';
+    if (nextButton) {
+      nextButton.disabled = false;
+      nextButton.textContent = 'Понятно';
+    }
+
     // Skipping the whole tour should not immediately trigger a second hint
     // for a roulette that was already available during the skipped tour.
     if (!completed && state.mode !== 'lucky' && luckyAvailable) storageSet(luckySeenKey);
+
     const title = completed ? 'На этом всё!' : 'Хорошего дня!';
     const copy = completed
       ? 'Теперь ты знаешь, где что находится. Если что-то забудется, знакомство всегда можно повторить в FAQ. Приятных поездок!'
@@ -341,16 +501,16 @@
     setMessage(title, copy);
     if (typeof window.qrideMascotReact === 'function') window.qrideMascotReact('happy');
 
-    startOverlay.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
-    window.setTimeout(function () {
+    // Keep Q where the user last saw him. The farewell stays readable before
+    // the original header is restored; no rushed trip back to the top.
+    const target = getTarget(state.currentStep);
+    requestAnimationFrame(function () {
       if (!tour || tour !== state) return;
-      positionGuide(state, rectForWelcome(state), true);
-      setPanelRect(state.panels, state.hole, rectForWelcome(state));
-      window.setTimeout(function () {
-        if (!tour || tour !== state) return;
-        closeLayer(state);
-      }, reduceMotion ? 0 : 620);
-    }, reduceMotion ? 0 : 520);
+      positionGuide(state, target, Boolean(state.currentStep && state.currentStep.top), 0);
+    });
+    state.goodbyeTimer = window.setTimeout(function () {
+      closeLayer(state);
+    }, 5200);
   }
 
   function startTour(mode) {
@@ -367,22 +527,24 @@
       index: 0,
       currentStep: null,
       finishing: false,
+      closing: false,
+      goodbyeTimer: 0,
       sawLucky: false,
       originalMessage: moodMessage.innerHTML,
       brandPlaceholder: createPlaceholder(brand, 'qride-tour-placeholder-brand'),
       introPlaceholder: createPlaceholder(intro, 'qride-tour-placeholder-intro'),
       layer: null,
-      panels: null,
+      svg: null,
+      shade: null,
+      blueFrame: null,
+      whiteFrame: null,
       hole: null,
       guide: null,
       controls: null
     };
 
     const ui = createLayer();
-    state.layer = ui.layer;
-    state.panels = ui.panels;
-    state.hole = ui.hole;
-    state.guide = ui.guide;
+    Object.assign(state, ui);
     state.guide.appendChild(brand);
     state.guide.appendChild(intro);
 
@@ -415,6 +577,10 @@
     next.addEventListener('click', function (event) {
       event.preventDefault();
       event.stopPropagation();
+      if (state.finishing) {
+        closeLayer(state);
+        return;
+      }
       if (state.mode === 'lucky' || state.index >= state.steps.length - 1) finishTour(state, true);
       else showStep(state, state.index + 1);
     });
@@ -503,24 +669,41 @@
     if (event.key === 'Escape' && tour && !tour.finishing) {
       event.preventDefault();
       finishTour(tour, false);
+    } else if (event.key === 'Escape' && tour && tour.finishing) {
+      event.preventDefault();
+      closeLayer(tour);
     }
   });
 
+  function repositionCurrentStep() {
+    if (!tour || tour.finishing || tour.closing) return;
+    if (tour.currentStep && tour.currentStep.top) {
+      positionGuide(tour, null, true, 0);
+    } else {
+      const target = getTarget(tour.currentStep);
+      if (target && isVisible(target)) positionGuide(tour, target, false, 0);
+    }
+  }
+
   if (window.MutationObserver) {
-    startObserver = new MutationObserver(function () {
+    const startObserver = new MutationObserver(function () {
       if (isVisible(startOverlay)) {
         scheduleFirstRun();
         maybeShowLuckyHint();
       }
     });
     startObserver.observe(startOverlay, { attributes: true, attributeFilter: ['hidden', 'class', 'style'] });
-
   }
 
+  window.addEventListener('resize', repositionCurrentStep);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', repositionCurrentStep);
+  }
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible') {
       scheduleFirstRun();
       maybeShowLuckyHint();
+      repositionCurrentStep();
     }
   });
   window.addEventListener('focus', function () {
@@ -529,7 +712,4 @@
   });
 
   installFaqReplay();
-  if (luckySection && isVisible(luckySection)) {
-    luckyAvailable = true;
-  }
 })();
