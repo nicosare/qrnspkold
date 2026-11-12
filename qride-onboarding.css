@@ -59,7 +59,7 @@
   max-width: 460px;
   pointer-events: auto;
   transform: translate3d(-120vw, -120vh, 0);
-  transition: transform .48s cubic-bezier(.2, .76, .22, 1);
+  transition: transform .68s cubic-bezier(.2, .76, .22, 1);
   will-change: transform;
 }
 .qride-tour-guide .start-brand,
