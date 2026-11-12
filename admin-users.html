@@ -274,10 +274,9 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    <div class="lucky-admin-stat"><span>За сканы</span><strong id="lucky-paid-spins-total">—</strong></div>
    <div class="lucky-admin-stat"><span>Списано сканов</span><strong id="lucky-scans-spent">—</strong></div>
   </div>
-  <h3 class="lucky-admin-subtitle">Выпадения по наградам</h3>
+  <h3 class="lucky-admin-subtitle">Фактическое распределение наград</h3>
+  <p class="promo-intro">Процент рассчитан по реальным выпадениям от общего числа прокруток, а не по заданным шансам.</p>
   <div id="lucky-prize-stats" class="lucky-admin-table-wrap"><div class="lucky-admin-empty">Загрузка…</div></div>
-  <h3 class="lucky-admin-subtitle">Последние прокрутки</h3>
-  <div id="lucky-recent" class="lucky-admin-table-wrap"><div class="lucky-admin-empty">Загрузка…</div></div>
   <div class="foot">Новая конфигурация получает отдельную версию. Уже выполненные прокрутки сохраняют исходную награду, вероятность и версию настроек.</div>
  </div>
 
@@ -558,14 +557,8 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
      document.getElementById('lucky-scans-spent').textContent=Number(stats.scansSpent||0).toLocaleString('ru-RU');
      const prizeStats=data.prizeStats||[];
      document.getElementById('lucky-prize-stats').innerHTML=prizeStats.length
-       ?'<table class="lucky-admin-table"><thead><tr><th>Награда</th><th>Тип</th><th>Выпадений</th></tr></thead><tbody>'+
-         prizeStats.map(p=>'<tr><td>'+esc(p.title)+'</td><td>'+esc(luckyPrizeTypeLabel(p.rewardType))+'</td><td>'+Number(p.count||0).toLocaleString('ru-RU')+'</td></tr>').join('')+
-         '</tbody></table>'
-       :'<div class="lucky-admin-empty">Прокруток пока нет.</div>';
-     const recent=data.recent||[];
-     document.getElementById('lucky-recent').innerHTML=recent.length
-       ?'<table class="lucky-admin-table"><thead><tr><th>Дата</th><th>VK ID</th><th>Награда</th><th>Попытка</th></tr></thead><tbody>'+
-         recent.map(p=>'<tr><td>'+esc(date(p.createdAt))+'</td><td>'+esc(p.vkId)+'</td><td>'+esc(p.title)+'<br><small>'+Number(p.probability).toLocaleString('ru-RU',{maximumFractionDigits:2})+'%</small></td><td>'+(p.isFree?'Бесплатно':'−'+Number(p.scanCost)+' скан.')+'</td></tr>').join('')+
+       ?'<table class="lucky-admin-table"><thead><tr><th>Награда</th><th>Тип</th><th>Выпадений</th><th>Факт. доля</th></tr></thead><tbody>'+
+         prizeStats.map(p=>'<tr><td>'+esc(p.title)+'</td><td>'+esc(luckyPrizeTypeLabel(p.rewardType))+'</td><td>'+Number(p.count||0).toLocaleString('ru-RU')+'</td><td><strong>'+Number(p.actualPercent||0).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+'%</strong></td></tr>').join('')+
          '</tbody></table>'
        :'<div class="lucky-admin-empty">Прокруток пока нет.</div>';
      luckyMessage('Настройки загружены. Версия конфигурации: '+Number(config.version||1)+'.',false);
@@ -663,6 +656,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
        '</div>'+
        '<details class="scan-history" data-scan-history="'+esc(u.vk_id)+'"><summary>История сканов · '+esc(u.scan_count||0)+'</summary><div class="scan-history-list"><div class="scan-history-empty">Нажмите, чтобы загрузить историю.</div></div></details>'+
        '<details class="credit-history" data-credit-history="'+esc(u.vk_id)+'"><summary>История начислений</summary><div class="scan-history-list"><div class="scan-history-empty">Нажмите, чтобы загрузить историю.</div></div></details>'+
+       '<details class="scan-history" data-lucky-history="'+esc(u.vk_id)+'"><summary>История рулетки</summary><div class="scan-history-list"><div class="scan-history-empty">Нажмите, чтобы загрузить историю.</div></div></details>'+
        '<div class="entitlement">'+
        '<details class="manage"><summary>Управление доступом</summary><div class="manage-body">'+
         '<div class="grant-section"><div class="grant-section-title">НАЧИСЛЕНИЕ</div>'+
@@ -744,6 +738,26 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
      .finally(()=>{delete details.dataset.loading;});
  },true);
  cards.addEventListener('toggle', event => {
+   const details=event.target.closest('details[data-lucky-history]');
+   if(!details || !details.open || details.dataset.loaded==='1' || details.dataset.loading==='1')return;
+   details.dataset.loading='1';
+   const list=details.querySelector('.scan-history-list');
+   list.innerHTML='<div class="scan-history-empty">Загружаем историю…</div>';
+   fetch('../api/admin/users/'+encodeURIComponent(details.dataset.luckyHistory)+'/lucky-spins',{headers:{Authorization:auth},cache:'no-store'})
+     .then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error||'Не удалось загрузить историю рулетки.');return data;})
+     .then(data=>{
+       details.dataset.loaded='1';
+       if(!data.spins.length){list.innerHTML='<div class="scan-history-empty">Прокруток пока нет.</div>';return;}
+       list.innerHTML=data.spins.map(item=>{
+         const attempt=item.is_free?'Бесплатная попытка':'−'+Number(item.scan_cost)+' скан.';
+         const credited=item.reward_credited_at?'Начислено':'Ожидает начисления';
+         return '<div class="scan-row"><div class="scan-row-main">'+esc(item.reward_title)+' · '+esc(item.reward_amount)+' · '+esc(luckyPrizeTypeLabel(item.reward_type))+'</div><div class="scan-row-meta">'+esc(date(item.created_at))+' · '+esc(attempt)+'<br>Шанс на момент выпадения: '+Number(item.probability).toLocaleString('ru-RU',{maximumFractionDigits:2})+'% · '+credited+'</div></div>';
+       }).join('');
+     })
+     .catch(error=>{list.innerHTML='<div class="scan-history-empty error">'+esc(error.message)+' <button type="button" data-action="retry-lucky">Повторить</button></div>';})
+     .finally(()=>{delete details.dataset.loading;});
+ },true);
+ cards.addEventListener('toggle', event => {
    const details=event.target.closest('details[data-credit-history]');
    if(!details || !details.open || details.dataset.loaded==='1' || details.dataset.loading==='1')return;
    details.dataset.loading='1';
@@ -813,6 +827,8 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    }
    const retry=event.target.closest('button[data-action="retry-scans"]');
    if(retry){const details=retry.closest('details[data-scan-history]');if(details){details.dataset.loaded='0';details.open=false;details.open=true;}return;}
+   const retryLucky=event.target.closest('button[data-action="retry-lucky"]');
+   if(retryLucky){const details=retryLucky.closest('details[data-lucky-history]');if(details){details.dataset.loaded='0';details.open=false;details.open=true;}return;}
    const retryCredits=event.target.closest('button[data-action="retry-credits"]');
    if(retryCredits){const details=retryCredits.closest('details[data-credit-history]');if(details){details.dataset.loaded='0';details.open=false;details.open=true;}return;}
    const button=event.target.closest('button[data-action]');
