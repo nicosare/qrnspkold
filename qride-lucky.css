@@ -87,3 +87,12 @@
     .qride-lucky-result-icon { animation: none !important; }
     .qride-lucky-spin:active, .qride-lucky-secondary:active { transform: none; }
 }
+
+.qride-scan-tariffs-sheet { max-height: min(88vh, 820px); overflow-y: auto; overscroll-behavior: contain; }
+.qride-scan-tariffs-groups { margin-top: 14px; }
+.qride-scan-tariffs-groups .start-offer-group + .start-offer-group { margin-top: 17px; }
+.qride-scan-tariffs-groups .start-offer-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.qride-scan-tariffs-groups .start-offer { padding: 10px 7px; }
+@media (max-width: 390px) {
+  .qride-scan-tariffs-groups .start-offer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
