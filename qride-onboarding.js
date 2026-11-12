@@ -78,7 +78,7 @@
     if (luckySection && isVisible(luckySection)) {
       steps.push({
         id: 'lucky',
-        selector: '#qride-lucky',
+        selector: '#qride-lucky-machine',
         title: 'Билет удачи',
         copy: 'Здесь можно прокрутить рулетку и получить одну из наград. Доступность бесплатной попытки и стоимость следующей указаны под рулеткой.',
         reaction: 'curious'
@@ -138,7 +138,7 @@
   function buildLuckyStep() {
     return [{
       id: 'lucky',
-      selector: '#qride-lucky',
+      selector: '#qride-lucky-machine',
       title: 'Билет удачи',
       copy: 'Рулетка уже доступна. Здесь можно прокрутить ленту и получить одну из наград. Условия попытки указаны прямо под ней.',
       reaction: 'curious'
@@ -320,8 +320,8 @@
       const candidate = candidates[i];
       const delta = candidate.targetTop - rect.top;
       const nextScroll = clamp(startOverlay.scrollTop - delta, 0, maxScroll);
-      const actualDelta = startOverlay.scrollTop - nextScroll;
-      const resultingTop = rect.top - actualDelta;
+      const scrollDelta = nextScroll - startOverlay.scrollTop;
+      const resultingTop = rect.top - scrollDelta;
       const resultingBottom = resultingTop + rect.height;
       const guideFits = candidate.side === 'above'
         ? resultingTop >= bounds.top + guideHeight + gap - 2
