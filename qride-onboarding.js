@@ -436,7 +436,8 @@
     firstRunTimer = window.setTimeout(function () {
       firstRunTimer = 0;
       if (tour || storageHas(seenKey) || !luckyReady) return;
-      if (!isVisible(startOverlay) || !document.body.classList.contains('app-ready') || document.visibilityState === 'hidden' || hasOtherDialogOpen()) {
+      if (!isVisible(startOverlay) || !document.body.classList.contains('app-ready') || document.visibilityState === 'hidden') return;
+      if (hasOtherDialogOpen()) {
         scheduleFirstRun();
         return;
       }
@@ -449,7 +450,8 @@
     luckyHintTimer = window.setTimeout(function () {
       luckyHintTimer = 0;
       if (tour || !luckyAvailable || !storageHas(seenKey) || storageHas(luckySeenKey)) return;
-      if (!isVisible(startOverlay) || document.visibilityState === 'hidden' || hasOtherDialogOpen()) {
+      if (!isVisible(startOverlay) || document.visibilityState === 'hidden') return;
+      if (hasOtherDialogOpen()) {
         maybeShowLuckyHint();
         return;
       }
