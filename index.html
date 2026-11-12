@@ -4019,6 +4019,264 @@ body.scan-loading-open { overflow: hidden !important; }
             if (hour >= 11 && hour < 17) return 'day';
             return 'evening';
         }
+
+        // Holiday dates follow Yekaterinburg time, matching QRide's daily
+        // accounting timezone and avoiding phone-timezone differences.
+        function getRoadnoteHolidayDate(date) {
+            const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Asia/Yekaterinburg',
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric',
+                weekday: 'short'
+            }).formatToParts(date);
+            const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+            const weekdays = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+            return {
+                year: Number(values.year),
+                month: Number(values.month),
+                day: Number(values.day),
+                weekday: weekdays[values.weekday]
+            };
+        }
+
+        function getRoadnoteNthWeekday(year, month, weekday, occurrence) {
+            if (occurrence > 0) {
+                const firstWeekday = new Date(year, month - 1, 1).getDay();
+                return 1 + ((weekday - firstWeekday + 7) % 7) + (occurrence - 1) * 7;
+            }
+            const lastDate = new Date(year, month, 0);
+            return lastDate.getDate() - ((lastDate.getDay() - weekday + 7) % 7);
+        }
+
+        function getRoadnoteBirthday(profile) {
+            if (!profile || typeof profile.bdate !== 'string' || !profile.bdate) return null;
+            const match = profile.bdate.match(/^(\\d{1,2})\\.(\\d{1,2})(?:\\.\\d{4})?$/);
+            if (!match) return null;
+            const day = Number(match[1]);
+            const month = Number(match[2]);
+            const daysInMonth = new Date(2024, month, 0).getDate();
+            if (month < 1 || month > 12 || day < 1 || day > daysInMonth) return null;
+            return { day, month };
+        }
+
+        const birthdayMoodMessages = [
+            'С днём рождения! Желаю тебе побольше счастливых моментов, верных друзей и исполнения желаний. Пусть впереди будет много хорошего!',
+            'Сегодня твой день! Желаю, чтобы рядом всегда были люди, с которыми можно разделить самые лучшие моменты жизни.',
+            'С днём рождения! Пусть все твои мечты однажды станут пунктами назначения, до которых обязательно получится добраться!',
+            'Желаю тебе побольше поводов улыбаться, интересных событий и приятных неожиданностей. С праздником!',
+            'Ещё один год новых историй, впечатлений и возможностей! Пусть следующий будет ещё лучше. С днём рождения!'
+        ];
+
+        const roadnoteHolidayMessages = [
+            {
+                id: 'christmas', date: { month: 1, day: 7 }, icon: 'sparkles', color: 'yellow',
+                messages: [
+                    'С Рождеством! Желаю тебе душевного тепла, спокойствия и побольше счастливых моментов рядом с близкими.',
+                    'Пусть этот светлый день принесёт в дом уют, добрые вести и ощущение, что всё обязательно будет хорошо. С Рождеством!',
+                    'С Рождеством! Желаю мира, добра и тепла — сегодня и каждый день.'
+                ]
+            },
+            {
+                id: 'student_day', date: { month: 1, day: 25 }, icon: 'award', color: 'lavender',
+                messages: [
+                    'С Днём студента! Желаю интересных открытий, лёгких экзаменов и побольше свободного времени на всё самое интересное!',
+                    'Пусть зачёты закрываются с первого раза, дедлайны не подкрадываются внезапно, а студенческие годы запоминаются хорошим. С праздником!',
+                    'С Днём студента! Желаю знаний, которые пригодятся, преподавателей, с которыми повезёт, и поводов гордиться собой.'
+                ]
+            },
+            {
+                id: 'science_day', date: { month: 2, day: 8 }, icon: 'sparkles', color: 'blue',
+                messages: [
+                    'С Днём российской науки! Желаю не переставать задавать вопросы, находить интересные ответы и открывать для себя новое.',
+                    'Пусть любопытство приводит к большим открытиям, а самые смелые идеи однажды становятся реальностью. С Днём науки!'
+                ]
+            },
+            {
+                id: 'defender_day', date: { month: 2, day: 23 }, gender: 2, icon: 'award', color: 'blue',
+                messages: [
+                    'С 23 февраля! Желаю крепких нервов, надёжного окружения и уверенности на любом маршруте!',
+                    'Пусть любые трудности будут тебе по плечу, а удача всегда будет на твоей стороне. С праздником!',
+                    'Желаю сил для больших свершений, уверенности в себе и побольше поводов для улыбки. С 23 февраля!'
+                ]
+            },
+            {
+                id: 'womens_day', date: { month: 3, day: 8 }, gender: 1, icon: 'flower', color: 'pink',
+                messages: [
+                    'С 8 марта! Пусть каждый день приносит поводы улыбаться, а рядом всегда будут люди, которые ценят тебя!',
+                    'Желаю весны в душе, приятных сюрпризов и исполнения самых заветных желаний. С праздником!',
+                    'Пусть в жизни будет побольше красоты, тепла, заботы и поездок только в приятные места. С 8 марта!'
+                ]
+            },
+            {
+                id: 'cosmonautics_day', date: { month: 4, day: 12 }, icon: 'sparkles', color: 'lavender',
+                messages: [
+                    'С Днём космонавтики! Желаю не бояться больших целей и помнить: самые невероятные маршруты начинаются с маленького шага!',
+                    'Пусть мечты будут смелыми, горизонты — широкими, а сил хватает даже на самые далёкие цели. С праздником!'
+                ]
+            },
+            {
+                id: 'spring_labor_day', date: { month: 5, day: 1 }, icon: 'sprout', color: 'sage',
+                messages: [
+                    'С Первомаем! Желаю побольше отдыха, хорошей погоды и поменьше поводов смотреть на часы!',
+                    'Пусть сегодня все маршруты ведут к отдыху, вкусной еде и хорошей компании. С праздником!',
+                    'С праздником весны и труда! Желаю, чтобы работа приносила удовольствие, а отдых никогда не заканчивался слишком быстро.'
+                ]
+            },
+            {
+                id: 'victory_day', date: { month: 5, day: 9 }, icon: 'heart', color: 'peach',
+                messages: [
+                    'С Днём Победы! Помним подвиг тех, кто подарил нам мирное небо. Пусть мир всегда будет рядом.',
+                    '9 Мая — день памяти, благодарности и уважения. Желаю мира, добра и спокойствия тебе и твоим близким.',
+                    'В этот день особенно важно помнить о тех, кто прошёл через войну ради будущих поколений. С Днём Победы!'
+                ]
+            },
+            {
+                id: 'childrens_day', date: { month: 6, day: 1 }, icon: 'gift', color: 'yellow',
+                messages: [
+                    'С Днём защиты детей! Желаю никогда не терять способность радоваться простым вещам и находить немного волшебства в каждом дне.',
+                    'Пусть у каждого ребёнка будет безопасное детство, забота близких и много поводов для счастливой улыбки. С праздником!'
+                ]
+            },
+            {
+                id: 'russian_language_day', date: { month: 6, day: 6 }, icon: 'messages-square', color: 'lavender',
+                messages: [
+                    'С Днём русского языка! Пусть в твоей жизни всегда находятся правильные слова, интересные истории и люди, с которыми есть о чём поговорить.',
+                    'Желаю красивых историй, точных слов и разговоров, после которых становится теплее. С праздником!'
+                ]
+            },
+            {
+                id: 'russia_day', date: { month: 6, day: 12 }, icon: 'flag', color: 'blue',
+                messages: [
+                    'С Днём России! Пусть впереди будет много интересных дорог, открытий и счастливых моментов!',
+                    'Сегодня отличный день, чтобы вспомнить, сколько всего интересного есть вокруг. С праздником!',
+                    'Желаю уверенно двигаться вперёд и всегда находить дорогу к своим мечтам. С Днём России!'
+                ]
+            },
+            {
+                id: 'youth_day', date: { month: 6, day: 27 }, icon: 'party-popper', color: 'pink',
+                messages: [
+                    'С Днём молодёжи! Желаю побольше энергии, смелых идей, незабываемых приключений и возможностей, которые хочется использовать!',
+                    'Пусть впереди будет много открытий, классных людей и историй, которые однажды захочется вспоминать. С Днём молодёжи!'
+                ]
+            },
+            {
+                id: 'family_day', date: { month: 7, day: 8 }, icon: 'heart', color: 'pink',
+                messages: [
+                    'С Днём семьи, любви и верности! Желаю, чтобы рядом всегда были люди, с которыми тепло даже в самый пасмурный день.',
+                    'Пусть дома всегда ждут, близкие поддерживают, а поводов собираться вместе становится только больше. С праздником!'
+                ]
+            },
+            {
+                id: 'fitness_day', dateRule: { month: 8, weekday: 6, occurrence: 2 }, icon: 'award', color: 'sage',
+                messages: [
+                    'С Днём физкультурника! Желаю энергии, сил и хорошего настроения. Пусть движение всегда приносит удовольствие!',
+                    'Пусть хватает сил на большие цели, а каждая тренировка приносит радость и уверенность в себе. С праздником!'
+                ]
+            },
+            {
+                id: 'flag_day', date: { month: 8, day: 22 }, icon: 'flag', color: 'blue',
+                messages: [
+                    'С Днём Государственного флага России! Желаю мира, единства и уверенности в завтрашнем дне.',
+                    'С праздником! Пусть в нашей стране будет больше поводов для гордости, добрых дел и взаимной поддержки.'
+                ]
+            },
+            {
+                id: 'knowledge_day', date: { month: 9, day: 1 }, icon: 'award', color: 'lavender',
+                messages: [
+                    'С Днём знаний! Желаю интересных открытий, лёгких задач и побольше пятёрок — не только в дневнике!',
+                    'Новый учебный год — новый маршрут! Пусть он будет интересным, успешным и без лишних пересадок.',
+                    'Желаю, чтобы учёба давалась легко, а свободного времени хватало на всё самое интересное. С 1 сентября!'
+                ]
+            },
+            {
+                id: 'teachers_day', date: { month: 10, day: 5 }, icon: 'heart', color: 'peach',
+                messages: [
+                    'С Днём учителя! Желаю побольше благодарных учеников, приятных моментов и сил для всех важных дел!',
+                    'Пусть знания, которыми ты делишься, возвращаются уважением, благодарностью и хорошими результатами. С праздником!'
+                ]
+            },
+            {
+                id: 'fathers_day', dateRule: { month: 10, weekday: 0, occurrence: 3 }, icon: 'heart', color: 'blue',
+                messages: [
+                    'С Днём отца! Желаю семейного тепла, взаимопонимания и побольше счастливых моментов с близкими.',
+                    'Пусть рядом всегда будут те, ради кого хочется становиться лучше, и те, кто поддержит в любой ситуации. С праздником!'
+                ]
+            },
+            {
+                id: 'unity_day', date: { month: 11, day: 4 }, icon: 'heart-handshake', color: 'sage',
+                messages: [
+                    'С Днём народного единства! Пусть рядом всегда будут люди, на которых можно положиться, а добрых дел становится больше!',
+                    'Желаю взаимопонимания, уважения друг к другу и побольше поводов объединяться ради хорошего. С праздником!'
+                ]
+            },
+            {
+                id: 'mothers_day', dateRule: { month: 11, weekday: 0, occurrence: -1 }, icon: 'flower', color: 'pink',
+                messages: [
+                    'С Днём матери! Желаю, чтобы в твоей жизни всегда было место заботе, любви и теплу самых близких людей.',
+                    'Сегодня хороший повод сказать спасибо за заботу и тепло. Пусть рядом всегда будут любовь и поддержка. С праздником!'
+                ]
+            },
+            {
+                id: 'volunteer_day', date: { month: 12, day: 5 }, icon: 'hand-heart', color: 'sage',
+                messages: [
+                    'С Днём добровольца! Желаю, чтобы доброта всегда возвращалась, а рядом были люди, готовые поддержать!',
+                    'Пусть даже небольшие добрые поступки меняют чей-то день к лучшему — и возвращаются к тебе теплом. С праздником!'
+                ]
+            }
+        ];
+
+        function chooseRoadnoteSpecialMoodMessage(now) {
+            const date = getRoadnoteHolidayDate(now);
+            const profile = window.qrideVkProfile || null;
+            const birthday = getRoadnoteBirthday(profile);
+            if (birthday && birthday.month === date.month && birthday.day === date.day) {
+                return {
+                    text: birthdayMoodMessages[Math.floor(Math.random() * birthdayMoodMessages.length)],
+                    icon: 'gift',
+                    color: 'pink',
+                    category: 'birthday'
+                };
+            }
+
+            // New Year is a four-day sequence: one fixed message per calendar day.
+            const newYearMessages = {
+                '12-31': 'Ну вот и ещё один год подходит к концу! Желаю оставить всё плохое в прошлом и взять с собой только хорошее. С наступающим!',
+                '1-1': 'С Новым годом! Желаю, чтобы впереди тебя ждали удивительные события, приятные встречи и множество счастливых моментов!',
+                '1-2': 'Надеюсь, ты уже успел немного отдохнуть! Пусть новый год будет щедрым на хорошие новости, добрых людей и исполнение желаний.',
+                '1-3': 'Пусть этот год станет одним из тех, которые потом вспоминают с улыбкой. Желаю побольше приключений и поменьше поводов для грусти!'
+            };
+            const newYearKey = date.month + '-' + date.day;
+            if (newYearMessages[newYearKey]) {
+                return {
+                    text: newYearMessages[newYearKey],
+                    icon: 'party-popper',
+                    color: 'yellow',
+                    category: 'holiday',
+                    holidayId: 'new_year'
+                };
+            }
+
+            const holiday = roadnoteHolidayMessages.find(item => {
+                if (item.gender && (!profile || profile.sex !== item.gender)) return false;
+                if (item.date) return item.date.month === date.month && item.date.day === date.day;
+                if (item.dateRule) {
+                    const rule = item.dateRule;
+                    return date.month === rule.month &&
+                        date.day === getRoadnoteNthWeekday(date.year, rule.month, rule.weekday, rule.occurrence);
+                }
+                return false;
+            });
+            if (!holiday) return null;
+            return {
+                text: holiday.messages[Math.floor(Math.random() * holiday.messages.length)],
+                icon: holiday.icon,
+                color: holiday.color,
+                category: 'holiday',
+                holidayId: holiday.id
+            };
+        }
+
         function isRoadnotePromoAvailable() {
             // Do not show commercial messages until the authenticated tariff state confirms
             // that the first purchase has not happened.
@@ -4035,6 +4293,8 @@ body.scan-loading-open { overflow: hidden !important; }
         }
         function chooseRoadnoteMoodMessage() {
             const now = new Date();
+            const specialMessage = chooseRoadnoteSpecialMoodMessage(now);
+            if (specialMessage) return specialMessage;
             const period = getRoadnotePeriod(now.getHours());
             const season = getRoadnoteSeason(now);
             const promoAvailable = isRoadnotePromoAvailable();
@@ -4116,7 +4376,8 @@ body.scan-loading-open { overflow: hidden !important; }
 
             // Select a fresh message on every entry to the start screen.
             const selected = chooseRoadnoteMoodMessage();
-            if (roadnoteTariffMoodReady && Math.random() < 0.12) {
+            if (selected.category !== 'birthday' && selected.category !== 'holiday' &&
+                roadnoteTariffMoodReady && Math.random() < 0.12) {
                 const candidates = buildRoadnoteTariffMoodMessages();
                 let recent = [];
                 try { recent = JSON.parse(sessionStorage.getItem('roadnoteMoodRecent') || '[]'); } catch (_) {}
@@ -4582,12 +4843,19 @@ body.scan-loading-open { overflow: hidden !important; }
     let profile = {};
     try {
       const info = await window.vkBridge.send('VKWebAppGetUserInfo');
+      const vkSex = Number(info.sex);
+      const birthDateVisible = Number(info.bdate_visibility) !== 0;
+      window.qrideVkProfile = {
+        sex: vkSex === 1 || vkSex === 2 ? vkSex : null,
+        bdate: birthDateVisible && typeof info.bdate === 'string' ? info.bdate : ''
+      };
       profile = {
         first_name: info.first_name || '',
         last_name: info.last_name || '',
         photo_url: info.photo_200 || info.photo_100 || ''
       };
     } catch (error) {
+      window.qrideVkProfile = null;
       console.warn('VK profile details unavailable:', error);
     }
 
@@ -4599,6 +4867,11 @@ body.scan-loading-open { overflow: hidden !important; }
     const firstName = String(profile.first_name || '').trim();
     const personalGreeting = greeting + (firstName ? ', ' + firstName : '');
     window.qridePersonalGreeting = personalGreeting;
+    // Re-render after VK profile data is available so birthday and gendered
+    // holiday greetings are selected only from explicitly visible VK fields.
+    if (typeof window.refreshRoadnoteMoodMessage === 'function') {
+      window.refreshRoadnoteMoodMessage();
+    }
     const moodGreeting = document.querySelector('#start-mood-message .q-speech-greeting');
     if (moodGreeting) moodGreeting.textContent = personalGreeting;
 
