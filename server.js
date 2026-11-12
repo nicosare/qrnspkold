@@ -3038,6 +3038,8 @@ app.post('/api/session', (req, res) => {
       ok: true,
       ...getTariffState(userId),
       isAdmin: userId === adminVkId,
+      vkUserId: userId,
+      paidScanBalance: Math.max(0, Number(balanceRow?.scan_balance) || 0),
       scanBalance,
       scanCount,
       lastScan,
