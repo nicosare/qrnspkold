@@ -535,9 +535,13 @@
       const next = await apiPost('api/lucky/state', {});
       const pendingFromServer = next.pendingResult || null;
       state = next;
-      // A background refresh must not interrupt an animation already in progress.
-      if (spinning && pendingFromServer) state.pendingResult = null;
       renderFaqPrizes();
+      // A focus/visibility refresh must never reset the rail's transform mid-spin.
+      if (spinning) {
+        state.pendingResult = null;
+        updateControls();
+        return;
+      }
       if (!pendingFromServer) {
         try { sessionStorage.removeItem(storageKey); } catch (_) {}
       }
