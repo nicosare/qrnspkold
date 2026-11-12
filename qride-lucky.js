@@ -443,12 +443,15 @@
 
   spinButton.addEventListener('click', runSpin);
   packagesNode.addEventListener('click', function (event) {
-    const button = event.target.closest('.start-offer-details[data-offer-id]');
-    if (!button) return;
-    const offer = document.querySelector('.start-offer[data-offer-id="' + button.dataset.offerId + '"] .start-offer-details');
-    if (!offer) return;
+    const card = event.target.closest('.start-offer[data-offer-id]');
+    if (!card || !packagesNode.contains(card)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const offerId = card.dataset.offerId;
     closeModal(insufficientModal, false);
-    window.setTimeout(function () { offer.click(); }, 240);
+    window.setTimeout(function () {
+      if (typeof window.qrideOpenTariffById === 'function') window.qrideOpenTariffById(offerId);
+    }, 240);
   });
   document.addEventListener('click', function (event) {
     const closeButton = event.target.closest('[data-lucky-close]');
