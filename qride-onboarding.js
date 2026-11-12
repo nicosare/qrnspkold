@@ -24,7 +24,6 @@
   let luckyAvailable = Boolean(luckySection && !luckySection.hidden);
   let luckyHintTimer = 0;
   let startObserver = null;
-  let bodyObserver = null;
 
   function storageHas(key) {
     try { if (window.localStorage.getItem(key) === '1') return true; } catch (_) {}
@@ -505,14 +504,6 @@
     });
     startObserver.observe(startOverlay, { attributes: true, attributeFilter: ['hidden', 'class', 'style'] });
 
-    bodyObserver = new MutationObserver(function () {
-      installFaqReplay();
-      if (!hasOtherDialogOpen()) {
-        scheduleFirstRun();
-        maybeShowLuckyHint();
-      }
-    });
-    bodyObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'class', 'style'] });
   }
 
   document.addEventListener('visibilitychange', function () {
