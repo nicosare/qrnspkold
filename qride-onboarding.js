@@ -109,7 +109,7 @@
       },
       {
         id: 'referral',
-        selector: '#start-referral-share',
+        selector: '.start-referral-actions',
         title: 'Пригласи друга',
         copy: 'Нажми «Поделиться», чтобы отправить приглашение. Рядом можно скопировать ссылку или открыть её QR-код. За первое успешное сканирование друга начислят бонусные сканы.',
         reaction: 'wink'
@@ -326,7 +326,7 @@
       const guideFits = candidate.side === 'above'
         ? resultingTop >= bounds.top + guideHeight + gap - 2
         : resultingBottom <= bounds.bottom - guideHeight - gap + 2;
-      if (guideFits && Math.abs(actualDelta) > 2) {
+      if (guideFits && Math.abs(scrollDelta) > 2) {
         startOverlay.scrollTo({
           top: nextScroll,
           behavior: reduceMotion ? 'auto' : 'smooth'
@@ -395,6 +395,37 @@
     return document.querySelector(step.selector);
   }
 
+  function waitForTargetScroll(target, callback) {
+    let settled = false;
+    let fallbackTimer = 0;
+    let settleTimer = 0;
+    const scrollRoots = [window, document, startOverlay];
+    function cleanup() {
+      scrollRoots.forEach(function (root) {
+        root.removeEventListener('scrollend', onScrollEnd);
+      });
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      if (settleTimer) clearTimeout(settleTimer);
+    }
+    function finish() {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      callback();
+    }
+    function onScrollEnd() {
+      if (settleTimer) clearTimeout(settleTimer);
+      settleTimer = window.setTimeout(finish, 100);
+    }
+    scrollRoots.forEach(function (root) {
+      root.addEventListener('scrollend', onScrollEnd, { passive: true });
+    });
+    // scrollIntoView may animate both the app's scroller and the WebView.
+    // Wait for scrollend where supported, with a safe fallback for older WebViews.
+    fallbackTimer = window.setTimeout(finish, reduceMotion ? 40 : 1100);
+    if (reduceMotion) onScrollEnd();
+  }
+
   function showStep(state, index) {
     if (!tour || tour !== state || state.finishing) return;
     const step = state.steps[index];
@@ -438,10 +469,10 @@
       inline: 'nearest'
     });
 
-    window.setTimeout(function () {
+    waitForTargetScroll(target, function () {
       if (!tour || tour !== state || state.finishing) return;
       positionGuide(state, target, false, 0);
-    }, reduceMotion ? 0 : 460);
+    });
   }
 
   function restoreOriginalElements(state) {
