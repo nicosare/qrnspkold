@@ -557,8 +557,8 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
      document.getElementById('lucky-scans-spent').textContent=Number(stats.scansSpent||0).toLocaleString('ru-RU');
      const prizeStats=data.prizeStats||[];
      document.getElementById('lucky-prize-stats').innerHTML=prizeStats.length
-       ?'<table class="lucky-admin-table"><thead><tr><th>Награда</th><th>Тип</th><th>Выпадений</th><th>Факт. доля</th></tr></thead><tbody>'+
-         prizeStats.map(p=>'<tr><td>'+esc(p.title)+'</td><td>'+esc(luckyPrizeTypeLabel(p.rewardType))+'</td><td>'+Number(p.count||0).toLocaleString('ru-RU')+'</td><td><strong>'+Number(p.actualPercent||0).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+'%</strong></td></tr>').join('')+
+       ?'<table class="lucky-admin-table"><thead><tr><th>Награда</th><th>Тип</th><th>Выпадений / доля от всех</th></tr></thead><tbody>'+
+         prizeStats.map(p=>'<tr><td>'+esc(p.title)+'</td><td>'+esc(luckyPrizeTypeLabel(p.rewardType))+'</td><td><strong>'+Number(p.count||0).toLocaleString('ru-RU')+' · '+Number(p.actualPercent||0).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+'%</strong></td></tr>').join('')+
          '</tbody></table>'
        :'<div class="lucky-admin-empty">Прокруток пока нет.</div>';
      luckyMessage('Настройки загружены. Версия конфигурации: '+Number(config.version||1)+'.',false);
