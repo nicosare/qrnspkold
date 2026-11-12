@@ -384,6 +384,18 @@ db.exec(`
   GROUP BY vk_id;
 `);
 
+// Existing spins were credited immediately by the previous implementation.
+if (!db.prepare("PRAGMA table_info(lucky_spins)").all().some(column => column.name === 'reward_credited_at')) {
+  db.exec("ALTER TABLE lucky_spins ADD COLUMN reward_credited_at TEXT DEFAULT NULL");
+}
+const luckyRewardSettlementMarker = 'lucky_reward_settlement_v1';
+if (!db.prepare('SELECT 1 FROM app_settings WHERE setting_key = ?').get(luckyRewardSettlementMarker)) {
+  db.transaction(() => {
+    db.prepare("UPDATE lucky_spins SET reward_credited_at = created_at WHERE reward_credited_at IS NULL").run();
+    db.prepare('INSERT OR REPLACE INTO app_settings (setting_key, setting_value) VALUES (?, ?)').run(luckyRewardSettlementMarker, new Date().toISOString());
+  })();
+}
+
 // Keep historical reward descriptions aligned with the current Arcade game names.
 db.prepare(
   "UPDATE scan_credit_history SET note = REPLACE(REPLACE(note, 'Q Runner', 'Q Run'), 'Q Breaker', 'Q Break') WHERE note LIKE '%Q Runner%' OR note LIKE '%Q Breaker%'"
@@ -1780,26 +1792,6 @@ app.post('/api/lucky/spin', (req, res) => {
       }
 
       const prize = drawLuckyPrize(config);
-      if (prize.rewardType === 'energy') {
-        const credited = db.prepare(
-          'UPDATE users SET game_attempts = COALESCE(game_attempts, 0) + ? WHERE vk_id = ?'
-        ).run(prize.amount, userId);
-        if (credited.changes !== 1) throw new Error('Не удалось начислить энергию.');
-      } else if (prize.rewardType === 'scans') {
-        const credited = db.prepare(
-          'UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + ? WHERE vk_id = ?'
-        ).run(prize.amount, userId);
-        if (credited.changes !== 1) throw new Error('Не удалось начислить сканы.');
-        recordScanCredit.run(userId, nowIso, prize.amount, 'lucky_reward', 'Выигрыш в «Билете удачи»');
-      } else if (prize.rewardType === 'subscription') {
-        const currentExpiry = user.subscription_until && Date.parse(user.subscription_until) > now.getTime()
-          ? new Date(user.subscription_until)
-          : now;
-        const expiry = new Date(currentExpiry.getTime() + Number(prize.amount) * 86400000);
-        updateSubscription.run(expiry.toISOString(), userId);
-      } else {
-        throw new Error('Неизвестный тип награды.');
-      }
 
       const inserted = db.prepare(
         'INSERT INTO lucky_spins (vk_id, request_id, created_at, day_key, is_free, scan_cost, config_version, prize_id, reward_type, reward_title, reward_amount, reward_probability_bp) ' +
@@ -1838,6 +1830,8 @@ app.post('/api/lucky/spin', (req, res) => {
     });
   }
   if (outcome.error) return res.status(404).json({ error: outcome.error });
+  // Debit is committed before the animation; notify the client immediately.
+  sendLiveEntitlement(userId);
   return res.json({
     ok: true,
     spin: serializeLuckySpin(outcome.spin),
@@ -1852,11 +1846,41 @@ app.post('/api/lucky/reveal', (req, res) => {
   catch { return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' }); }
   const spinId = Number(req.body?.spinId);
   if (!Number.isSafeInteger(spinId) || spinId < 1) return res.status(400).json({ error: 'Некорректный результат.' });
-  const spin = db.prepare('SELECT reward_type FROM lucky_spins WHERE id = ? AND vk_id = ?').get(spinId, userId);
-  if (!spin) return res.status(404).json({ error: 'Награда не найдена.' });
-  sendLiveEntitlement(userId);
-  if (spin.reward_type === 'energy') sendLiveGameState(userId);
-  return res.json({ ok: true });
+  let settled;
+  try {
+    settled = db.transaction(() => {
+      const spin = db.prepare('SELECT * FROM lucky_spins WHERE id = ? AND vk_id = ?').get(spinId, userId);
+      if (!spin) return { error: 'Награда не найдена.' };
+      if (spin.reward_credited_at) return { rewardType: spin.reward_type, alreadyCredited: true };
+      const now = new Date(), nowIso = now.toISOString();
+      if (spin.reward_type === 'energy') {
+        const result = db.prepare('UPDATE users SET game_attempts = COALESCE(game_attempts, 0) + ? WHERE vk_id = ?')
+          .run(Number(spin.reward_amount), userId);
+        if (result.changes !== 1) throw new Error('Не удалось начислить энергию.');
+      } else if (spin.reward_type === 'scans') {
+        const result = db.prepare('UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + ? WHERE vk_id = ?')
+          .run(Number(spin.reward_amount), userId);
+        if (result.changes !== 1) throw new Error('Не удалось начислить сканы.');
+        recordScanCredit.run(userId, nowIso, Number(spin.reward_amount), 'lucky_reward', 'Выигрыш в «Билете удачи»');
+      } else if (spin.reward_type === 'subscription') {
+        const user = db.prepare('SELECT subscription_until FROM users WHERE vk_id = ?').get(userId);
+        const expiryBase = user?.subscription_until && Date.parse(user.subscription_until) > now.getTime()
+          ? new Date(user.subscription_until) : now;
+        updateSubscription.run(new Date(expiryBase.getTime() + Number(spin.reward_amount) * 86400000).toISOString(), userId);
+      } else throw new Error('Неизвестный тип награды.');
+      db.prepare('UPDATE lucky_spins SET reward_credited_at = ? WHERE id = ? AND reward_credited_at IS NULL').run(nowIso, spinId);
+      return { rewardType: spin.reward_type, alreadyCredited: false };
+    }).immediate();
+  } catch (error) {
+    console.error('[lucky reveal]', error?.message || error);
+    return res.status(500).json({ error: 'Не удалось начислить награду. Попробуй ещё раз.' });
+  }
+  if (settled.error) return res.status(404).json({ error: settled.error });
+  if (!settled.alreadyCredited) {
+    sendLiveEntitlement(userId);
+    if (settled.rewardType === 'energy') sendLiveGameState(userId);
+  }
+  return res.json({ ok: true, alreadyCredited: settled.alreadyCredited });
 });
 
 app.post('/api/lucky/ack', (req, res) => {
