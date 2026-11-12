@@ -1894,8 +1894,17 @@ app.post('/api/lucky/ack', (req, res) => {
   catch { return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' }); }
   const spinId = Number(req.body?.spinId);
   if (!Number.isSafeInteger(spinId) || spinId < 1) return res.status(400).json({ error: 'Некорректный результат.' });
-  db.prepare('UPDATE lucky_spins SET acknowledged_at = ? WHERE id = ? AND vk_id = ? AND acknowledged_at IS NULL')
-    .run(new Date().toISOString(), spinId, userId);
+  const acknowledged = db.prepare(
+    'UPDATE lucky_spins SET acknowledged_at = ? WHERE id = ? AND vk_id = ? AND acknowledged_at IS NULL AND reward_credited_at IS NOT NULL'
+  ).run(new Date().toISOString(), spinId, userId);
+  if (acknowledged.changes !== 1) {
+    const spin = db.prepare('SELECT acknowledged_at, reward_credited_at FROM lucky_spins WHERE id = ? AND vk_id = ?')
+      .get(spinId, userId);
+    if (!spin) return res.status(404).json({ error: 'Награда не найдена.' });
+    if (!spin.acknowledged_at || !spin.reward_credited_at) {
+      return res.status(409).json({ error: 'Сначала необходимо начислить награду.' });
+    }
+  }
   return res.json({ ok: true });
 });
 
