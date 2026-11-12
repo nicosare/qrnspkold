@@ -259,7 +259,10 @@
     resultMeta.hidden = true;
     if (restored) setStatus('Прокрутка завершилась, пока приложение было закрыто. Награда уже начислена.', false);
     openModal(resultModal);
-    apiPost('api/lucky/reveal', { spinId: spin.id }).catch(function (error) {
+    apiPost('api/lucky/reveal', { spinId: spin.id }).then(function (data) {
+      if (data.entitlement) window.dispatchEvent(new CustomEvent('qride:entitlement-state', { detail: data.entitlement }));
+      if (data.gameState) window.dispatchEvent(new CustomEvent('qride:game-state', { detail: data.gameState }));
+    }).catch(function (error) {
       console.warn('[QRide lucky reveal]', error.message);
     });
   }
@@ -385,6 +388,7 @@
     try {
       const data = await apiPost('api/lucky/spin', { requestId: requestId });
       state = data;
+      window.dispatchEvent(new CustomEvent('qride:entitlement-state', { detail: data }));
       updateControls();
       setStatus('', false);
       if (data.spin) {
