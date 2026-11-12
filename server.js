@@ -1880,7 +1880,12 @@ app.post('/api/lucky/reveal', (req, res) => {
     sendLiveEntitlement(userId);
     if (settled.rewardType === 'energy') sendLiveGameState(userId);
   }
-  return res.json({ ok: true, alreadyCredited: settled.alreadyCredited });
+  return res.json({
+    ok: true,
+    alreadyCredited: settled.alreadyCredited,
+    entitlement: getLiveEntitlement(userId),
+    gameState: settled.rewardType === 'energy' ? gamePublicState(userId) : null
+  });
 });
 
 app.post('/api/lucky/ack', (req, res) => {
