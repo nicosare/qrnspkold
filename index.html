@@ -4016,11 +4016,15 @@ body.scan-loading-open { overflow: hidden !important; }
                 if (event.target === scanTariffsModal || event.target.closest('[data-scan-tariffs-close]')) {
                     closeScanTariffsModal(); return;
                 }
-                const purchase = event.target.closest('.start-offer-details[data-offer-id]');
-                if (!purchase) return;
-                const original = document.querySelector('#start-offers-groups .start-offer[data-offer-id="' + purchase.dataset.offerId + '"] .start-offer-details');
+                const card = event.target.closest('.start-offer[data-offer-id]');
+                if (!card || !scanTariffsGroups.contains(card)) return;
+                event.preventDefault();
+                event.stopPropagation();
+                const offerId = card.dataset.offerId;
                 closeScanTariffsModal();
-                if (original) window.setTimeout(function () { original.click(); }, 240);
+                window.setTimeout(function () {
+                    if (typeof window.qrideOpenTariffById === 'function') window.qrideOpenTariffById(offerId);
+                }, 240);
             });
             const tariffSheet = scanTariffsModal.querySelector('.qride-collect-info-sheet');
             let tariffTouchY = 0, tariffTouchX = 0;
