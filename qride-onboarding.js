@@ -311,6 +311,7 @@
   function closeLayer(state) {
     state.layer.style.opacity = '0';
     window.setTimeout(function () {
+      if (state.controls && state.controls.parentNode) state.controls.remove();
       state.brandPlaceholder.replaceWith(brand);
       state.introPlaceholder.replaceWith(intro);
       moodMessage.innerHTML = state.originalMessage;
