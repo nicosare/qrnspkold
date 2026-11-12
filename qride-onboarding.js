@@ -336,7 +336,11 @@
         // to the heading and subtitle when the whole card cannot fit.
         return {
           left: fullRect.left,
-          top: Math.min.apply(null, rects.map(function (r) { return r.top; })),
+          // Arcade's spotlight follows the card's own top edge (including
+          // its kicker), while its bottom stops exactly after the subtitle.
+          top: step.id === 'arcade'
+            ? fullRect.top
+            : Math.min.apply(null, rects.map(function (r) { return r.top; })),
           right: fullRect.right,
           bottom: Math.max.apply(null, rects.map(function (r) { return r.bottom; }))
         };
