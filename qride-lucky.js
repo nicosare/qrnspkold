@@ -441,9 +441,15 @@
       setStatus('', false);
       if (data.spin) {
         const animationCompleted = await animateToPrize(data.spin);
-        // If the WebView suspends or interrupts requestAnimationFrame, do not
-        // leave the user with a disabled button and a hidden pending reward.
-        showResult(data.spin, !animationCompleted);
+        if (animationCompleted) {
+          showResult(data.spin, false);
+        } else {
+          // A suspended WebView may pause requestAnimationFrame. Keep the
+          // result pending; never reveal it as if the wheel had stopped.
+          state.pendingResult = data.spin;
+          setStatus('Прокрутка приостановлена. Вернись в приложение, чтобы продолжить.', true);
+          updateControls();
+        }
       }
     } catch (error) {
       if (error.status === 402 && error.data && error.data.code === 'INSUFFICIENT_SCANS') {
@@ -536,7 +542,6 @@
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'hidden') {
       stopIdle();
-      if (spinning) spinAnimationToken += 1;
     } else { refreshState(); if (!activeModal) startIdle(); }
   });
   window.addEventListener('focus', refreshState);
