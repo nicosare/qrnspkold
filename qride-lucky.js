@@ -260,6 +260,9 @@
       : 'Потрачено: ' + Number(spin.scanCost || 0) + ' ' + scanWord(spin.scanCost || 0);
     if (restored) setStatus('Прокрутка завершилась, пока приложение было закрыто. Награда уже начислена.', false);
     openModal(resultModal);
+    apiPost('api/lucky/reveal', { spinId: spin.id }).catch(function (error) {
+      console.warn('[QRide lucky reveal]', error.message);
+    });
   }
   function renderFaqPrizes() {
     const faqNode = document.getElementById('qride-lucky-faq-prizes');
