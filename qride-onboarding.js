@@ -107,7 +107,7 @@
       {
         id: 'arcade',
         selector: '#roadnote-game',
-        compactSelectors: ['.roadnote-game-head'],
+        compactSelectors: ['#roadnote-game-title', '.arcade-section-lead'],
         title: 'QRide Arcade',
         copy: 'Здесь находятся игры QRide. За достижения можно получать дополнительные сканы, а рекорды сохраняются.',
         reaction: 'happy'
@@ -258,6 +258,17 @@
   function renderHighlight(state, rect) {
     const width = Math.max(1, window.innerWidth);
     const height = Math.max(1, window.innerHeight);
+    const viewport = 'M 0 0 H ' + width + ' V ' + height + ' H 0 Z ';
+    state.svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+    state.svg.setAttribute('width', width);
+    state.svg.setAttribute('height', height);
+    if (!rect) {
+      state.shade.setAttribute('d', viewport);
+      state.blueFrame.setAttribute('d', '');
+      state.whiteFrame.setAttribute('d', '');
+      state.hole.style.display = 'none';
+      return;
+    }
     const pad = 5;
     const left = Math.max(1, Math.min(width - 1, rect.left - pad));
     const top = Math.max(1, Math.min(height - 1, rect.top - pad));
@@ -267,20 +278,28 @@
     const boxHeight = bottom - top;
     const radius = Math.min(19, boxHeight / 2, boxWidth / 2);
     const path = roundedRectPath(left, top, boxWidth, boxHeight, radius);
-    const viewport = 'M 0 0 H ' + width + ' V ' + height + ' H 0 Z ';
-    state.svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
-    state.svg.setAttribute('width', width);
-    state.svg.setAttribute('height', height);
     state.shade.setAttribute('d', viewport + path);
     state.blueFrame.setAttribute('d', path);
     state.whiteFrame.setAttribute('d', path);
     Object.assign(state.hole.style, {
+      display: 'block',
       left: left + 'px', top: top + 'px', width: boxWidth + 'px',
       height: boxHeight + 'px', borderRadius: radius + 'px'
     });
   }
 
+  function clearHighlight(state) {
+    if (state.highlightFrame) cancelAnimationFrame(state.highlightFrame);
+    state.highlightFrame = 0;
+    state.highlightRect = null;
+    renderHighlight(state, null);
+  }
+
   function setHighlight(state, rect) {
+    if (!rect) {
+      clearHighlight(state);
+      return;
+    }
     if (state.highlightFrame) cancelAnimationFrame(state.highlightFrame);
     const target = { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
     const from = state.highlightRect || target;
@@ -301,7 +320,6 @@
     }
     state.highlightFrame = requestAnimationFrame(tick);
   }
-
   function getStepFocusRect(step, target, guideHeight, bounds) {
     if (!target) return null;
     const fullRect = target.getBoundingClientRect();
@@ -433,7 +451,11 @@
 
       top = clamp(top, bounds.top, Math.max(bounds.top, bounds.bottom - guideHeight));
       state.guide.style.transform = 'translate3d(' + Math.round(left) + 'px,' + Math.round(top) + 'px,0)';
-      setHighlight(state, rect);
+      setHighlight(state, isWelcome ? null : rect);
+      window.setTimeout(function () {
+        if (!tour || tour !== state || state.closing) return;
+        state.guide.style.opacity = '1';
+      }, reduceMotion ? 0 : 430);
     });
   }
 
@@ -479,6 +501,8 @@
     if (!step) return;
     state.index = index;
     state.currentStep = step;
+    state.guide.style.opacity = '0';
+    clearHighlight(state);
     setMessage(step.title, step.copy);
 
     const progress = state.controls.querySelector('.qride-tour-progress');
@@ -581,11 +605,9 @@
 
     // Keep Q where the user last saw him. The farewell stays readable before
     // the original header is restored; no rushed trip back to the top.
-    const target = getTarget(state.currentStep);
-    requestAnimationFrame(function () {
-      if (!tour || tour !== state) return;
-      positionGuide(state, target, Boolean(state.currentStep && state.currentStep.top), 0);
-    });
+    // Keep the farewell beside the last explained section; do not recalculate
+    // the target or move the guide while replacing the message.
+    state.guide.style.opacity = '1';
     state.goodbyeTimer = window.setTimeout(function () {
       closeLayer(state);
     }, 5200);
