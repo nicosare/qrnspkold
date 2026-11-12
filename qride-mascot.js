@@ -318,6 +318,15 @@
     else suspend();
   }
 
+  window.qrideMascotReact = function (mood) {
+    if (reduceMotion || !cycleActive || suspended) return;
+    clearTimeout(delayTimer);
+    clearTimeout(blinkTimer);
+    delayTimer = blinkTimer = 0;
+    const animation = mood === 'happy' ? 'happy' : mood === 'curious' ? 'curious' : 'wink';
+    runAnimation(animation);
+  };
+
   resetFace();
   if (!reduceMotion) {
     document.addEventListener('visibilitychange',syncVisibility);
