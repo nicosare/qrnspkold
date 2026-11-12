@@ -4051,7 +4051,7 @@ body.scan-loading-open { overflow: hidden !important; }
 
         function getRoadnoteBirthday(profile) {
             if (!profile || typeof profile.bdate !== 'string' || !profile.bdate) return null;
-            const match = profile.bdate.match(/^(\\d{1,2})\\.(\\d{1,2})(?:\\.\\d{4})?$/);
+            const match = profile.bdate.match(/^(\d{1,2})\.(\d{1,2})(?:\.\d{4})?$/);
             if (!match) return null;
             const day = Number(match[1]);
             const month = Number(match[2]);
