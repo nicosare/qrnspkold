@@ -106,6 +106,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
     .qride-lucky-result-icon { animation: none !important; }
+    .qride-lucky-confetti-particle { display: none !important; animation: none !important; }
     .qride-lucky-spin:active, .qride-lucky-secondary:active { transform: none; }
 }
 
