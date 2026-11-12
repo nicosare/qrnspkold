@@ -25,6 +25,8 @@
   height: 100%;
   overflow: visible;
   pointer-events: none;
+  opacity: 1;
+  transition: opacity .24s ease;
 }
 .qride-tour-shade { fill: rgba(12, 23, 38, .68); }
 .qride-tour-frame-blue,
