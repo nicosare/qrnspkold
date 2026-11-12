@@ -30,7 +30,7 @@
 .qride-tour-frame-blue,
 .qride-tour-frame-white {
   opacity: 1;
-  transition: opacity .22s ease;
+  transition: opacity .28s ease;
 }
 .qride-tour-frame-blue {
   fill: none;
