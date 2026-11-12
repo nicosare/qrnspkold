@@ -732,7 +732,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
         '<input type="number" min="1" max="100000" step="1" value="9" aria-label="Количество для начисления" data-grant-amount>'+
         '<button class="primary" type="button" data-action="grant-custom">Начислить</button></div></div>'+
         '<button class="unlimited-toggle" type="button" data-action="toggle-unlimited">'+(u.unlimited?'Отключить безлимит':'Включить безлимит')+'</button>' +
-       (String(u.vk_id)===String(adminUserId)?'<button class="reset-account" type="button" data-action="reset-account">Обнулить мой аккаунт</button>':'')+
+       '<button class="reset-account" type="button" data-action="reset-account">Обнулить аккаунт</button>'+
        '<div class="action-status" aria-live="polite"></div></div></details></div></article>';
      }).join('');
    status.hidden=filtered.length>0;
@@ -764,8 +764,9 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
       if(!selected||!Number.isSafeInteger(amount)||amount<1||amount>selected.max){message.className='action-status error';message.textContent='Введите количество от 1 до '+(selected?selected.max:100000)+'.';return}
       body={action:selected.action,[selected.field]:amount};
     }else if(button.dataset.action==='reset-account'){
-     if(vkId!==String(adminUserId)){message.className='action-status error';message.textContent='Можно обнулить только собственный аккаунт администратора.';return}
-     const confirmed=window.confirm('Обнулить твой аккаунт QRide?\n\nБаланс сканов и подписка будут сброшены, история покупок и отметки о покупках удалены. История сканирований останется. Скидка на первую покупку снова станет доступна. Это действие нельзя отменить.');
+     const user=users.find(item=>String(item.vk_id)===vkId);
+     const userName=user?((String(user.first_name||'')+' '+String(user.last_name||'')).trim()||'пользователя VK'):'пользователя';
+     const confirmed=window.confirm('Обнулить аккаунт '+userName+' (VK ID '+vkId+')?\n\nБаланс сканов и подписка будут сброшены, история покупок и отметки о покупках удалены. История сканирований останется. Повторный приветственный бонус не выдаётся. Это действие нельзя отменить.');
      if(!confirmed)return;
      body={action:'reset_account'};
    }else{
