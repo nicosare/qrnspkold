@@ -3683,9 +3683,7 @@ app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
   const now = new Date();
   try {
     if (action === 'reset_account') {
-      if (vkId !== req.vkUserId) {
-        return res.status(403).json({ error: 'Можно обнулить только собственный аккаунт администратора.' });
-      }
+      // requireAdmin protects this endpoint; admins may reset any selected user account.
       const resetAccount = db.transaction(() => {
         db.prepare(
           'UPDATE users SET scan_balance = 0, subscription_until = NULL, unlimited = 0, welcome_bonus_granted = 1 WHERE vk_id = ?'
