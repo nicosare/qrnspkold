@@ -3099,16 +3099,9 @@ app.get('/api/admin/lucky', requireAdmin, (_req, res) => {
     'SELECT prize_id AS id, reward_title AS title, reward_type AS rewardType, COUNT(*) AS count ' +
     'FROM lucky_spins GROUP BY prize_id, reward_title, reward_type ORDER BY count DESC, title COLLATE NOCASE'
   ).all().map(item => ({
-    id: String(item.id), title: String(item.title), rewardType: String(item.rewardType), count: Number(item.count)
-  }));
-  const recent = db.prepare(
-    'SELECT id, vk_id, created_at, is_free, scan_cost, reward_title, reward_type, reward_amount, reward_probability_bp ' +
-    'FROM lucky_spins ORDER BY id DESC LIMIT 50'
-  ).all().map(row => ({
-    id: Number(row.id), vkId: String(row.vk_id), createdAt: row.created_at,
-    isFree: Number(row.is_free) === 1, scanCost: Number(row.scan_cost),
-    title: String(row.reward_title), rewardType: String(row.reward_type),
-    amount: Number(row.reward_amount), probability: Number((Number(row.reward_probability_bp) / 100).toFixed(2))
+    id: String(item.id), title: String(item.title), rewardType: String(item.rewardType),
+    count: Number(item.count),
+    actualPercent: Number(stats.total) > 0 ? Number((Number(item.count) * 100 / Number(stats.total)).toFixed(2)) : 0
   }));
   return res.json({
     config,
@@ -3357,6 +3350,24 @@ app.get('/api/admin/users/:vkId/credits', requireAdmin, (req, res) => {
   }
   const credits = listUserCredits.all(vkId);
   return res.json({ credits, total: credits.length });
+});
+
+app.get('/api/admin/users/:vkId/lucky-spins', requireAdmin, (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const vkId = String(req.params.vkId || '');
+  if (!/^[0-9]+$/.test(vkId)) return res.status(400).json({ error: 'Некорректный VK ID.' });
+  if (!db.prepare('SELECT 1 FROM users WHERE vk_id = ?').get(vkId)) return res.status(404).json({ error: 'Пользователь не найден.' });
+  const spins = db.prepare(
+    'SELECT id, created_at, is_free, scan_cost, reward_title, reward_type, reward_amount, reward_probability_bp, reward_credited_at ' +
+    'FROM lucky_spins WHERE vk_id = ? ORDER BY id DESC'
+  ).all(vkId).map(row => ({
+    id: Number(row.id), created_at: row.created_at, is_free: Number(row.is_free) === 1,
+    scan_cost: Number(row.scan_cost), reward_title: String(row.reward_title),
+    reward_type: String(row.reward_type), reward_amount: Number(row.reward_amount),
+    probability: Number((Number(row.reward_probability_bp) / 100).toFixed(2)),
+    reward_credited_at: row.reward_credited_at || null
+  }));
+  return res.json({ spins, total: spins.length });
 });
 
 app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
