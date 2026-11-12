@@ -324,6 +324,42 @@
     startIdle();
   }
   function iconForResult(type) { return typeIcon(type); }
+  function burstRewardConfetti(type) {
+    const previous = resultIcon.querySelector('.qride-lucky-confetti');
+    if (previous) previous.remove();
+    const layer = document.createElement('span');
+    layer.className = 'qride-lucky-confetti qride-lucky-confetti--' +
+      (type === 'subscription' ? 'subscription' : type === 'scans' ? 'scans' : 'energy');
+    layer.setAttribute('aria-hidden', 'true');
+
+    const palettes = type === 'subscription'
+      ? ['#f4bd45', '#ffd978', '#fff0bd', '#e7a92e', '#5d9cf3', '#ffffff']
+      : type === 'scans'
+        ? ['#31a879', '#54c69a', '#f1b84b', '#5b9cf0', '#f28c75', '#ffffff']
+        : ['#75baff', '#3f91ed', '#a8d6ff', '#d8edff'];
+    const count = type === 'subscription' ? 42 : type === 'scans' ? 28 : 16;
+    for (let i = 0; i < count; i += 1) {
+      const particle = document.createElement('span');
+      const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5) * 0.34;
+      const distance = (type === 'subscription' ? 66 : type === 'scans' ? 55 : 43) + Math.random() * (type === 'subscription' ? 48 : 30);
+      const shape = type === 'energy'
+        ? 'is-dot'
+        : type === 'scans'
+          ? (i % 4 === 0 ? 'is-dot' : 'is-confetti')
+          : (i % 5 === 0 ? 'is-star' : i % 3 === 0 ? 'is-dot' : 'is-confetti');
+      particle.className = 'qride-lucky-confetti-particle ' + shape;
+      particle.style.setProperty('--dx', (Math.cos(angle) * distance).toFixed(1) + 'px');
+      particle.style.setProperty('--dy', (Math.sin(angle) * distance).toFixed(1) + 'px');
+      particle.style.setProperty('--turn', (Math.random() * 540 - 270).toFixed(0) + 'deg');
+      particle.style.setProperty('--size', (type === 'subscription' ? 5 + Math.random() * 7 : type === 'scans' ? 5 + Math.random() * 6 : 3 + Math.random() * 4).toFixed(1) + 'px');
+      particle.style.setProperty('--delay', (Math.random() * (type === 'subscription' ? 100 : 65)).toFixed(0) + 'ms');
+      particle.style.setProperty('--particle-color', palettes[Math.floor(Math.random() * palettes.length)]);
+      if (shape === 'is-star') particle.textContent = '✦';
+      layer.appendChild(particle);
+    }
+    resultIcon.appendChild(layer);
+  }
+
   function showResult(spin, restored) {
     if (!spin) return;
     const sameSpin = activeSpin && Number(activeSpin.id) === Number(spin.id);
@@ -333,6 +369,7 @@
       resultIcon.innerHTML = iconForResult(spin.rewardType);
       resultIcon.classList.toggle('is-subscription', spin.rewardType === 'subscription');
       resultIcon.classList.toggle('is-energy', spin.rewardType === 'energy');
+      burstRewardConfetti(spin.rewardType);
       resultTitle.textContent = spin.title || 'Награда получена';
       resultDetail.textContent = 'Начисляем награду…';
       resultMeta.textContent = '';
