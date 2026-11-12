@@ -133,13 +133,12 @@
       }
       cycle.push.apply(cycle, deck);
     }
-    // Rotate the cycle to a boundary where the last and first cards differ.
+    // If the repeating seam would show the same card twice, swap the
+    // first two cards. They belong to the same unique-prize deck.
     if (cycle.length > 1 && String(cycle[0].id) === String(cycle[cycle.length - 1].id)) {
-      for (let cut = 1; cut < cycle.length; cut += 1) {
-        if (String(cycle[cut - 1].id) !== String(cycle[cut].id)) {
-          return cycle.slice(cut).concat(cycle.slice(0, cut));
-        }
-      }
+      const value = cycle[0];
+      cycle[0] = cycle[1];
+      cycle[1] = value;
     }
     return cycle;
   }
