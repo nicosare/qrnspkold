@@ -543,7 +543,8 @@
       if (!pendingFromServer) {
         try { sessionStorage.removeItem(storageKey); } catch (_) {}
       }
-      if (!state.enabled || !Array.isArray(state.prizes) || !state.prizes.length) {
+      if (!state.enabled || !Array.isArray(state.prizes) || !state.prizes.length ||
+          (!state.rouletteEligible && !state.pendingResult)) {
         section.hidden = true;
         stopIdle();
         return;
