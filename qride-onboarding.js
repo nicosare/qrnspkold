@@ -113,6 +113,27 @@
         reaction: 'happy'
       },
       {
+        id: 'q-run',
+        selector: '#roadnote-game-stage',
+        title: 'Q Run',
+        copy: 'Перепрыгивай препятствия, набирай очки и постарайся побить свой рекорд. За нужное количество очков можно получить скан.',
+        reaction: 'wink'
+      },
+      {
+        id: 'q-break',
+        selector: '#qride-breaker-card',
+        title: 'Q Break',
+        copy: 'Отбивай мяч платформой и разбивай блоки. Чем дольше продержишься, тем выше будет результат.',
+        reaction: 'curious'
+      },
+      {
+        id: 'q-stack',
+        selector: '#qride-stack-card',
+        title: 'Q Stack',
+        copy: 'Останавливай движущиеся блоки точно друг на друге и строй башню. Следи за темпом — со временем игра ускоряется.',
+        reaction: 'happy'
+      },
+      {
         id: 'referral',
         selector: '.start-referral',
         compactSelectors: ['.start-referral-title', '.start-referral-description'],
@@ -131,8 +152,15 @@
       {
         id: 'help',
         selector: '#start-faq-button',
-        title: 'Помощь',
+        title: 'Частые вопросы',
         copy: 'В FAQ собраны ответы на частые вопросы. Там же можно в любой момент заново пройти это знакомство.',
+        reaction: 'happy'
+      },
+      {
+        id: 'support',
+        selector: '#start-support-button',
+        title: 'Поддержка',
+        copy: 'Если возникнет вопрос или что-то пойдёт не так, нажми сюда — откроется чат поддержки QRide.',
         reaction: 'happy'
       }
     );
@@ -454,6 +482,10 @@
       state.guide.style.transform = 'translate3d(' + Math.round(left) + 'px,' + Math.round(top) + 'px,0)';
       if (isWelcome) {
         clearHighlight(state);
+        // The welcome is a full-screen introduction: dim everything, with no
+        // spotlight cutout around the mascot placeholder.
+        state.svg.style.opacity = '1';
+        state.hole.style.opacity = '0';
       } else {
         setHighlight(state, rect);
         state.svg.style.opacity = '1';
@@ -550,14 +582,19 @@
       return;
     }
 
-    // The start overlay is the page's only intended scroller. Align the
-    // target near its top instead of centering it (which hides Arcade's title).
-    // Avoid scrollIntoView: WebViews may scroll both the overlay and window,
-    // producing the small back-and-forth movement seen in the previous build.
-    const overlayRect = startOverlay.getBoundingClientRect();
+    // The start overlay is the page's only intended scroller. Center the
+    // target when the guide and spotlight can share the viewport; otherwise
+    // keep the target near the top so its heading is not hidden.
+    // Avoid scrollIntoView: WebViews may scroll both the overlay and window.
     const targetRect = target.getBoundingClientRect();
     const bounds = viewportBounds();
-    const desiredTop = startOverlay.scrollTop + targetRect.top - (bounds.top + 18);
+    const guideHeight = state.guide.getBoundingClientRect().height;
+    const gap = 14;
+    const canCenter = targetRect.height + guideHeight + gap <= bounds.height - 20;
+    const desiredTargetTop = canCenter
+      ? bounds.top + (bounds.height - targetRect.height) / 2
+      : bounds.top + 18;
+    const desiredTop = startOverlay.scrollTop + targetRect.top - desiredTargetTop;
     const maxScroll = Math.max(0, startOverlay.scrollHeight - startOverlay.clientHeight);
     const nextScrollTop = clamp(desiredTop, 0, maxScroll);
     if (Math.abs(nextScrollTop - startOverlay.scrollTop) < 2) {
