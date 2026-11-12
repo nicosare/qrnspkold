@@ -295,6 +295,7 @@
         current[key] = from[key] + (target[key] - from[key]) * eased;
       });
       renderHighlight(state, current);
+      state.highlightRect = current;
       if (raw < 1) state.highlightFrame = requestAnimationFrame(tick);
       else { state.highlightFrame = 0; state.highlightRect = target; }
     }
