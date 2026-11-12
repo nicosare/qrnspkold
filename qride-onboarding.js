@@ -555,8 +555,13 @@
     const bounds = viewportBounds();
     const desiredTop = startOverlay.scrollTop + targetRect.top - (bounds.top + 18);
     const maxScroll = Math.max(0, startOverlay.scrollHeight - startOverlay.clientHeight);
+    const nextScrollTop = clamp(desiredTop, 0, maxScroll);
+    if (Math.abs(nextScrollTop - startOverlay.scrollTop) < 2) {
+      positionGuide(state, target, false, 0);
+      return;
+    }
     startOverlay.scrollTo({
-      top: clamp(desiredTop, 0, maxScroll),
+      top: nextScrollTop,
       behavior: reduceMotion ? 'auto' : 'smooth'
     });
 
