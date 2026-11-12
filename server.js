@@ -1838,14 +1838,25 @@ app.post('/api/lucky/spin', (req, res) => {
     });
   }
   if (outcome.error) return res.status(404).json({ error: outcome.error });
-  sendLiveEntitlement(userId);
-  if (outcome.spin.reward_type === 'energy') sendLiveGameState(userId);
   return res.json({
     ok: true,
     spin: serializeLuckySpin(outcome.spin),
     duplicate: Boolean(outcome.duplicate),
     ...getLuckyPublicState(userId, config)
   });
+});
+
+app.post('/api/lucky/reveal', (req, res) => {
+  let userId;
+  try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
+  catch { return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' }); }
+  const spinId = Number(req.body?.spinId);
+  if (!Number.isSafeInteger(spinId) || spinId < 1) return res.status(400).json({ error: 'Некорректный результат.' });
+  const spin = db.prepare('SELECT reward_type FROM lucky_spins WHERE id = ? AND vk_id = ?').get(spinId, userId);
+  if (!spin) return res.status(404).json({ error: 'Награда не найдена.' });
+  sendLiveEntitlement(userId);
+  if (spin.reward_type === 'energy') sendLiveGameState(userId);
+  return res.json({ ok: true });
 });
 
 app.post('/api/lucky/ack', (req, res) => {
