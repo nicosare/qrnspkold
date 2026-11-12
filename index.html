@@ -4181,11 +4181,24 @@ body.scan-loading-open { overflow: hidden !important; }
         let qrideTopupPromptUserId = '';
 
         function qrideTariffPromptDayKey() {
-            const parts = new Intl.DateTimeFormat('en-CA', {
-                timeZone: 'Asia/Yekaterinburg', year: 'numeric', month: '2-digit', day: '2-digit'
-            }).formatToParts(new Date());
-            const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
-            return values.year + '-' + values.month + '-' + values.day;
+            try {
+                const parts = new Intl.DateTimeFormat('en-CA', {
+                    timeZone: 'Asia/Yekaterinburg', year: 'numeric', month: '2-digit', day: '2-digit'
+                }).formatToParts(new Date());
+                const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+                if (values.year && values.month && values.day) {
+                    return values.year + '-' + values.month + '-' + values.day;
+                }
+            } catch (error) {
+                console.warn('[QRide] Yekaterinburg date formatting is unavailable; using UTC+5 fallback:', error);
+            }
+
+            // Yekaterinburg uses UTC+5 year-round. Build the date without Intl
+            // so a restricted WebView cannot break session initialization.
+            const yekaterinburgNow = new Date(Date.now() + 5 * 60 * 60 * 1000);
+            return yekaterinburgNow.getUTCFullYear() + '-' +
+                String(yekaterinburgNow.getUTCMonth() + 1).padStart(2, '0') + '-' +
+                String(yekaterinburgNow.getUTCDate()).padStart(2, '0');
         }
         function qrideTariffPromptStorageKey() {
             if (!qrideTopupPromptUserId) return '';
@@ -4245,17 +4258,21 @@ body.scan-loading-open { overflow: hidden !important; }
 
             let attempts = 0;
             const tryShow = () => {
-                if (qrideTariffPromptWasSeen()) return;
-                if (document.visibilityState === 'hidden' || !startOverlayElement || startOverlayElement.hidden) return;
-                const anotherDialogOpen = Array.from(document.querySelectorAll('[role="dialog"]')).some(element =>
-                    element !== startOverlayElement && element !== scanTariffsModal && !element.hidden
-                );
-                if (anotherDialogOpen) {
-                    attempts += 1;
-                    if (attempts < 16) window.setTimeout(tryShow, 500);
-                    return;
+                try {
+                    if (qrideTariffPromptWasSeen()) return;
+                    if (document.visibilityState === 'hidden' || !startOverlayElement || startOverlayElement.hidden) return;
+                    const anotherDialogOpen = Array.from(document.querySelectorAll('[role="dialog"]')).some(element =>
+                        element !== startOverlayElement && element !== scanTariffsModal && !element.hidden
+                    );
+                    if (anotherDialogOpen) {
+                        attempts += 1;
+                        if (attempts < 16) window.setTimeout(tryShow, 500);
+                        return;
+                    }
+                    openScanTariffsModal(prompt);
+                } catch (error) {
+                    console.warn('[QRide] Daily tariff prompt was skipped; session and scan balance remain available:', error);
                 }
-                openScanTariffsModal(prompt);
             };
             window.setTimeout(tryShow, 850);
         }
@@ -4596,7 +4613,13 @@ body.scan-loading-open { overflow: hidden !important; }
       updateScanBalance(session.scanBalance, session.subscriptionUntil, session.unlimited, session.subscriptionActive);
       qrideTopupPromptUserId = String(session.vkUserId || '');
       if (topupButton) topupButton.disabled = false;
-      maybeShowDailyTariffPrompt(session);
+      try {
+        maybeShowDailyTariffPrompt(session);
+      } catch (promptError) {
+        // Upsell is optional: it must never turn a successful session/balance
+        // response into a scanner initialization failure.
+        console.warn('[QRide] Daily tariff prompt initialization failed; continuing without the prompt:', promptError);
+      }
       updateContinueTicketButton(session.scanCount);
       restoreLatestTicketFromHistory(session.lastScan);
 
