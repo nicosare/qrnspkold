@@ -50,6 +50,9 @@
 .qride-lucky-status { min-height: 0; margin: 0; color: #758293; font-size: 11px; line-height: 1.35; text-align: center; }
 .qride-lucky-status:empty { display: none; }
 .qride-lucky-status.is-error { margin-top: 7px; color: #b42318; }
+.qride-lucky-status.is-action { margin-top: 7px; color: #176ecb; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.qride-lucky-status.is-action:active { opacity: .7; }
+.qride-lucky-status.is-action:focus-visible { outline: 2px solid rgba(23,110,203,.35); outline-offset: 3px; border-radius: 4px; }
 
 /* The result and purchase sheets reuse the exact shared QRide Collect modal structure. */
 .qride-lucky-result-sheet { overflow-y: auto; text-align: center; }
