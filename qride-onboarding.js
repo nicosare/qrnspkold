@@ -332,10 +332,12 @@
       }).filter(isVisible);
       if (parts.length) {
         const rects = parts.map(function (part) { return part.getBoundingClientRect(); });
+        // Keep the spotlight as wide as the real card, but limit its height
+        // to the heading and subtitle when the whole card cannot fit.
         return {
-          left: Math.min.apply(null, rects.map(function (r) { return r.left; })),
+          left: fullRect.left,
           top: Math.min.apply(null, rects.map(function (r) { return r.top; })),
-          right: Math.max.apply(null, rects.map(function (r) { return r.right; })),
+          right: fullRect.right,
           bottom: Math.max.apply(null, rects.map(function (r) { return r.bottom; }))
         };
       }
@@ -433,25 +435,26 @@
           top = rect.top - guideHeight - gap;
         } else if (canPlaceBelow) {
           top = rect.bottom + gap;
-        } else if (retry < 2 && scrollTargetForGuide(state, target, rect, guideHeight, bounds)) {
-          window.setTimeout(function () {
-            positionGuide(state, target, false, retry + 1);
-          }, reduceMotion ? 0 : 420);
-          return;
         } else {
-          // Last-resort safe placement: never put the guide over the focus target.
-          // The target has already been scrolled as far as the viewport allows.
-          if (rect.top >= window.innerHeight / 2) {
-            top = bounds.top;
-          } else {
-            top = bounds.bottom - guideHeight;
-          }
+          // Do not initiate a second corrective scroll here. Keep the page
+          // stationary and place Q on the side with the greater free area.
+          const roomAbove = rect.top - bounds.top;
+          const roomBelow = bounds.bottom - rect.bottom;
+          top = roomBelow >= roomAbove
+            ? bounds.bottom - guideHeight
+            : bounds.top;
         }
       }
 
       top = clamp(top, bounds.top, Math.max(bounds.top, bounds.bottom - guideHeight));
       state.guide.style.transform = 'translate3d(' + Math.round(left) + 'px,' + Math.round(top) + 'px,0)';
-      setHighlight(state, isWelcome ? null : rect);
+      if (isWelcome) {
+        clearHighlight(state);
+      } else {
+        setHighlight(state, rect);
+        state.svg.style.opacity = '1';
+        state.hole.style.opacity = '1';
+      }
       if (state.revealTimer) clearTimeout(state.revealTimer);
       state.revealTimer = window.setTimeout(function () {
         state.revealTimer = 0;
@@ -470,11 +473,9 @@
     let settled = false;
     let fallbackTimer = 0;
     let settleTimer = 0;
-    const scrollRoots = [window, document, startOverlay];
     function cleanup() {
-      scrollRoots.forEach(function (root) {
-        root.removeEventListener('scrollend', onScrollEnd);
-      });
+      startOverlay.removeEventListener('scrollend', onScrollEnd);
+      startOverlay.removeEventListener('scroll', onScroll, { passive: true });
       if (fallbackTimer) clearTimeout(fallbackTimer);
       if (settleTimer) clearTimeout(settleTimer);
     }
@@ -484,17 +485,19 @@
       cleanup();
       callback();
     }
+    function onScroll() {
+      if (settleTimer) clearTimeout(settleTimer);
+      settleTimer = window.setTimeout(finish, 140);
+    }
     function onScrollEnd() {
       if (settleTimer) clearTimeout(settleTimer);
-      settleTimer = window.setTimeout(finish, 100);
+      settleTimer = window.setTimeout(finish, 70);
     }
-    scrollRoots.forEach(function (root) {
-      root.addEventListener('scrollend', onScrollEnd, { passive: true });
-    });
-    // scrollIntoView may animate both the app's scroller and the WebView.
-    // Wait for scrollend where supported, with a safe fallback for older WebViews.
-    fallbackTimer = window.setTimeout(finish, reduceMotion ? 40 : 1100);
-    if (reduceMotion) onScrollEnd();
+    startOverlay.addEventListener('scroll', onScroll, { passive: true });
+    startOverlay.addEventListener('scrollend', onScrollEnd, { passive: true });
+    // Fallback for older VK WebViews; allow the smooth scroll to finish first.
+    fallbackTimer = window.setTimeout(finish, reduceMotion ? 50 : 1050);
+    if (reduceMotion) finish();
   }
 
   function showStep(state, index) {
@@ -508,7 +511,10 @@
       clearTimeout(state.revealTimer);
       state.revealTimer = 0;
     }
-    clearHighlight(state);
+    // Keep the previous spotlight geometry during the scroll, but fade it
+    // out. The next spotlight will animate from the previous position.
+    state.svg.style.opacity = '0';
+    state.hole.style.opacity = '0';
     setMessage(step.title, step.copy);
 
     const progress = state.controls.querySelector('.qride-tour-progress');
@@ -540,10 +546,18 @@
       return;
     }
 
-    target.scrollIntoView({
-      behavior: reduceMotion ? 'auto' : 'smooth',
-      block: 'center',
-      inline: 'nearest'
+    // The start overlay is the page's only intended scroller. Align the
+    // target near its top instead of centering it (which hides Arcade's title).
+    // Avoid scrollIntoView: WebViews may scroll both the overlay and window,
+    // producing the small back-and-forth movement seen in the previous build.
+    const overlayRect = startOverlay.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const bounds = viewportBounds();
+    const desiredTop = startOverlay.scrollTop + targetRect.top - (bounds.top + 18);
+    const maxScroll = Math.max(0, startOverlay.scrollHeight - startOverlay.clientHeight);
+    startOverlay.scrollTo({
+      top: clamp(desiredTop, 0, maxScroll),
+      behavior: reduceMotion ? 'auto' : 'smooth'
     });
 
     waitForTargetScroll(target, function () {
