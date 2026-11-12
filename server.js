@@ -3210,9 +3210,9 @@ app.get('/api/admin/analytics', requireAdmin, (req, res) => {
     ' WHERE event_name = ? AND created_at < ?' + (adminVkId ? ' AND vk_id <> ?' : '') +
     ' GROUP BY vk_id HAVING cohort_day >= date(?) AND cohort_day <= date(?)' +
     ') SELECT COUNT(*) AS cohort_users,' +
-     ' SUM(CASE WHEN date(c.cohort_day) <= date(\\'now\\', \\'-1 day\\') THEN 1 ELSE 0 END) AS eligible1,' +
-     ' SUM(CASE WHEN date(c.cohort_day) <= date(\\'now\\', \\'-7 days\\') THEN 1 ELSE 0 END) AS eligible7,' +
-     ' SUM(CASE WHEN date(c.cohort_day) <= date(\\'now\\', \\'-30 days\\') THEN 1 ELSE 0 END) AS eligible30,' +
+     ' SUM(CASE WHEN date(c.cohort_day) <= date(\'now\', \'-1 day\') THEN 1 ELSE 0 END) AS eligible1,' +
+     ' SUM(CASE WHEN date(c.cohort_day) <= date(\'now\', \'-7 days\') THEN 1 ELSE 0 END) AS eligible7,' +
+     ' SUM(CASE WHEN date(c.cohort_day) <= date(\'now\', \'-30 days\') THEN 1 ELSE 0 END) AS eligible30,' +
     ' SUM(CASE WHEN EXISTS (SELECT 1 FROM analytics_events e WHERE e.vk_id = c.vk_id AND e.event_name = ? AND date(e.created_at) = date(c.cohort_day, \'+1 day\')) THEN 1 ELSE 0 END) AS day1,' +
     ' SUM(CASE WHEN EXISTS (SELECT 1 FROM analytics_events e WHERE e.vk_id = c.vk_id AND e.event_name = ? AND date(e.created_at) = date(c.cohort_day, \'+7 days\')) THEN 1 ELSE 0 END) AS day7,' +
     ' SUM(CASE WHEN EXISTS (SELECT 1 FROM analytics_events e WHERE e.vk_id = c.vk_id AND e.event_name = ? AND date(e.created_at) = date(c.cohort_day, \'+30 days\')) THEN 1 ELSE 0 END) AS day30' +
