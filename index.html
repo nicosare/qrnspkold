@@ -5796,7 +5796,7 @@ body.scan-loading-open { overflow: hidden !important; }
   }
 
   function closeEnergyExchangeModal() {
-    if (!energyExchangeModal || energyExchangeModal.hidden || energyExchangeBusy) return;
+    if (!energyExchangeModal || energyExchangeModal.hidden) return;
     energyExchangeModal.hidden = true;
     document.body.style.overflow = energyExchangePreviousOverflow;
   }
