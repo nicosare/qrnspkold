@@ -3398,6 +3398,15 @@ body.scan-loading-open { overflow: hidden !important; }
     }
     window.qrideAnimateStartValue = animateStartValue;
 
+    function getRussianScanWord(amount) {
+        const value = Math.abs(Number(amount)) % 100;
+        const lastDigit = value % 10;
+        if (value >= 11 && value <= 14) return 'сканов';
+        if (lastDigit === 1) return 'скан';
+        if (lastDigit >= 2 && lastDigit <= 4) return 'скана';
+        return 'сканов';
+    }
+
     function updateScanBalance(balance, subscriptionUntil = null, unlimited = false, subscriptionActive = false) {
         const previousBalanceText = scanBalanceElement.textContent;
         const previousExtraText = scanBalanceExtraElement.textContent;
@@ -3406,7 +3415,7 @@ body.scan-loading-open { overflow: hidden !important; }
         const numericBalance = balance === null || balance === undefined || balance === '' ? null : Number(balance);
         const hasPackScans = Number.isSafeInteger(numericBalance) && numericBalance > 0;
         scanBalanceExtraElement.hidden = !(subscriptionActive && hasPackScans && !unlimited);
-        scanBalanceExtraElement.textContent = scanBalanceExtraElement.hidden ? '' : '+' + numericBalance + (numericBalance === 1 ? ' скан' : numericBalance < 5 ? ' скана' : ' сканов');
+        scanBalanceExtraElement.textContent = scanBalanceExtraElement.hidden ? '' : '+' + numericBalance + ' ' + getRussianScanWord(numericBalance);
         if (unlimited) {
             scanBalanceAssigned = false;
             currentScanBalance = null;
@@ -6534,6 +6543,8 @@ body.scan-loading-open { overflow: hidden !important; }
   function renderState(state) {
     if (!state) return;
     attempts = Math.max(0, Number(state.attempts || 0));
+    // Keep the main balance in sync when Q Break starts and spends an attempt.
+    window.dispatchEvent(new CustomEvent('qride:game-state', { detail: { attempts } }));
     const energy = document.getElementById('roadnote-game-energy-count');
     if (energy) energy.textContent = String(attempts);
     if (state.breakerBestScore !== undefined) recordNode.textContent = String(Math.max(0, Number(state.breakerBestScore) || 0));
