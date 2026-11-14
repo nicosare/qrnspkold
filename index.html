@@ -2325,7 +2325,7 @@ body.scan-loading-open { overflow: hidden !important; }
             <div>
                 <span class="faq-kicker">QRIDE · СПРАВКА</span>
                 <h2 class="info-sheet-title" id="faq-title">Частые вопросы</h2>
-                <p class="info-sheet-subtitle">Ответы о сканировании, тарифах и правилах использования.</p>
+                <p class="info-sheet-subtitle">Ответы о сканировании, энергии, тарифах и правилах использования.</p>
             </div>
             <button class="info-sheet-close" id="faq-close" type="button" aria-label="Закрыть FAQ">×</button>
         </header>
@@ -2344,6 +2344,7 @@ body.scan-loading-open { overflow: hidden !important; }
             <details><summary><span class="faq-number">12</span><span>Насколько точны данные?</span></summary><div class="faq-answer"><p>QRide показывает данные, полученные от внешнего сервиса, и не гарантирует их постоянную доступность, полноту или точность. Используй приложение на свой страх и риск и самостоятельно проверяй важную информацию. QRide не заменяет официальный билет или подтверждение оплаты.</p></div></details>
             <details><summary><span class="faq-number">13</span><span>Что важно знать о безопасности и ответственности?</span></summary><div class="faq-answer"><p>Не используй отображённую информацию как единственное подтверждение оплаты. За фактическую оплату проезда отвечают официальные транспортные сервисы и перевозчик. QRide — информационный инструмент; использование приложения не создаёт платёжных обязательств и не гарантирует принятие QR-кода перевозчиком.</p></div></details>
             <details><summary><span class="faq-number">14</span><span>Как работает «Билет удачи»?</span></summary><div class="faq-answer"><p>Одна бесплатная попытка становится доступна раз в 24 часа после предыдущей. Следующие прокрутки оплачиваются сканами: активная подписка не отменяет эту стоимость. Если сканов не хватает, можно выбрать пакет. Пустых результатов нет: каждая попытка приносит награду. Результат определяется сервером и начисляется до завершения анимации. Виды наград и актуальные вероятности:</p><div class="qride-lucky-faq-prizes" id="qride-lucky-faq-prizes" aria-live="polite"><span>Загружаем список наград…</span></div></div></details>
+            <details><summary><span class="faq-number">15</span><span>Как обменять энергию на сканы?</span></summary><div class="faq-answer"><p>Нажми «Обмен энергии» под балансом сканов и выбери количество. QRide покажет актуальный курс — <strong><span id="qride-energy-exchange-faq-rate">Загружаем…</span> энергии за один скан</strong> — общую стоимость и остаток после обмена. Курс может меняться, поэтому перед подтверждением ориентируйся на значение в окне обмена. После успешного обмена энергия спишется, а сканы сразу появятся на балансе.</p></div></details>
         </div>
         <p class="faq-footer">QRide — информационный инструмент, а не сервис оплаты проезда.</p>
     </div>
@@ -2602,7 +2603,7 @@ body.scan-loading-open { overflow: hidden !important; }
                     </div>
                     <button class="qride-collect-info-close" type="button" data-energy-exchange-close aria-label="Закрыть">×</button>
                 </div>
-                <p class="qride-collect-info-copy">Обменивай накопленную энергию на дополнительные сканы. Курс — 1 000 энергии за один скан.</p>
+                <p class="qride-collect-info-copy">Обменивай накопленную энергию на дополнительные сканы. Актуальный курс — <strong><span id="qride-energy-exchange-rate-value">Загружаем…</span> энергии за 1 скан</strong>. Перед подтверждением проверь стоимость и остаток.</p>
                 <div class="qride-energy-exchange-balance">
                     <span>Твоя энергия</span>
                     <strong><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg><span id="qride-energy-exchange-available">—</span></strong>
@@ -2616,7 +2617,7 @@ body.scan-loading-open { overflow: hidden !important; }
                     </div>
                 </div>
                 <div class="qride-energy-exchange-calculation">
-                    <div><span>Стоимость</span><strong id="qride-energy-exchange-cost">1 000 энергии</strong></div>
+                    <div><span>Стоимость</span><strong id="qride-energy-exchange-cost">—</strong></div>
                     <div><span>Останется</span><strong id="qride-energy-exchange-remaining">—</strong></div>
                 </div>
                 <p class="qride-energy-exchange-status" id="qride-energy-exchange-status" role="status" aria-live="polite"></p>
@@ -5743,7 +5744,9 @@ body.scan-loading-open { overflow: hidden !important; }
     if (!response.ok) throw new Error(data.error || 'Не удалось обновить игровую награду.');
     return data;
   }
-  let ENERGY_EXCHANGE_RATE = 1000;
+  let ENERGY_EXCHANGE_RATE = null;
+  let energyExchangeRateLoaded = false;
+  let energyExchangeRateLoading = false;
   const energyBalanceNode = document.getElementById('scan-energy-balance-count');
   const energyExchangeModal = document.getElementById('qride-energy-exchange-modal');
   const energyExchangeSheet = energyExchangeModal ? energyExchangeModal.querySelector('.qride-energy-exchange-sheet') : null;
@@ -5753,6 +5756,8 @@ body.scan-loading-open { overflow: hidden !important; }
   const energyExchangeCostNode = document.getElementById('qride-energy-exchange-cost');
   const energyExchangeRemainingNode = document.getElementById('qride-energy-exchange-remaining');
   const energyExchangeStatusNode = document.getElementById('qride-energy-exchange-status');
+  const energyExchangeRateValueNode = document.getElementById('qride-energy-exchange-rate-value');
+  const energyExchangeFaqRateNode = document.getElementById('qride-energy-exchange-faq-rate');
   const energyExchangeMinusButton = document.getElementById('qride-energy-exchange-minus');
   const energyExchangePlusButton = document.getElementById('qride-energy-exchange-plus');
   const energyExchangeSubmitButton = document.getElementById('qride-energy-exchange-submit');
@@ -5761,24 +5766,45 @@ body.scan-loading-open { overflow: hidden !important; }
   let energyExchangeBusy = false;
   let energyExchangePreviousOverflow = '';
 
+  function formatEnergyAmount(amount) {
+    return Math.max(0, Number(amount) || 0).toLocaleString('ru-RU');
+  }
+
+  function updateEnergyExchangeRateLabels() {
+    const label = energyExchangeRateLoaded
+      ? formatEnergyAmount(ENERGY_EXCHANGE_RATE)
+      : energyExchangeRateLoading ? 'Загружаем…' : 'недоступен';
+    if (energyExchangeRateValueNode) energyExchangeRateValueNode.textContent = label;
+    if (energyExchangeFaqRateNode) energyExchangeFaqRateNode.textContent = label;
+  }
+
   async function loadEnergyExchangeRate() {
+    if (energyExchangeRateLoading) return;
+    energyExchangeRateLoading = true;
+    energyExchangeRateLoaded = false;
+    ENERGY_EXCHANGE_RATE = null;
+    updateEnergyExchangeRateLabels();
+    refreshEnergyExchangePreview();
     try {
       const response = await fetch(gameApiBase + 'api/energy/exchange-rate', { cache:'no-store', credentials:'omit' });
+      if (!response.ok) throw new Error('Сервер не вернул актуальный курс обмена.');
       const data = await response.json().catch(() => ({}));
-      if (response.ok && Number.isSafeInteger(Number(data.energyPerScan)) && Number(data.energyPerScan) > 0) {
-        ENERGY_EXCHANGE_RATE = Number(data.energyPerScan);
-        refreshEnergyExchangePreview();
+      const rate = Number(data.energyPerScan);
+      if (!Number.isSafeInteger(rate) || rate < 1 || rate > 1000000000) {
+        throw new Error('Сервер вернул некорректный курс обмена.');
       }
+      ENERGY_EXCHANGE_RATE = rate;
+      energyExchangeRateLoaded = true;
     } catch (error) {
       console.warn('[QRide energy exchange rate]', error?.message || error);
+    } finally {
+      energyExchangeRateLoading = false;
+      updateEnergyExchangeRateLabels();
+      refreshEnergyExchangePreview();
     }
   }
 
   loadEnergyExchangeRate();
-
-  function formatEnergyAmount(amount) {
-    return Math.max(0, Number(amount) || 0).toLocaleString('ru-RU');
-  }
 
   function updateEnergyBalance(amount) {
     const numeric = Number(amount);
@@ -5792,6 +5818,26 @@ body.scan-loading-open { overflow: hidden !important; }
 
   function refreshEnergyExchangePreview() {
     if (!energyExchangeModal) return;
+    if (energyExchangeAvailableNode) energyExchangeAvailableNode.textContent = formatEnergyAmount(currentEnergyBalance);
+    if (!energyExchangeRateLoaded || !Number.isSafeInteger(ENERGY_EXCHANGE_RATE) || ENERGY_EXCHANGE_RATE < 1) {
+      energyExchangeCount = 0;
+      if (energyExchangeCountNode) energyExchangeCountNode.textContent = '0';
+      if (energyExchangeCostNode) energyExchangeCostNode.textContent = '—';
+      if (energyExchangeRemainingNode) energyExchangeRemainingNode.textContent = '—';
+      if (energyExchangeMinusButton) energyExchangeMinusButton.disabled = true;
+      if (energyExchangePlusButton) energyExchangePlusButton.disabled = true;
+      if (energyExchangeSubmitButton) {
+        energyExchangeSubmitButton.disabled = true;
+        energyExchangeSubmitButton.textContent = 'Обмен недоступен';
+      }
+      if (energyExchangeStatusNode) {
+        energyExchangeStatusNode.textContent = energyExchangeRateLoading
+          ? 'Загружаем актуальный курс обмена…'
+          : 'Не удалось загрузить курс. Проверь соединение и открой окно обмена ещё раз.';
+      }
+      return;
+    }
+
     const maxScans = Math.floor(currentEnergyBalance / ENERGY_EXCHANGE_RATE);
     if (maxScans <= 0) energyExchangeCount = 0;
     else if (energyExchangeCount < 1) energyExchangeCount = 1;
@@ -5799,7 +5845,6 @@ body.scan-loading-open { overflow: hidden !important; }
 
     const hasExchange = maxScans > 0 && energyExchangeCount > 0;
     const cost = hasExchange ? energyExchangeCount * ENERGY_EXCHANGE_RATE : ENERGY_EXCHANGE_RATE;
-    if (energyExchangeAvailableNode) energyExchangeAvailableNode.textContent = formatEnergyAmount(currentEnergyBalance);
     if (energyExchangeCountNode) energyExchangeCountNode.textContent = String(energyExchangeCount);
     if (energyExchangeCostNode) energyExchangeCostNode.textContent = formatEnergyAmount(cost) + ' энергии';
     if (energyExchangeRemainingNode) energyExchangeRemainingNode.textContent = hasExchange
@@ -5824,11 +5869,13 @@ body.scan-loading-open { overflow: hidden !important; }
 
   function openEnergyExchangeModal() {
     if (!energyExchangeModal || energyExchangeBusy) return;
-    energyExchangeCount = Math.floor(currentEnergyBalance / ENERGY_EXCHANGE_RATE) > 0 ? 1 : 0;
+    energyExchangeCount = 0;
     refreshEnergyExchangePreview();
     energyExchangePreviousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     energyExchangeModal.hidden = false;
+    // Re-read the server setting on every open so a changed admin rate is reflected immediately.
+    loadEnergyExchangeRate();
   }
 
   function closeEnergyExchangeModal() {
@@ -5882,7 +5929,7 @@ body.scan-loading-open { overflow: hidden !important; }
       energyExchangeSheet.addEventListener('touchcancel', () => { trackingEnergySwipe = false; }, { passive: true });
     }
     if (energyExchangeSubmitButton) energyExchangeSubmitButton.addEventListener('click', async () => {
-      if (energyExchangeBusy || energyExchangeCount < 1) return;
+      if (!energyExchangeRateLoaded || energyExchangeBusy || energyExchangeCount < 1) return;
       const requestedScans = energyExchangeCount;
       energyExchangeBusy = true;
       refreshEnergyExchangePreview();
@@ -7470,7 +7517,7 @@ body.scan-loading-open { overflow: hidden !important; }
 </script>
 <script src="qride-mascot.js?v=20261112-1"></script>
 <script src="qride-collect.js?v=20261108-2"></script>
-<script src="qride-onboarding.js?v=20261112-13"></script>
+<script src="qride-onboarding.js?v=20261114-1"></script>
 <script src="qride-lucky.js?v=20261112-4"></script>
 
 
