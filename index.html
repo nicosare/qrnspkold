@@ -638,8 +638,16 @@
             color: #fff;
             box-shadow: 0 14px 30px #0052EE28;
         }
-        .start-card-eyebrow {
+        .start-balance-heading-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            min-width: 0;
             margin-bottom: 9px;
+        }
+        .start-card-eyebrow {
+            margin-bottom: 0;
             color: #dcecff;
             font-size: 11px;
             font-weight: 700;
@@ -666,14 +674,13 @@
             display: inline-flex;
             flex: 0 0 auto;
             align-items: center;
-            justify-content: center;
-            gap: 6px;
-            min-height: 34px;
+            justify-content: flex-end;
+            gap: 5px;
             max-width: 132px;
-            padding: 7px 10px;
-            border: 1px solid #ffffff45;
-            border-radius: 12px;
-            background: #ffffff17;
+            padding: 0;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
             color: #fff;
             font-size: 13px;
             font-weight: 800;
@@ -683,11 +690,11 @@
         }
         .scan-energy-balance svg {
             display: block;
-            flex: 0 0 15px;
-            width: 15px;
-            height: 15px;
+            flex: 0 0 14px;
+            width: 14px;
+            height: 14px;
             fill: none;
-            stroke: #ffd36a;
+            stroke: currentColor;
             stroke-width: 2.1;
             stroke-linecap: round;
             stroke-linejoin: round;
@@ -2458,14 +2465,16 @@ body.scan-loading-open { overflow: hidden !important; }
 
         <div class="start-quickbar" id="start-quickbar" role="group" aria-label="Баланс и управление сканированием">
             <div class="start-balance-card">
-                <div class="start-card-eyebrow">ТВОЙ БАЛАНС</div>
-                <span id="scan-balance-extra" class="scan-balance-extra" hidden></span>
-                <div class="start-balance-main-row">
-                    <div id="scan-balance-status" class="scan-balance-status" role="status" aria-live="polite">Проверяем баланс…</div>
+                <div class="start-balance-heading-row">
+                    <div class="start-card-eyebrow">ТВОЙ БАЛАНС</div>
                     <div class="scan-energy-balance" aria-label="Энергия: не загружена">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg>
                         <span id="scan-energy-balance-count">—</span>
                     </div>
+                </div>
+                <span id="scan-balance-extra" class="scan-balance-extra" hidden></span>
+                <div class="start-balance-main-row">
+                    <div id="scan-balance-status" class="scan-balance-status" role="status" aria-live="polite">Проверяем баланс…</div>
                 </div>
                 <div class="start-balance-topup-row">
                     <button class="start-balance-topup" id="start-balance-topup" type="button" disabled>
@@ -2590,7 +2599,7 @@ body.scan-loading-open { overflow: hidden !important; }
                     </div>
                     <button class="qride-collect-info-close" type="button" data-energy-exchange-close aria-label="Закрыть">×</button>
                 </div>
-                <p class="qride-collect-info-copy">Обменивай накопленную энергию на дополнительные сканы. Курс — 1 000 ⚡ за один скан.</p>
+                <p class="qride-collect-info-copy">Обменивай накопленную энергию на дополнительные сканы. Курс — 1 000 энергии за один скан.</p>
                 <div class="qride-energy-exchange-balance">
                     <span>Твоя энергия</span>
                     <strong><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg><span id="qride-energy-exchange-available">—</span></strong>
@@ -2604,7 +2613,7 @@ body.scan-loading-open { overflow: hidden !important; }
                     </div>
                 </div>
                 <div class="qride-energy-exchange-calculation">
-                    <div><span>Стоимость</span><strong id="qride-energy-exchange-cost">1 000 ⚡</strong></div>
+                    <div><span>Стоимость</span><strong id="qride-energy-exchange-cost">1 000 энергии</strong></div>
                     <div><span>Останется</span><strong id="qride-energy-exchange-remaining">—</strong></div>
                 </div>
                 <p class="qride-energy-exchange-status" id="qride-energy-exchange-status" role="status" aria-live="polite"></p>
@@ -5765,9 +5774,9 @@ body.scan-loading-open { overflow: hidden !important; }
     const cost = hasExchange ? energyExchangeCount * ENERGY_EXCHANGE_RATE : ENERGY_EXCHANGE_RATE;
     if (energyExchangeAvailableNode) energyExchangeAvailableNode.textContent = formatEnergyAmount(currentEnergyBalance);
     if (energyExchangeCountNode) energyExchangeCountNode.textContent = String(energyExchangeCount);
-    if (energyExchangeCostNode) energyExchangeCostNode.textContent = formatEnergyAmount(cost) + ' ⚡';
+    if (energyExchangeCostNode) energyExchangeCostNode.textContent = formatEnergyAmount(cost) + ' энергии';
     if (energyExchangeRemainingNode) energyExchangeRemainingNode.textContent = hasExchange
-      ? formatEnergyAmount(currentEnergyBalance - cost) + ' ⚡'
+      ? formatEnergyAmount(currentEnergyBalance - cost) + ' энергии'
       : '—';
     if (energyExchangeMinusButton) energyExchangeMinusButton.disabled = !hasExchange || energyExchangeCount <= 1 || energyExchangeBusy;
     if (energyExchangePlusButton) energyExchangePlusButton.disabled = !hasExchange || energyExchangeCount >= maxScans || energyExchangeBusy;
@@ -5782,7 +5791,7 @@ body.scan-loading-open { overflow: hidden !important; }
         ? 'Проверяем баланс и выполняем обмен…'
         : hasExchange
           ? 'После обмена энергия и сканы сразу обновятся в балансе.'
-          : 'До первого обмена не хватает ' + formatEnergyAmount(ENERGY_EXCHANGE_RATE - currentEnergyBalance) + ' ⚡.';
+          : 'До первого обмена не хватает ' + formatEnergyAmount(ENERGY_EXCHANGE_RATE - currentEnergyBalance) + ' энергии.';
     }
   }
 
