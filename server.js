@@ -1602,6 +1602,14 @@ async function handleAdminMessageEvent(event) {
 
 
 // QRide Arcade: streak-based energy, server-backed sessions and daily rewards per game.
+const ENERGY_EXCHANGE_RATE_KEY = 'energy_exchange_rate';
+const ENERGY_EXCHANGE_RATE_DEFAULT = 1000;
+function getEnergyExchangeRate() {
+  const row = db.prepare('SELECT setting_value FROM app_settings WHERE setting_key = ?').get(ENERGY_EXCHANGE_RATE_KEY);
+  const value = Number(row?.setting_value);
+  return Number.isSafeInteger(value) && value >= 1 && value <= 1000000000
+    ? value : ENERGY_EXCHANGE_RATE_DEFAULT;
+}
 const GAME_DAILY_REWARDS = [1, 1, 2, 2, 3, 3, 5];
 const GAME_REWARD_DEFAULTS = Object.freeze({ runner: 2000, breaker: 60, stack: 50 });
 function getGameRewardThresholds() {
@@ -1669,13 +1677,17 @@ app.post('/api/game/state', (req, res) => {
   })();
   return res.json({ ok: true, ...gamePublicState(userId), awarded, streak });
 });
+app.get('/api/energy/exchange-rate', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  return res.json({ energyPerScan: getEnergyExchangeRate() });
+});
 app.post('/api/energy/exchange', (req, res) => {
   let userId;
   try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
   catch { return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' }); }
 
   const scans = Number(req.body?.scans);
-  const energyPerScan = 1000;
+  const energyPerScan = getEnergyExchangeRate();
   if (!Number.isSafeInteger(scans) || scans < 1 || scans > 100000) {
     return res.status(400).json({ error: 'Выбери от 1 до 100 000 сканов для обмена.' });
   }
@@ -3429,6 +3441,24 @@ app.delete('/api/admin/promocodes/:id', requireAdmin, (req, res) => {
     db.prepare("UPDATE promo_code_applications SET status = 'cancelled', tariff_request_id = NULL WHERE promo_code_id = ? AND status = 'selected' AND (tariff_request_id IS NULL OR tariff_request_id IN (SELECT id FROM tariff_requests WHERE status NOT IN ('awaiting_payment','awaiting_review')))").run(id);
   })();
   return res.json({ ok: true });
+});
+
+app.get('/api/admin/energy-exchange', requireAdmin, (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  return res.json({ energyPerScan: getEnergyExchangeRate() });
+});
+app.post('/api/admin/energy-exchange', requireAdmin, (req, res) => {
+  const energyPerScan = Number(req.body?.energyPerScan);
+  if (!Number.isSafeInteger(energyPerScan) || energyPerScan < 1 || energyPerScan > 1000000000) {
+    return res.status(400).json({ error: 'Укажи целое число от 1 до 1 000 000 000 энергии за скан.' });
+  }
+  const now = new Date().toISOString();
+  db.prepare(`
+    INSERT INTO app_settings (setting_key, setting_value, updated_at)
+    VALUES (?, ?, ?)
+    ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value, updated_at = excluded.updated_at
+  `).run(ENERGY_EXCHANGE_RATE_KEY, String(energyPerScan), now);
+  return res.json({ ok: true, energyPerScan });
 });
 
 app.get('/api/admin/game-rewards', requireAdmin, (_req, res) => {
