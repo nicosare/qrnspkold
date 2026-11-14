@@ -7114,6 +7114,7 @@ body.scan-loading-open { overflow: hidden !important; }
     rewardClaimedToday = Boolean(state.stackRewardClaimed);
     rewardTarget = Math.max(1, Number(state.stackRewardThreshold) || 50);
     if (energyNode) energyNode.textContent = String(attempts);
+    window.dispatchEvent(new CustomEvent('qride:game-state', { detail: { attempts } }));
     if (state.stackBestScore !== undefined && recordNode) {
       recordNode.textContent = String(Math.max(0, Number(state.stackBestScore) || 0));
     }
