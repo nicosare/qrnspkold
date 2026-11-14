@@ -1669,6 +1669,79 @@ app.post('/api/game/state', (req, res) => {
   })();
   return res.json({ ok: true, ...gamePublicState(userId), awarded, streak });
 });
+app.post('/api/energy/exchange', (req, res) => {
+  let userId;
+  try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
+  catch { return res.status(401).json({ error: 'Открой QRide внутри VK и попробуй ещё раз.' }); }
+
+  const scans = Number(req.body?.scans);
+  const energyPerScan = 1000;
+  if (!Number.isSafeInteger(scans) || scans < 1 || scans > 100000) {
+    return res.status(400).json({ error: 'Выбери от 1 до 100 000 сканов для обмена.' });
+  }
+
+  const energyCost = scans * energyPerScan;
+  const nowIso = new Date().toISOString();
+  ensureUserWithWelcome(userId, nowIso);
+
+  let exchanged = false;
+  try {
+    db.transaction(() => {
+      const updated = db.prepare(`
+        UPDATE users
+        SET game_attempts = COALESCE(game_attempts, 0) - ?,
+            scan_balance = COALESCE(scan_balance, 0) + ?
+        WHERE vk_id = ?
+          AND COALESCE(game_attempts, 0) >= ?
+      `).run(energyCost, scans, userId, energyCost);
+
+      if (updated.changes !== 1) return;
+      recordScanCredit.run(
+        userId,
+        nowIso,
+        scans,
+        'energy_exchange',
+        'Обмен ' + energyCost + ' энергии на ' + scans + ' сканов'
+      );
+      exchanged = true;
+    }).immediate();
+  } catch (error) {
+    console.error('[energy exchange]', error?.message || error);
+    return res.status(500).json({ error: 'Не удалось выполнить обмен. Попробуй ещё раз.' });
+  }
+
+  if (!exchanged) {
+    const currentEnergy = Number(db.prepare('SELECT game_attempts FROM users WHERE vk_id = ?').get(userId)?.game_attempts || 0);
+    return res.status(409).json({
+      error: 'Недостаточно энергии для выбранного количества сканов.',
+      energy: Math.max(0, currentEnergy),
+      requiredEnergy: energyCost,
+      energyPerScan
+    });
+  }
+
+  const balanceRow = getUserScanBalance.get(userId);
+  const subscriptionUntil = balanceRow?.subscription_until || null;
+  const subscriptionActive = Boolean(subscriptionUntil && Date.parse(subscriptionUntil) > Date.now());
+  const unlimited = Number(balanceRow?.unlimited || 0) === 1;
+  const gameState = gamePublicState(userId);
+
+  sendLiveGameState(userId);
+  sendLiveEntitlement(userId);
+
+  return res.json({
+    ok: true,
+    exchangedScans: scans,
+    energy: gameState.attempts,
+    scanBalance: getDisplayedScanBalance(balanceRow),
+    paidScanBalance: Math.max(0, Number(balanceRow?.scan_balance) || 0),
+    subscriptionUntil,
+    subscriptionActive,
+    unlimited,
+    energyPerScan
+  });
+});
+
 app.post('/api/game/heartbeat', (req, res) => {
   let userId;
   try { ({ userId } = parseLaunchParams(req.body?.launchParams)); }
