@@ -216,6 +216,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  <a href="#promos" data-admin-view="promos">Промокоды</a>
  <a href="#paytags" data-admin-view="paytags">Paytag</a>
  <a href="#games" data-admin-view="games">Игры</a>
+ <a href="#economy" data-admin-view="economy">Экономика</a>
  <a href="#lucky" data-admin-view="lucky">Билет удачи</a>
  <a href="#analytics" data-admin-view="analytics">Аналитика</a>
 </nav>
@@ -286,6 +287,16 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    <div id="game-rewards-status" class="action-status" role="status" aria-live="polite"></div>
   </form>
   <div class="foot">Изменения применяются на сервере сразу после сохранения. Для Q Break количество блоков в игре также будет учитывать установленный порог.</div>
+ </div>
+
+ <div id="economy-view" hidden>
+  <div class="promo-intro">Настрой, сколько игровой энергии требуется для получения одного скана. Новое значение применяется ко всем следующим обменам сразу после сохранения.</div>
+  <form id="energy-exchange-form" class="promo-create">
+   <label class="promo-field"><span>Энергии за 1 скан</span><input id="energy-exchange-rate" type="number" min="1" max="1000000000" step="1" inputmode="numeric" required></label>
+   <button class="primary promo-create-button" type="submit" id="energy-exchange-save">Сохранить курс</button>
+   <div id="energy-exchange-status" class="action-status" role="status" aria-live="polite"></div>
+  </form>
+  <div class="foot">Изменение курса не пересчитывает уже накопленную энергию и не затрагивает ранее выполненные обмены.</div>
  </div>
 
  <div id="lucky-view" hidden>
@@ -363,6 +374,9 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  const promosView = document.getElementById('promos-view');
  const paytagsView = document.getElementById('paytags-view');
  const gamesView = document.getElementById('games-view');
+ const economyView = document.getElementById('economy-view');
+ const energyExchangeForm = document.getElementById('energy-exchange-form');
+ const energyExchangeStatus = document.getElementById('energy-exchange-status');
  const luckyView = document.getElementById('lucky-view');
  const luckyForm = document.getElementById('lucky-config-form');
  const luckyPrizeList = document.getElementById('lucky-prize-list');
@@ -530,6 +544,31 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
      await loadPaytags();paytagListStatus.hidden=false;paytagListStatus.className='status';paytagListStatus.textContent='Кеш очищен. Удалено записей: '+Number(data.deletedCount||0)+'.';
    }catch(error){window.alert(error.message);}
    finally{button.disabled=false;button.textContent='Очистить кеш';}
+ });
+
+ async function loadEnergyExchangeRate(){
+   energyExchangeStatus.className='action-status';energyExchangeStatus.textContent='Загружаем текущий курс…';
+   try{
+     const response=await fetch('../api/admin/energy-exchange',{headers:{Authorization:auth},cache:'no-store'});
+     const data=await response.json();if(!response.ok)throw new Error(data.error||'Не удалось загрузить курс обмена.');
+     document.getElementById('energy-exchange-rate').value=data.energyPerScan;
+     energyExchangeStatus.className='action-status';energyExchangeStatus.textContent='Текущий курс загружен.';
+   }catch(error){energyExchangeStatus.className='action-status error';energyExchangeStatus.textContent=error.message;}
+ }
+ energyExchangeForm.addEventListener('submit',async event=>{
+   event.preventDefault();
+   const energyPerScan=Number(document.getElementById('energy-exchange-rate').value);
+   if(!Number.isSafeInteger(energyPerScan)||energyPerScan<1||energyPerScan>1000000000){
+     energyExchangeStatus.className='action-status error';energyExchangeStatus.textContent='Укажи целое число от 1 до 1 000 000 000.';return;
+   }
+   const button=document.getElementById('energy-exchange-save');button.disabled=true;button.textContent='Сохраняем…';
+   try{
+     const response=await fetch('../api/admin/energy-exchange',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify({energyPerScan}),cache:'no-store'});
+     const data=await response.json();if(!response.ok)throw new Error(data.error||'Не удалось сохранить курс.');
+     document.getElementById('energy-exchange-rate').value=data.energyPerScan;
+     energyExchangeStatus.className='action-status';energyExchangeStatus.textContent='Курс сохранён: '+Number(data.energyPerScan).toLocaleString('ru-RU')+' энергии за 1 скан. Новые обмены уже используют его.';
+   }catch(error){energyExchangeStatus.className='action-status error';energyExchangeStatus.textContent=error.message;}
+   finally{button.disabled=false;button.textContent='Сохранить курс';}
  });
 
  async function loadGameRewards(){
@@ -978,21 +1017,23 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  document.querySelectorAll('[data-admin-view]').forEach(link=>link.addEventListener('click',event=>{
    event.preventDefault();const view=link.dataset.adminView;
    document.querySelectorAll('[data-admin-view]').forEach(item=>item.classList.toggle('active',item===link));
-   usersView.hidden=view!=='users';promosView.hidden=view!=='promos';paytagsView.hidden=view!=='paytags';gamesView.hidden=view!=='games';luckyView.hidden=view!=='lucky';
-   document.querySelector('h1').textContent=view==='promos'?'Промокоды QRide':view==='paytags'?'Paytag QRide':view==='games'?'Настройки игр QRide':view==='lucky'?'Билет удачи QRide':'Пользователи QRide';
-   document.querySelector('.top .sub').textContent=view==='promos'?'Коды скидок и пополнения баланса':view==='paytags'?'Кеш транспортных QR-кодов и управление ценами':view==='games'?'Пороги бесплатных сканов за игровые рекорды':view==='lucky'?'Призовой фонд, вероятности и статистика':'Нажми на карточку, чтобы открыть профиль VK';
-   count.textContent=view==='users'?(users.length?'Всего: '+users.length:'Загрузка…'):view==='paytags'?'Загрузка…':view==='games'?'Настройки':view==='lucky'?'Награды':'Промокоды';
+   usersView.hidden=view!=='users';promosView.hidden=view!=='promos';paytagsView.hidden=view!=='paytags';gamesView.hidden=view!=='games';economyView.hidden=view!=='economy';luckyView.hidden=view!=='lucky';
+   document.querySelector('h1').textContent=view==='promos'?'Промокоды QRide':view==='paytags'?'Paytag QRide':view==='games'?'Настройки игр QRide':view==='economy'?'Экономика QRide':view==='lucky'?'Билет удачи QRide':'Пользователи QRide';
+   document.querySelector('.top .sub').textContent=view==='promos'?'Коды скидок и пополнения баланса':view==='paytags'?'Кеш транспортных QR-кодов и управление ценами':view==='games'?'Пороги бесплатных сканов за игровые рекорды':view==='economy'?'Курс обмена игровой энергии на сканы':view==='lucky'?'Призовой фонд, вероятности и статистика':'Нажми на карточку, чтобы открыть профиль VK';
+   count.textContent=view==='users'?(users.length?'Всего: '+users.length:'Загрузка…'):view==='paytags'?'Загрузка…':view==='games'?'Настройки':view==='economy'?'Курс обмена':view==='lucky'?'Награды':'Промокоды';
    if(view==='promos')loadPromos();
    if(view==='paytags')loadPaytags();
    if(view==='games')loadGameRewards();
+   if(view==='economy')loadEnergyExchangeRate();
    if(view==='lucky')loadLucky();
    if(view==='users'&&!users.length)load();
-   if(history.replaceState)history.replaceState(null,'',window.location.pathname+window.location.search+(view==='promos'?'#promos':view==='paytags'?'#paytags':view==='games'?'#games':view==='lucky'?'#lucky':'#users'));
+   if(history.replaceState)history.replaceState(null,'',window.location.pathname+window.location.search+(view==='promos'?'#promos':view==='paytags'?'#paytags':view==='games'?'#games':view==='economy'?'#economy':view==='lucky'?'#lucky':'#users'));
  }));
  if(window.location.hash==='#promos')document.querySelector('[data-admin-view="promos"]').click();
  else if(window.location.hash==='#paytags')document.querySelector('[data-admin-view="paytags"]').click();
  else if(window.location.hash==='#games')document.querySelector('[data-admin-view="games"]').click();
  else if(window.location.hash==='#lucky')document.querySelector('[data-admin-view="lucky"]').click();
+ else if(window.location.hash==='#economy')document.querySelector('[data-admin-view="economy"]').click();
  load();
 })();
 </script>
