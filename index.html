@@ -702,10 +702,13 @@
         .scan-balance-extra {
             position: static;
             display: inline-flex;
+            flex: 0 0 auto;
             align-items: center;
             width: fit-content;
-            max-width: 100%;
-            margin-top: 8px;
+            max-width: 46%;
+            margin-top: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
             padding: 5px 9px;
             border: 1px solid #ffffff55;
             border-radius: 999px;
@@ -2475,9 +2478,9 @@ body.scan-loading-open { overflow: hidden !important; }
                         <span id="scan-energy-balance-count">—</span>
                     </div>
                 </div>
-                <span id="scan-balance-extra" class="scan-balance-extra" hidden></span>
                 <div class="start-balance-main-row">
                     <div id="scan-balance-status" class="scan-balance-status" role="status" aria-live="polite">Проверяем баланс…</div>
+                    <span id="scan-balance-extra" class="scan-balance-extra" hidden></span>
                 </div>
                 <div class="start-balance-topup-row">
                     <button class="start-balance-topup" id="start-balance-topup" type="button" disabled>
