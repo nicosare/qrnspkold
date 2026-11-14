@@ -645,9 +645,53 @@
             font-weight: 700;
             letter-spacing: 1.5px;
         }
-        .scan-balance-status { font-size: 28px; font-weight: 700; line-height: 1.2; color: #fff; }
+        .start-balance-main-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            min-width: 0;
+        }
+        .scan-balance-status {
+            flex: 1 1 auto;
+            min-width: 0;
+            font-size: 28px;
+            font-weight: 700;
+            line-height: 1.2;
+            color: #fff;
+        }
         .scan-balance-status.empty { font-size: 22px; color: #fff; }
-        .scan-balance-status.unassigned { font-size: 19px; color: #fff; }
+        .scan-balance-status.unassigned { font-size: 17px; color: #fff; }
+        .scan-energy-balance {
+            display: inline-flex;
+            flex: 0 0 auto;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-height: 34px;
+            max-width: 132px;
+            padding: 7px 10px;
+            border: 1px solid #ffffff45;
+            border-radius: 12px;
+            background: #ffffff17;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 800;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        .scan-energy-balance svg {
+            display: block;
+            flex: 0 0 15px;
+            width: 15px;
+            height: 15px;
+            fill: none;
+            stroke: #ffd36a;
+            stroke-width: 2.1;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
         .scan-balance-extra {
             position: absolute;
             top: 15px;
@@ -695,7 +739,7 @@
             stroke-linecap: round;
         }
         .daily-free-scan-note strong { color: #fff; font-weight: 800; }
-        .start-balance-topup-row { display:flex; justify-content:flex-start; margin-top:13px; }
+        .start-balance-topup-row { display:flex; align-items:center; justify-content:flex-start; flex-wrap:wrap; gap:8px; margin-top:13px; }
         .start-balance-topup {
             display:inline-flex; align-items:center; justify-content:center; gap:7px;
             min-height:39px; padding:8px 13px; border:1px solid #ffffff55;
@@ -707,6 +751,147 @@
         .start-balance-topup svg { display:block; width:15px; height:15px; flex:0 0 15px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; }
         .start-balance-topup:active:not(:disabled) { transform:scale(.97); }
         .start-balance-topup:disabled { opacity:.55; cursor:wait; }
+        .start-energy-exchange-open {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-height: 39px;
+            padding: 8px 11px;
+            border: 1px solid #ffffff70;
+            border-radius: 12px;
+            background: #ffffff18;
+            color: #fff;
+            font: inherit;
+            font-size: 12px;
+            font-weight: 800;
+            line-height: 1.2;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            transition: transform .16s ease, background .16s ease;
+        }
+        .start-energy-exchange-open svg {
+            display: block;
+            flex: 0 0 14px;
+            width: 14px;
+            height: 14px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .start-energy-exchange-open:active { transform: scale(.97); background: #ffffff28; }
+
+        .qride-energy-exchange-sheet { text-align: left; }
+        .qride-energy-exchange-sheet .qride-collect-info-copy { margin: 10px 0 16px; }
+        .qride-energy-exchange-balance {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 0 0 17px;
+            padding: 14px 15px;
+            border: 1px solid #e7edf5;
+            border-radius: 15px;
+            background: #f6f9fd;
+            color: #687789;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .qride-energy-exchange-balance strong {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #26384b;
+            font-size: 18px;
+            font-weight: 850;
+            font-variant-numeric: tabular-nums;
+        }
+        .qride-energy-exchange-balance svg {
+            display: block;
+            width: 17px;
+            height: 17px;
+            fill: none;
+            stroke: #e6a52a;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .qride-energy-exchange-counter {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 0 0 14px;
+            color: #344256;
+            font-size: 14px;
+            font-weight: 800;
+        }
+        .qride-energy-exchange-stepper { display: inline-flex; align-items: center; gap: 13px; }
+        .qride-energy-exchange-stepper button {
+            display: grid;
+            place-items: center;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border: 1px solid #dce7f5;
+            border-radius: 50%;
+            background: #f2f7ff;
+            color: #0052EE;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .qride-energy-exchange-stepper button:disabled { opacity: .35; }
+        .qride-energy-exchange-stepper svg {
+            display: block;
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.2;
+            stroke-linecap: round;
+        }
+        .qride-energy-exchange-stepper strong {
+            min-width: 18px;
+            color: #202a36;
+            font-size: 20px;
+            font-weight: 850;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+        .qride-energy-exchange-calculation {
+            display: grid;
+            gap: 9px;
+            margin: 0 0 12px;
+            padding: 13px 15px;
+            border-radius: 15px;
+            background: #f6f9fd;
+        }
+        .qride-energy-exchange-calculation div {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            color: #718093;
+            font-size: 13px;
+            line-height: 1.3;
+        }
+        .qride-energy-exchange-calculation strong {
+            color: #344256;
+            font-size: 13px;
+            font-weight: 850;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        .qride-energy-exchange-status {
+            min-height: 18px;
+            margin: 0 0 13px;
+            color: #718093;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .qride-energy-exchange-submit:disabled { opacity: .45; }
 
         .start-offers-section {
             margin: 0;
@@ -2275,11 +2460,21 @@ body.scan-loading-open { overflow: hidden !important; }
             <div class="start-balance-card">
                 <div class="start-card-eyebrow">ТВОЙ БАЛАНС</div>
                 <span id="scan-balance-extra" class="scan-balance-extra" hidden></span>
-                <div id="scan-balance-status" class="scan-balance-status" role="status" aria-live="polite">Проверяем баланс…</div>
+                <div class="start-balance-main-row">
+                    <div id="scan-balance-status" class="scan-balance-status" role="status" aria-live="polite">Проверяем баланс…</div>
+                    <div class="scan-energy-balance" aria-label="Энергия: не загружена">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg>
+                        <span id="scan-energy-balance-count">—</span>
+                    </div>
+                </div>
                 <div class="start-balance-topup-row">
                     <button class="start-balance-topup" id="start-balance-topup" type="button" disabled>
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
                         <span>Пополнить</span>
+                    </button>
+                    <button class="start-energy-exchange-open" id="start-energy-exchange-open" type="button" aria-haspopup="dialog" aria-controls="qride-energy-exchange-modal">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h13l-3-3M17 17H4l3 3"/></svg>
+                        <span>Обмен энергии</span>
                     </button>
                 </div>
                 <div class="daily-free-scan-note"><span class="daily-free-scan-note-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 5v14M5 12h14"/></svg></span><span><strong>1 бесплатный скан каждый день</strong> — доступен при нуле на балансе.</span></div>
@@ -2381,6 +2576,39 @@ body.scan-loading-open { overflow: hidden !important; }
                 <p class="qride-collect-info-copy" id="qride-scan-tariffs-copy">Выбери подходящий тариф, чтобы продолжить сканирование.</p>
                 <div id="qride-scan-tariffs-groups" class="qride-scan-tariffs-groups"></div>
                 <button class="qride-collect-info-action qride-lucky-secondary" type="button" data-scan-tariffs-close>Не сейчас</button>
+            </div>
+        </section>
+
+        <section class="qride-collect-info" id="qride-energy-exchange-modal" role="dialog" aria-modal="true" aria-labelledby="qride-energy-exchange-title" hidden>
+            <button class="qride-collect-info-backdrop" type="button" data-energy-exchange-close aria-label="Закрыть окно обмена"></button>
+            <div class="qride-collect-info-sheet qride-energy-exchange-sheet">
+                <div class="qride-collect-info-grabber" aria-hidden="true"></div>
+                <div class="qride-collect-info-top">
+                    <div>
+                        <div class="qride-lucky-kicker">QRIDE · ОБМЕН</div>
+                        <h4 id="qride-energy-exchange-title">Энергия в сканы</h4>
+                    </div>
+                    <button class="qride-collect-info-close" type="button" data-energy-exchange-close aria-label="Закрыть">×</button>
+                </div>
+                <p class="qride-collect-info-copy">Обменивай накопленную энергию на дополнительные сканы. Курс — 1 000 ⚡ за один скан.</p>
+                <div class="qride-energy-exchange-balance">
+                    <span>Твоя энергия</span>
+                    <strong><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg><span id="qride-energy-exchange-available">—</span></strong>
+                </div>
+                <div class="qride-energy-exchange-counter">
+                    <span>Сколько сканов</span>
+                    <div class="qride-energy-exchange-stepper">
+                        <button id="qride-energy-exchange-minus" type="button" aria-label="Уменьшить количество сканов" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+                        <strong id="qride-energy-exchange-count">0</strong>
+                        <button id="qride-energy-exchange-plus" type="button" aria-label="Увеличить количество сканов" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+                    </div>
+                </div>
+                <div class="qride-energy-exchange-calculation">
+                    <div><span>Стоимость</span><strong id="qride-energy-exchange-cost">1 000 ⚡</strong></div>
+                    <div><span>Останется</span><strong id="qride-energy-exchange-remaining">—</strong></div>
+                </div>
+                <p class="qride-energy-exchange-status" id="qride-energy-exchange-status" role="status" aria-live="polite"></p>
+                <button class="qride-collect-info-action qride-energy-exchange-submit" id="qride-energy-exchange-submit" type="button" disabled>Обменять</button>
             </div>
         </section>
 
@@ -5494,9 +5722,160 @@ body.scan-loading-open { overflow: hidden !important; }
     if (!response.ok) throw new Error(data.error || 'Не удалось обновить игровую награду.');
     return data;
   }
+  const ENERGY_EXCHANGE_RATE = 1000;
+  const energyBalanceNode = document.getElementById('scan-energy-balance-count');
+  const energyExchangeModal = document.getElementById('qride-energy-exchange-modal');
+  const energyExchangeSheet = energyExchangeModal ? energyExchangeModal.querySelector('.qride-energy-exchange-sheet') : null;
+  const energyExchangeOpenButton = document.getElementById('start-energy-exchange-open');
+  const energyExchangeAvailableNode = document.getElementById('qride-energy-exchange-available');
+  const energyExchangeCountNode = document.getElementById('qride-energy-exchange-count');
+  const energyExchangeCostNode = document.getElementById('qride-energy-exchange-cost');
+  const energyExchangeRemainingNode = document.getElementById('qride-energy-exchange-remaining');
+  const energyExchangeStatusNode = document.getElementById('qride-energy-exchange-status');
+  const energyExchangeMinusButton = document.getElementById('qride-energy-exchange-minus');
+  const energyExchangePlusButton = document.getElementById('qride-energy-exchange-plus');
+  const energyExchangeSubmitButton = document.getElementById('qride-energy-exchange-submit');
+  let currentEnergyBalance = 0;
+  let energyExchangeCount = 0;
+  let energyExchangeBusy = false;
+  let energyExchangePreviousOverflow = '';
+
+  function formatEnergyAmount(amount) {
+    return Math.max(0, Number(amount) || 0).toLocaleString('ru-RU');
+  }
+
+  function updateEnergyBalance(amount) {
+    const numeric = Number(amount);
+    if (!Number.isSafeInteger(numeric) || numeric < 0) return;
+    currentEnergyBalance = numeric;
+    if (energyBalanceNode) energyBalanceNode.textContent = formatEnergyAmount(currentEnergyBalance);
+    const balanceChip = document.querySelector('.scan-energy-balance');
+    if (balanceChip) balanceChip.setAttribute('aria-label', 'Энергия: ' + formatEnergyAmount(currentEnergyBalance));
+    if (energyExchangeModal && !energyExchangeModal.hidden) refreshEnergyExchangePreview();
+  }
+
+  function refreshEnergyExchangePreview() {
+    if (!energyExchangeModal) return;
+    const maxScans = Math.floor(currentEnergyBalance / ENERGY_EXCHANGE_RATE);
+    if (maxScans <= 0) energyExchangeCount = 0;
+    else if (energyExchangeCount < 1) energyExchangeCount = 1;
+    else energyExchangeCount = Math.min(energyExchangeCount, maxScans);
+
+    const hasExchange = maxScans > 0 && energyExchangeCount > 0;
+    const cost = hasExchange ? energyExchangeCount * ENERGY_EXCHANGE_RATE : ENERGY_EXCHANGE_RATE;
+    if (energyExchangeAvailableNode) energyExchangeAvailableNode.textContent = formatEnergyAmount(currentEnergyBalance);
+    if (energyExchangeCountNode) energyExchangeCountNode.textContent = String(energyExchangeCount);
+    if (energyExchangeCostNode) energyExchangeCostNode.textContent = formatEnergyAmount(cost) + ' ⚡';
+    if (energyExchangeRemainingNode) energyExchangeRemainingNode.textContent = hasExchange
+      ? formatEnergyAmount(currentEnergyBalance - cost) + ' ⚡'
+      : '—';
+    if (energyExchangeMinusButton) energyExchangeMinusButton.disabled = !hasExchange || energyExchangeCount <= 1 || energyExchangeBusy;
+    if (energyExchangePlusButton) energyExchangePlusButton.disabled = !hasExchange || energyExchangeCount >= maxScans || energyExchangeBusy;
+    if (energyExchangeSubmitButton) {
+      energyExchangeSubmitButton.disabled = !hasExchange || energyExchangeBusy;
+      energyExchangeSubmitButton.textContent = energyExchangeBusy
+        ? 'Обмениваем…'
+        : 'Обменять на ' + energyExchangeCount + (energyExchangeCount === 1 ? ' скан' : energyExchangeCount < 5 ? ' скана' : ' сканов');
+    }
+    if (energyExchangeStatusNode) {
+      energyExchangeStatusNode.textContent = energyExchangeBusy
+        ? 'Проверяем баланс и выполняем обмен…'
+        : hasExchange
+          ? 'После обмена энергия и сканы сразу обновятся в балансе.'
+          : 'До первого обмена не хватает ' + formatEnergyAmount(ENERGY_EXCHANGE_RATE - currentEnergyBalance) + ' ⚡.';
+    }
+  }
+
+  function openEnergyExchangeModal() {
+    if (!energyExchangeModal || energyExchangeBusy) return;
+    energyExchangeCount = Math.floor(currentEnergyBalance / ENERGY_EXCHANGE_RATE) > 0 ? 1 : 0;
+    refreshEnergyExchangePreview();
+    energyExchangePreviousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    energyExchangeModal.hidden = false;
+  }
+
+  function closeEnergyExchangeModal() {
+    if (!energyExchangeModal || energyExchangeModal.hidden || energyExchangeBusy) return;
+    energyExchangeModal.hidden = true;
+    document.body.style.overflow = energyExchangePreviousOverflow;
+  }
+
+  if (energyExchangeOpenButton) energyExchangeOpenButton.addEventListener('click', openEnergyExchangeModal);
+  if (energyExchangeModal) {
+    energyExchangeModal.querySelectorAll('[data-energy-exchange-close]').forEach((button) => {
+      button.addEventListener('click', closeEnergyExchangeModal);
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeEnergyExchangeModal();
+    });
+    if (energyExchangeMinusButton) energyExchangeMinusButton.addEventListener('click', () => {
+      if (energyExchangeCount > 1) energyExchangeCount -= 1;
+      refreshEnergyExchangePreview();
+    });
+    if (energyExchangePlusButton) energyExchangePlusButton.addEventListener('click', () => {
+      const maxScans = Math.floor(currentEnergyBalance / ENERGY_EXCHANGE_RATE);
+      if (energyExchangeCount < maxScans) energyExchangeCount += 1;
+      refreshEnergyExchangePreview();
+    });
+    if (energyExchangeSheet) {
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let trackingEnergySwipe = false;
+      energyExchangeSheet.addEventListener('touchstart', (event) => {
+        if (!event.touches || event.touches.length !== 1 || energyExchangeSheet.scrollTop > 1) {
+          trackingEnergySwipe = false;
+          return;
+        }
+        const target = event.target;
+        if (target && target.closest && target.closest('button, a')) {
+          trackingEnergySwipe = false;
+          return;
+        }
+        touchStartX = event.touches[0].clientX;
+        touchStartY = event.touches[0].clientY;
+        trackingEnergySwipe = true;
+      }, { passive: true });
+      energyExchangeSheet.addEventListener('touchend', (event) => {
+        if (!trackingEnergySwipe || !event.changedTouches || !event.changedTouches.length) return;
+        const dx = event.changedTouches[0].clientX - touchStartX;
+        const dy = event.changedTouches[0].clientY - touchStartY;
+        trackingEnergySwipe = false;
+        if (dy >= 65 && dy > Math.abs(dx) * 1.25) closeEnergyExchangeModal();
+      }, { passive: true });
+      energyExchangeSheet.addEventListener('touchcancel', () => { trackingEnergySwipe = false; }, { passive: true });
+    }
+    if (energyExchangeSubmitButton) energyExchangeSubmitButton.addEventListener('click', async () => {
+      if (energyExchangeBusy || energyExchangeCount < 1) return;
+      const requestedScans = energyExchangeCount;
+      energyExchangeBusy = true;
+      refreshEnergyExchangePreview();
+      try {
+        const result = await gameRequest('/api/energy/exchange', { scans: requestedScans });
+        updateEnergyBalance(Number(result.energy));
+        window.dispatchEvent(new CustomEvent('qride:game-state', { detail: { attempts: Number(result.energy) } }));
+        window.dispatchEvent(new CustomEvent('qride:entitlement-state', { detail: {
+          scanBalance: result.scanBalance,
+          subscriptionUntil: result.subscriptionUntil,
+          unlimited: result.unlimited,
+          subscriptionActive: result.subscriptionActive
+        } }));
+        const scanWord = requestedScans === 1 ? 'скан' : requestedScans < 5 ? 'скана' : 'сканов';
+        closeEnergyExchangeModal();
+        showGameToast('Обмен выполнен', '+' + requestedScans + ' ' + scanWord + ' за энергию', 'bolt');
+      } catch (error) {
+        if (energyExchangeStatusNode) energyExchangeStatusNode.textContent = error.message || 'Не удалось выполнить обмен. Попробуй ещё раз.';
+      } finally {
+        energyExchangeBusy = false;
+        refreshEnergyExchangePreview();
+      }
+    });
+  }
+
   function renderGameState(state) {
     if (!state) return;
     gameAttempts = Math.max(0, Number(state.attempts || 0));
+    updateEnergyBalance(gameAttempts);
     gameStreak = Math.max(0, Number(state.streak || 0));
     runnerRewardThreshold = Math.max(1, Number(state.rewardThreshold) || 2000);
     const energyNode = document.getElementById('roadnote-game-energy-count');
@@ -5548,6 +5927,7 @@ body.scan-loading-open { overflow: hidden !important; }
     const amount = Number(event.detail && event.detail.attempts);
     if (!Number.isSafeInteger(amount)) return;
     gameAttempts = Math.max(0, amount);
+    updateEnergyBalance(gameAttempts);
     const energyNode = document.getElementById('roadnote-game-energy-count');
     if (energyNode) energyNode.textContent = String(gameAttempts);
     if (attemptsNode) attemptsNode.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13h6L10 22l9.5-12h-6L13 2Z"/></svg> ' + gameAttempts;
