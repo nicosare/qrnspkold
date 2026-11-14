@@ -5743,7 +5743,7 @@ body.scan-loading-open { overflow: hidden !important; }
     if (!response.ok) throw new Error(data.error || 'Не удалось обновить игровую награду.');
     return data;
   }
-  const ENERGY_EXCHANGE_RATE = 1000;
+  let ENERGY_EXCHANGE_RATE = 1000;
   const energyBalanceNode = document.getElementById('scan-energy-balance-count');
   const energyExchangeModal = document.getElementById('qride-energy-exchange-modal');
   const energyExchangeSheet = energyExchangeModal ? energyExchangeModal.querySelector('.qride-energy-exchange-sheet') : null;
@@ -5760,6 +5760,21 @@ body.scan-loading-open { overflow: hidden !important; }
   let energyExchangeCount = 0;
   let energyExchangeBusy = false;
   let energyExchangePreviousOverflow = '';
+
+  async function loadEnergyExchangeRate() {
+    try {
+      const response = await fetch(gameApiBase + 'api/energy/exchange-rate', { cache:'no-store', credentials:'omit' });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && Number.isSafeInteger(Number(data.energyPerScan)) && Number(data.energyPerScan) > 0) {
+        ENERGY_EXCHANGE_RATE = Number(data.energyPerScan);
+        refreshEnergyExchangePreview();
+      }
+    } catch (error) {
+      console.warn('[QRide energy exchange rate]', error?.message || error);
+    }
+  }
+
+  loadEnergyExchangeRate();
 
   function formatEnergyAmount(amount) {
     return Math.max(0, Number(amount) || 0).toLocaleString('ru-RU');
