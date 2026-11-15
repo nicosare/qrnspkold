@@ -875,227 +875,247 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    finally{button.disabled=false;button.textContent='Сохранить настройки';}
  });
 
- function render(){
-   const q=search.value.trim().toLowerCase();
-   const filtered=users.filter(u=>(u.first_name+' '+u.last_name+' '+u.vk_id+' '+(u.last_transport_number||'')).toLowerCase().includes(q));
-   filtered.sort((a,b)=>{
-     if(sort.value==='scans') return Number(b.scan_balance??-1)-Number(a.scan_balance??-1);
-     if(sort.value==='subscription') {
-       const rank=u=>u.unlimited?2:(u.subscription_until&&Date.parse(u.subscription_until)>Date.now()?1:0);
-       const priority=rank(b)-rank(a);
-       if(priority) return priority;
-       if(rank(a)===1) return Date.parse(a.subscription_until)-Date.parse(b.subscription_until);
-     }
-     return (b.last_seen||'').localeCompare(a.last_seen||'');
-   });
-   cards.innerHTML=filtered.map(u=>{
-     const name=(u.first_name+' '+u.last_name).trim()||'Пользователь VK';
-     const avatar=u.photo_url?'<img class="avatar" src="'+esc(u.photo_url)+'" alt="" referrerpolicy="no-referrer" loading="lazy">':'<span class="avatar" aria-hidden="true">VK</span>';
-     const profile='https://vk.com/id'+encodeURIComponent(u.vk_id);
-     const subscriptionActive=Boolean(u.subscription_until && Date.parse(u.subscription_until)>Date.now());
-     const dailyScanAvailable=Number(u.daily_scan_is_current||0)===1;
-     const scanBalanceLabel=u.unlimited?'Безлимит':u.scan_balance===null||u.scan_balance===undefined?'Не назначен':(String(u.scan_balance)+(dailyScanAvailable&&Number(u.scan_balance)<=0?' + 1 ежедневный':''));
-     const subscriptionDetail=subscriptionActive?'<small>'+esc(remaining(u.subscription_until))+' · до '+esc(new Date(u.subscription_until).toLocaleString('ru-RU',{day:'numeric',month:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}))+'</small>':'';
-     const lastScan=u.last_scan_at?date(u.last_scan_at):'Ещё не сканировал';
-     const transport=[u.last_transport_type, u.last_route_number?'№ '+u.last_route_number:''].filter(Boolean).join(' ')||'—';
-     return '<article class="user-card" data-user-card="'+esc(u.vk_id)+'">'+
-       '<div class="person">'+avatar+'<div class="person-text"><a href="'+profile+'" target="_blank" rel="noopener noreferrer" class="name" style="color:inherit;text-decoration:none">'+esc(name)+'</a><div class="vk-id">VK ID: '+esc(u.vk_id)+' · '+esc(u.visit_count)+' посещ. · '+esc(u.scan_count||0)+' сканов</div></div></div>'+
-       '<div class="stats">'+
-         '<div class="stat"><span class="stat-label">Баланс сканов</span><span class="stat-value">'+esc(scanBalanceLabel)+'</span></div>'+
-         '<div class="stat"><span class="stat-label">Подписка</span><span class="stat-value">'+esc(subscriptionActive?new Date(u.subscription_until).toLocaleDateString('ru-RU'):(u.subscription_until?'Истекла':'Нет'))+'</span></div>'+
-         '<div class="stat"><span class="stat-label">Последний скан</span><span class="stat-value">'+esc(lastScan)+'</span></div>'+
-          '<div class="stat"><span class="stat-label">Последний транспорт</span><span class="stat-value">'+esc(transport)+'</span></div>'+
-          '<div class="stat"><span class="stat-label">Энергия</span><span class="stat-value">'+esc(Number(u.game_attempts||0))+'</span></div>'+
-       '</div>'+
-       '<div class="stats game-records">'+
-         '<div class="stat"><span class="stat-label">Рекорд Q Run</span><span class="stat-value">'+esc(Number(u.runner_best_score||0))+' очк.</span></div>'+
-         '<div class="stat"><span class="stat-label">Рекорд Q Break</span><span class="stat-value">'+esc(Number(u.breaker_best_score||0))+' блоков</span></div>'+
-         '<div class="stat"><span class="stat-label">Рекорд Q Stack</span><span class="stat-value">'+esc(Number(u.stack_best_score||0))+' блоков</span></div>'+
-       '</div>'+
-       '<details class="scan-history" data-scan-history="'+esc(u.vk_id)+'"><summary>История сканов · '+esc(u.scan_count||0)+'</summary><div class="scan-history-list"><div class="scan-history-empty">Нажмите, чтобы загрузить историю.</div></div></details>'+
-       '<details class="credit-history" data-credit-history="'+esc(u.vk_id)+'"><summary>История начислений</summary><div class="scan-history-list"><div class="scan-history-empty">Нажмите, чтобы загрузить историю.</div></div></details>'+
-       '<details class="scan-history" data-lucky-history="'+esc(u.vk_id)+'"><summary>История рулетки</summary><div class="scan-history-list"><div class="scan-history-empty">Нажмите, чтобы загрузить историю.</div></div></details>'+
-       '<div class="entitlement">'+
-       '<details class="manage"><summary>Управление доступом</summary><div class="manage-body">'+
-        '<div class="grant-section"><div class="grant-section-title">НАЧИСЛЕНИЕ</div>'+
-        '<div class="grant-grid"><select aria-label="Что начислить" data-grant-type><option value="scans">Скан</option><option value="days">День</option><option value="months">Месяц</option><option value="energy">Энергия</option></select>'+
-        '<input type="number" min="1" max="100000" step="1" value="9" aria-label="Количество для начисления" data-grant-amount>'+
-        '<button class="primary" type="button" data-action="grant-custom">Начислить</button></div></div>'+
-        '<button class="unlimited-toggle" type="button" data-action="toggle-unlimited">'+(u.unlimited?'Отключить безлимит':'Включить безлимит')+'</button>' +
-       '<button class="reset-account" type="button" data-action="reset-account">Обнулить аккаунт</button>'+
-       '<div class="action-status" aria-live="polite"></div></div></details></div></article>';
-     }).join('');
-   status.hidden=filtered.length>0;
-   status.className='status';
-   status.textContent=users.length?'По вашему запросу ничего не найдено':'Пока нет зарегистрированных пользователей';
-   cards.hidden=filtered.length===0;
- }
- async function load(){
-   if(!query){status.textContent='Откройте эту страницу из VK Mini App, чтобы проверить подпись запуска.';status.className='status error';return}
-   status.hidden=false;status.className='status';status.textContent='Загрузка списка…';cards.hidden=true;
-   try{
-     const response=await fetch('../api/admin/users',{headers:{Authorization:auth},cache:'no-store'});
-     const data=await response.json();
-     if(!response.ok)throw new Error(response.status===403?'Доступ запрещён: этот аккаунт VK не является администратором.':data.error||'Не удалось загрузить список');
-     users=data.users||[];adminUserId=String(data.adminUserId||'');count.textContent='Всего: '+data.total;render();
-   }catch(e){status.hidden=false;status.className='status error';status.textContent=e.message;count.textContent='Нет доступа'}
- }
- async function performEntitlement(button){
-   const card=button.closest('[data-user-card]');
-   if(!card)return;
-   const vkId=card.dataset.userCard;
-   const message=card.querySelector('.action-status');
-   let body;
+  function userScanBalanceLabel(user){
+    const daily=Number(user.daily_scan_is_current||0)===1;
+    return user.unlimited?'Безлимит':user.scan_balance===null||user.scan_balance===undefined?'Не назначен':String(user.scan_balance)+(daily&&Number(user.scan_balance)<=0?' + 1 ежедневный':'');
+  }
+  function render(){
+    const q=search.value.trim().toLowerCase();
+    const filtered=users.filter(user=>([
+      user.first_name,user.last_name,user.vk_id,user.last_transport_number,
+      user.last_transport_type,user.last_route_number
+    ].join(' ')).toLowerCase().includes(q));
+    filtered.sort((a,b)=>{
+      if(sort.value==='scans') return Number(b.scan_balance??-1)-Number(a.scan_balance??-1);
+      if(sort.value==='energy') return Number(b.game_attempts||0)-Number(a.game_attempts||0);
+      if(sort.value==='visits') return Number(b.visit_count||0)-Number(a.visit_count||0);
+      if(sort.value==='subscription') {
+        const rank=user=>user.unlimited?2:(user.subscription_until&&Date.parse(user.subscription_until)>Date.now()?1:0);
+        const priority=rank(b)-rank(a);
+        if(priority)return priority;
+        if(rank(a)===1)return Date.parse(a.subscription_until)-Date.parse(b.subscription_until);
+      }
+      return (b.last_seen||'').localeCompare(a.last_seen||'');
+    });
+    cards.innerHTML=filtered.map(user=>{
+      const name=(user.first_name+' '+user.last_name).trim()||'Пользователь VK';
+      const avatar=user.photo_url
+        ?'<img class="avatar" src="'+esc(user.photo_url)+'" alt="" referrerpolicy="no-referrer" loading="lazy">'
+        :'<span class="avatar" aria-hidden="true">VK</span>';
+      const lastSeen=user.last_seen?date(user.last_seen):'Нет данных';
+      return '<button type="button" class="user-row" data-user-open="'+esc(user.vk_id)+'">'+
+        '<span class="user-row-person">'+avatar+'<span><span class="user-row-name">'+esc(name)+'</span><span class="user-row-meta">VK ID '+esc(user.vk_id)+' · '+esc(Number(user.scan_count||0))+' поездок</span></span></span>'+
+        '<span class="user-row-cell"><span>Сканы</span><strong>'+esc(userScanBalanceLabel(user))+'</strong></span>'+
+        '<span class="user-row-cell"><span>Энергия</span><strong>'+esc(Number(user.game_attempts||0).toLocaleString('ru-RU'))+'</strong></span>'+
+        '<span class="user-row-cell user-row-visits"><span>Визиты</span><strong>'+esc(Number(user.visit_count||0).toLocaleString('ru-RU'))+'</strong></span>'+
+        '<span class="user-row-cell user-row-last"><span>Последний заход</span><strong>'+esc(lastSeen)+'</strong></span>'+
+      '</button>';
+    }).join('');
+    const weekAgo=Date.now()-7*86400000;
+    const activeWeek=users.filter(user=>Date.parse(user.last_seen||'')>=weekAgo).length;
+    const totalScans=users.reduce((sum,user)=>sum+Number(user.scan_count||0),0);
+    document.getElementById('users-total').textContent=users.length.toLocaleString('ru-RU');
+    document.getElementById('users-active-week').textContent=activeWeek.toLocaleString('ru-RU');
+    document.getElementById('users-total-scans').textContent=totalScans.toLocaleString('ru-RU');
+    count.textContent='Всего: '+users.length;
+    status.hidden=filtered.length>0;
+    status.className='status';
+    status.textContent=users.length?'По вашему запросу ничего не найдено':'Пока нет зарегистрированных пользователей';
+    cards.hidden=filtered.length===0;
+  }
+  function renderUserSummary(user){
+    const active=Boolean(user.subscription_until&&Date.parse(user.subscription_until)>Date.now());
+    const subscription=user.unlimited?'Безлимит':active?'Активна до '+preciseDate(user.subscription_until):user.subscription_until?'Истекла':'Нет';
+    const transport=[user.last_transport_type,user.last_route_number?'№ '+user.last_route_number:''].filter(Boolean).join(' ')||'—';
+    const stats=[
+      ['Последний заход',preciseDate(user.last_seen),'Первый вход: '+preciseDate(user.first_seen)],
+      ['Баланс сканов',userScanBalanceLabel(user),Number(user.scan_count||0).toLocaleString('ru-RU')+' успешных поездок'],
+      ['Энергия',Number(user.game_attempts||0).toLocaleString('ru-RU'),'Серия входов: '+Number(user.game_streak||0)+' дн.'],
+      ['Подписка',subscription,user.unlimited?'Без ограничений':active?remaining(user.subscription_until):''],
+      ['Визиты',Number(user.visit_count||0).toLocaleString('ru-RU'),'Зарегистрирован: '+preciseDate(user.first_seen)],
+      ['Последний транспорт',transport,user.last_scan_at?'Поездка: '+preciseDate(user.last_scan_at):'Поездок пока нет']
+    ];
+    userDetailSummary.innerHTML=
+      '<div class="user-detail-id"><span>VK ID: '+esc(user.vk_id)+'</span><a href="https://vk.com/id'+encodeURIComponent(user.vk_id)+'" target="_blank" rel="noopener noreferrer">Открыть VK ↗</a></div>'+
+      '<div class="user-detail-stats">'+stats.map(item=>'<div class="user-detail-stat"><span>'+esc(item[0])+'</span><strong>'+esc(item[1])+'</strong>'+(item[2]?'<small>'+esc(item[2])+'</small>':'')+'</div>').join('')+'</div>'+
+      '<h3 class="user-detail-subtitle">Результаты в QRide Arcade</h3>'+
+      '<div class="user-detail-records">'+
+       '<div class="user-detail-record"><span>Q Run</span><strong>'+esc(Number(user.runner_best_score||0).toLocaleString('ru-RU'))+' очк.</strong></div>'+
+       '<div class="user-detail-record"><span>Q Break</span><strong>'+esc(Number(user.breaker_best_score||0).toLocaleString('ru-RU'))+' блоков</strong></div>'+
+       '<div class="user-detail-record"><span>Q Stack</span><strong>'+esc(Number(user.stack_best_score||0).toLocaleString('ru-RU'))+' блоков</strong></div>'+
+      '</div>';
+    const unlimitedButton=userDetail.querySelector('[data-action="toggle-unlimited"]');
+    if(unlimitedButton)unlimitedButton.textContent=user.unlimited?'Отключить безлимит':'Включить безлимит';
+  }
+  function renderActivity(){
+    const filtered=activityFilter==='all'?activityItems:activityItems.filter(item=>item.category===activityFilter);
+    userActivityCount.textContent=filtered.length===activityItems.length
+      ?activityItems.length.toLocaleString('ru-RU')+' событий'
+      :filtered.length.toLocaleString('ru-RU')+' из '+activityItems.length;
+    activityFilters.querySelectorAll('[data-activity-filter]').forEach(button=>{
+      button.classList.toggle('active',button.dataset.activityFilter===activityFilter);
+    });
+    if(!filtered.length){
+      userActivityList.innerHTML='<div class="activity-empty">В этой категории пока нет событий.</div>';
+      return;
+    }
+    userActivityList.innerHTML=filtered.map(item=>{
+      const canDelete=String(selectedUserId)===String(adminUserId)&&String(item.id).startsWith('scan:');
+      const scanId=canDelete?String(item.id).slice(5):'';
+      return '<article class="activity-item" data-activity-id="'+esc(item.id)+'">'+
+        '<div class="activity-item-main"><strong class="activity-item-title">'+esc(item.title)+'</strong><span class="activity-item-description">'+esc(item.description)+'</span></div>'+
+        (item.amountLabel?'<span class="activity-amount">'+esc(item.amountLabel)+'</span>':'')+
+        '<time class="activity-item-time" datetime="'+esc(item.at)+'">'+esc(preciseDate(item.at))+'</time>'+
+        (canDelete?'<button type="button" class="activity-delete" data-delete-scan="'+esc(scanId)+'">Удалить запись поездки</button>':'')+
+      '</article>';
+    }).join('');
+  }
+  function closeUserDetail(){
+    userDetail.hidden=true;
+    document.body.classList.remove('user-detail-open');
+    selectedUserId='';
+    activityItems=[];
+  }
+  async function openUser(vkId,refreshOnly){
+    const user=users.find(item=>String(item.vk_id)===String(vkId));
+    if(!user)return;
+    selectedUserId=String(vkId);
+    activityFilter='all';
+    const name=(user.first_name+' '+user.last_name).trim()||'Пользователь VK';
+    const avatar=user.photo_url
+      ?'<img class="avatar" src="'+esc(user.photo_url)+'" alt="" referrerpolicy="no-referrer">'
+      :'<span class="avatar" aria-hidden="true">VK</span>';
+    userDetailHeading.innerHTML=avatar+'<span><strong>'+esc(name)+'</strong><small>VK ID '+esc(user.vk_id)+'</small></span>';
+    userProfileLink.href='https://vk.com/id'+encodeURIComponent(user.vk_id);
+    renderUserSummary(user);
+    userActionStatus.textContent='';
+    if(!refreshOnly){
+      userDetail.hidden=false;
+      document.body.classList.add('user-detail-open');
+    }
+    userActivityCount.textContent='Загрузка…';
+    userActivityList.innerHTML='<div class="user-detail-loading">Загружаем историю пользователя…</div>';
+    try{
+      const response=await fetch('../api/admin/users/'+encodeURIComponent(vkId)+'/activity',{headers:{Authorization:auth},cache:'no-store'});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'Не удалось загрузить историю пользователя.');
+      if(String(selectedUserId)!==String(vkId))return;
+      activityItems=Array.isArray(data.activity)?data.activity:[];
+      renderActivity();
+      renderUserSummary(user);
+    }catch(error){
+      userActivityCount.textContent='Ошибка';
+      userActivityList.innerHTML='<div class="activity-empty">'+esc(error.message)+'<br><button type="button" data-action="retry-activity">Повторить</button></div>';
+    }
+  }
+  async function load(){
+    if(!query){status.textContent='Откройте эту страницу из VK Mini App, чтобы проверить подпись запуска.';status.className='status error';return}
+    status.hidden=false;status.className='status';status.textContent='Загрузка списка…';cards.hidden=true;
+    try{
+      const response=await fetch('../api/admin/users',{headers:{Authorization:auth},cache:'no-store'});
+      const data=await response.json();
+      if(!response.ok)throw new Error(response.status===403?'Доступ запрещён: этот аккаунт VK не является администратором.':data.error||'Не удалось загрузить список');
+      users=data.users||[];adminUserId=String(data.adminUserId||'');render();
+      if(selectedUserId){
+        const selected=users.find(item=>String(item.vk_id)===String(selectedUserId));
+        if(selected)renderUserSummary(selected);
+      }
+    }catch(error){status.hidden=false;status.className='status error';status.textContent=error.message;count.textContent='Нет доступа'}
+  }
+  async function performEntitlement(button){
+    const vkId=String(selectedUserId||'');
+    const user=users.find(item=>String(item.vk_id)===vkId);
+    if(!vkId||!user)return;
+    let body;
     if(button.dataset.action==='grant-custom'){
-      const type=String(card.querySelector('[data-grant-type]')?.value||'scans');
-      const amount=Number(card.querySelector('[data-grant-amount]')?.value);
+      const type=String(userDetail.querySelector('[data-grant-type]')?.value||'scans');
+      const amount=Number(userDetail.querySelector('[data-grant-amount]')?.value);
       const settings={scans:{action:'grant_pack',field:'amount',max:100000},days:{action:'grant_days',field:'days',max:3650},months:{action:'grant_months',field:'months',max:120},energy:{action:'grant_energy',field:'amount',max:100000}};
       const selected=settings[type];
-      if(!selected||!Number.isSafeInteger(amount)||amount<1||amount>selected.max){message.className='action-status error';message.textContent='Введите количество от 1 до '+(selected?selected.max:100000)+'.';return}
+      if(!selected||!Number.isSafeInteger(amount)||amount<1||amount>selected.max){
+        userActionStatus.className='action-status error';
+        userActionStatus.textContent='Введите количество от 1 до '+(selected?selected.max:100000)+'.';
+        return;
+      }
       body={action:selected.action,[selected.field]:amount};
     }else if(button.dataset.action==='reset-account'){
-     const user=users.find(item=>String(item.vk_id)===vkId);
-     const userName=user?((String(user.first_name||'')+' '+String(user.last_name||'')).trim()||'пользователя VK'):'пользователя';
-     const confirmed=window.confirm('Обнулить аккаунт '+userName+' (VK ID '+vkId+')?\n\nБаланс сканов и подписка будут сброшены, история покупок и отметки о покупках удалены. История сканирований останется. Повторный приветственный бонус не выдаётся. Это действие нельзя отменить.');
-     if(!confirmed)return;
-     body={action:'reset_account'};
-   }else{
-     const user=users.find(item=>String(item.vk_id)===vkId);
-     body={action:'set_unlimited',enabled:!(user&&user.unlimited)};
-   }
-   button.disabled=true;message.className='action-status';message.textContent='Сохраняем…';
-   try{
-     const response=await fetch('../api/admin/users/'+encodeURIComponent(vkId)+'/entitlement',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});
-     const data=await response.json();
-     if(!response.ok)throw new Error(data.error||'Не удалось изменить доступ.');
-     await load();
-   }catch(error){message.className='action-status error';message.textContent=error.message}
-   finally{button.disabled=false}
- }
- cards.addEventListener('toggle', event => {
-   const details=event.target.closest('details[data-scan-history]');
-   if(!details || !details.open || details.dataset.loaded==='1' || details.dataset.loading==='1')return;
-   details.dataset.loading='1';
-   const list=details.querySelector('.scan-history-list');
-   list.innerHTML='<div class="scan-history-empty">Загружаем историю…</div>';
-   fetch('../api/admin/users/'+encodeURIComponent(details.dataset.scanHistory)+'/scans',{headers:{Authorization:auth},cache:'no-store'})
-     .then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error||'Не удалось загрузить историю.');return data;})
-     .then(data=>{
-       details.dataset.loaded='1';
-       if(!data.scans.length){list.innerHTML='<div class="scan-history-empty">Сканов пока нет.</div>';return;}
-       list.innerHTML=data.scans.map(scan=>{
-         const type=[scan.transport_type,scan.route_number?'№ '+scan.route_number:''].filter(Boolean).join(' ');
-         const vehicle=scan.vehicle_number?'Т/С № '+scan.vehicle_number:'Номер Т/С не указан';
-         const price=scan.price===null?'':' · '+Number(scan.price).toLocaleString('ru-RU',{maximumFractionDigits:2})+' ₽';
-         const deleteAction=String(details.dataset.scanHistory)===String(adminUserId)
-           ?'<div class="scan-row-actions"><button type="button" class="scan-delete" data-delete-scan="'+esc(scan.id)+'">Удалить запись</button></div>'
-           :'';
-         return '<div class="scan-row" data-scan-row="'+esc(scan.id)+'"><div class="scan-row-main">'+esc(type||'Скан QR-кода')+' · '+esc(vehicle)+'</div><div class="scan-row-meta">'+esc(date(scan.scanned_at)+price)+'</div>'+deleteAction+'</div>';
-       }).join('');
-     })
-     .catch(error=>{list.innerHTML='<div class="scan-history-empty error">'+esc(error.message)+' <button type="button" data-action="retry-scans">Повторить</button></div>';})
-     .finally(()=>{delete details.dataset.loading;});
- },true);
- cards.addEventListener('toggle', event => {
-   const details=event.target.closest('details[data-lucky-history]');
-   if(!details || !details.open || details.dataset.loaded==='1' || details.dataset.loading==='1')return;
-   details.dataset.loading='1';
-   const list=details.querySelector('.scan-history-list');
-   list.innerHTML='<div class="scan-history-empty">Загружаем историю…</div>';
-   fetch('../api/admin/users/'+encodeURIComponent(details.dataset.luckyHistory)+'/lucky-spins',{headers:{Authorization:auth},cache:'no-store'})
-     .then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error||'Не удалось загрузить историю рулетки.');return data;})
-     .then(data=>{
-       details.dataset.loaded='1';
-       if(!data.spins.length){list.innerHTML='<div class="scan-history-empty">Прокруток пока нет.</div>';return;}
-       list.innerHTML=data.spins.map(item=>{
-         const attempt=item.is_free?'Бесплатная попытка':'−'+Number(item.scan_cost)+' скан.';
-         const credited=item.reward_credited_at?'Начислено':'Ожидает начисления';
-         return '<div class="scan-row"><div class="scan-row-main">'+esc(item.reward_title)+' · '+esc(item.reward_amount)+' · '+esc(luckyPrizeTypeLabel(item.reward_type))+'</div><div class="scan-row-meta">'+esc(date(item.created_at))+' · '+esc(attempt)+'<br>Шанс на момент выпадения: '+Number(item.probability).toLocaleString('ru-RU',{maximumFractionDigits:2})+'% · '+credited+'</div></div>';
-       }).join('');
-     })
-     .catch(error=>{list.innerHTML='<div class="scan-history-empty error">'+esc(error.message)+' <button type="button" data-action="retry-lucky">Повторить</button></div>';})
-     .finally(()=>{delete details.dataset.loading;});
- },true);
- cards.addEventListener('toggle', event => {
-   const details=event.target.closest('details[data-credit-history]');
-   if(!details || !details.open || details.dataset.loaded==='1' || details.dataset.loading==='1')return;
-   details.dataset.loading='1';
-   const list=details.querySelector('.scan-history-list');
-   list.innerHTML='<div class="scan-history-empty">Загружаем историю…</div>';
-   fetch('../api/admin/users/'+encodeURIComponent(details.dataset.creditHistory)+'/credits',{headers:{Authorization:auth},cache:'no-store'})
-     .then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error||'Не удалось загрузить историю начислений.');return data;})
-     .then(data=>{
-       details.dataset.loaded='1';
-       if(!data.credits.length){list.innerHTML='<div class="scan-history-empty">Начислений пока нет.</div>';return;}
-       list.innerHTML=data.credits.map(item=>{
-         const source=item.source==='welcome'?'Приветственный бонус':item.source==='daily'?'Ежедневный бонус':item.source==='referral'?'Реферальный бонус':item.source==='game_reward'?'Игровая награда':item.source==='lucky_reward'?'Билет удачи':item.source==='purchase'?'Покупка тарифа':item.source==='admin'?'Ручное начисление':item.source==='promo_code'?'Промокод':'Начисление';
-         const note=item.note?' · '+item.note:'';
-         const amount=Number(item.amount);
-         const plural=amount===1?'скан':amount>=2&&amount<=4?'скана':'сканов';
-         return '<div class="scan-row"><div class="scan-row-main">+'+esc(amount)+' '+plural+'</div><div class="scan-row-meta">'+esc(source+note)+'<br>'+esc(date(item.credited_at))+'</div></div>';
-       }).join('');
-     })
-     .catch(error=>{list.innerHTML='<div class="scan-history-empty error">'+esc(error.message)+' <button type="button" data-action="retry-credits">Повторить</button></div>';})
-     .finally(()=>{delete details.dataset.loading;});
- },true);
- cards.addEventListener('click',async event=>{
-   const deleteScanButton=event.target.closest('button[data-delete-scan]');
-   if(deleteScanButton){
-     const details=deleteScanButton.closest('details[data-scan-history]');
-     const card=deleteScanButton.closest('[data-user-card]');
-     if(!details||!card||String(card.dataset.userCard)!==String(adminUserId)||String(details.dataset.scanHistory)!==String(adminUserId))return;
-     const scanId=String(deleteScanButton.dataset.deleteScan||'');
-     if(!/^\d+$/.test(scanId))return;
-     if(!window.confirm('Удалить эту запись из истории сканирований?\n\nЗапись исчезнет из истории и коллекции маршрутов. Баланс сканов не изменится. Это действие нельзя отменить.'))return;
-     deleteScanButton.disabled=true;deleteScanButton.textContent='Удаляем…';
-     try{
-       const response=await fetch('../api/admin/users/'+encodeURIComponent(adminUserId)+'/scans/'+encodeURIComponent(scanId),{
-         method:'DELETE',headers:{Authorization:auth},cache:'no-store'
-       });
-       const data=await response.json();
-       if(!response.ok)throw new Error(data.error||'Не удалось удалить запись.');
-       const user=users.find(item=>String(item.vk_id)===String(adminUserId));
-       if(user){
-         user.scan_count=Number(data.total||0);
-         user.last_scan_at=data.latestScan?.scanned_at||null;
-         user.last_transport_number=data.latestScan?.vehicle_number||null;
-         user.last_transport_type=data.latestScan?.transport_type||'';
-         user.last_route_number=data.latestScan?.route_number||'';
-       }
-       const meta=card.querySelector('.vk-id');
-       if(meta&&user)meta.textContent='VK ID: '+user.vk_id+' · '+user.visit_count+' посещ. · '+user.scan_count+' сканов';
-       const statValues=card.querySelectorAll('.stat-value');
-       if(statValues[2])statValues[2].textContent=data.latestScan?.scanned_at?date(data.latestScan.scanned_at):'Ещё не сканировал';
-       if(statValues[3])statValues[3].textContent=data.latestScan
-         ?[data.latestScan.transport_type,data.latestScan.route_number?'№ '+data.latestScan.route_number:''].filter(Boolean).join(' ')||'—'
-         :'—';
-       const summary=details.querySelector('summary');
-       if(summary)summary.textContent='История сканов · '+Number(data.total||0);
-       const deletedRow=Array.from(details.querySelectorAll('[data-scan-row]')).find(row=>String(row.dataset.scanRow)===scanId);
-       if(deletedRow)deletedRow.remove();
-       if(Number(data.total||0)===0){
-         const list=details.querySelector('.scan-history-list');
-         if(list)list.innerHTML='<div class="scan-history-empty">Сканов пока нет.</div>';
-       }
-       details.dataset.loaded='1';
-     }catch(error){
-       deleteScanButton.disabled=false;deleteScanButton.textContent='Удалить запись';
-       window.alert(error.message);
-     }
-     return;
-   }
-   const retry=event.target.closest('button[data-action="retry-scans"]');
-   if(retry){const details=retry.closest('details[data-scan-history]');if(details){details.dataset.loaded='0';details.open=false;details.open=true;}return;}
-   const retryLucky=event.target.closest('button[data-action="retry-lucky"]');
-   if(retryLucky){const details=retryLucky.closest('details[data-lucky-history]');if(details){details.dataset.loaded='0';details.open=false;details.open=true;}return;}
-   const retryCredits=event.target.closest('button[data-action="retry-credits"]');
-   if(retryCredits){const details=retryCredits.closest('details[data-credit-history]');if(details){details.dataset.loaded='0';details.open=false;details.open=true;}return;}
-   const button=event.target.closest('button[data-action]');
-   if(button)performEntitlement(button);
- });
- search.addEventListener('input',render);
- sort.addEventListener('change',render);
- document.getElementById('refresh').addEventListener('click',load);
+      const userName=((String(user.first_name||'')+' '+String(user.last_name||'')).trim()||'пользователя VK');
+      if(!window.confirm('Обнулить аккаунт '+userName+' (VK ID '+vkId+')?\n\nБаланс сканов и подписка будут сброшены, история покупок и отметки о покупках удалены. История сканирований останется. Повторный приветственный бонус не выдаётся. Это действие нельзя отменить.'))return;
+      body={action:'reset_account'};
+    }else{
+      body={action:'set_unlimited',enabled:!user.unlimited};
+    }
+    button.disabled=true;
+    userActionStatus.className='action-status';
+    userActionStatus.textContent='Сохраняем…';
+    try{
+      const response=await fetch('../api/admin/users/'+encodeURIComponent(vkId)+'/entitlement',{
+        method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},
+        body:JSON.stringify(body),cache:'no-store'
+      });
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'Не удалось изменить доступ.');
+      await load();
+      await openUser(vkId,true);
+      userActionStatus.className='action-status';
+      userActionStatus.textContent='Изменения сохранены.';
+    }catch(error){
+      userActionStatus.className='action-status error';
+      userActionStatus.textContent=error.message;
+    }finally{button.disabled=false}
+  }
+  cards.addEventListener('click',event=>{
+    const row=event.target.closest('[data-user-open]');
+    if(row)openUser(row.dataset.userOpen);
+  });
+  userDetail.addEventListener('click',async event=>{
+    if(event.target.closest('[data-close-user-detail]')){closeUserDetail();return;}
+    const retry=event.target.closest('[data-action="retry-activity"]');
+    if(retry){openUser(selectedUserId,true);return;}
+    const deleteButton=event.target.closest('[data-delete-scan]');
+    if(deleteButton){
+      const scanId=String(deleteButton.dataset.deleteScan||'');
+      if(String(selectedUserId)!==String(adminUserId)||!/^\\d+$/.test(scanId))return;
+      if(!window.confirm('Удалить эту запись из истории сканирований? Она исчезнет из истории и коллекции маршрутов. Баланс сканов не изменится. Это действие нельзя отменить.'))return;
+      deleteButton.disabled=true;deleteButton.textContent='Удаляем…';
+      try{
+        const response=await fetch('../api/admin/users/'+encodeURIComponent(adminUserId)+'/scans/'+encodeURIComponent(scanId),{
+          method:'DELETE',headers:{Authorization:auth},cache:'no-store'
+        });
+        const data=await response.json();
+        if(!response.ok)throw new Error(data.error||'Не удалось удалить запись.');
+        const user=users.find(item=>String(item.vk_id)===String(adminUserId));
+        if(user){
+          user.scan_count=Number(data.total||0);
+          user.last_scan_at=data.latestScan?.scanned_at||null;
+          user.last_transport_number=data.latestScan?.vehicle_number||null;
+          user.last_transport_type=data.latestScan?.transport_type||'';
+          user.last_route_number=data.latestScan?.route_number||'';
+        }
+        await load();
+        await openUser(adminUserId,true);
+      }catch(error){
+        deleteButton.disabled=false;deleteButton.textContent='Удалить запись поездки';
+        window.alert(error.message);
+      }
+      return;
+    }
+    const action=event.target.closest('button[data-action]');
+    if(action)performEntitlement(action);
+  });
+  activityFilters.addEventListener('click',event=>{
+    const button=event.target.closest('[data-activity-filter]');
+    if(!button)return;
+    activityFilter=button.dataset.activityFilter||'all';
+    renderActivity();
+  });
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!userDetail.hidden)closeUserDetail();});
+  search.addEventListener('input',render);
+  sort.addEventListener('change',render);
+  document.getElementById('refresh').addEventListener('click',async()=>{
+    await load();
+    if(selectedUserId)await openUser(selectedUserId,true);
+  });
  function promoMessage(message,isError){promoFormStatus.className='action-status'+(isError?' error':'');promoFormStatus.textContent=message||'';}
  function promoDate(value){return value?new Date(value).toLocaleString('ru-RU',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'Без ограничения';}
   function renderPromoOffers(){
