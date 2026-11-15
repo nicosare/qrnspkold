@@ -2405,7 +2405,7 @@ body.scan-loading-open { overflow: hidden !important; }
         <button class="admin-panel-back" id="admin-panel-back" type="button" aria-label="Вернуться в QRide">‹</button>
         <div class="admin-panel-title" id="admin-panel-title">Панель управления QRide</div>
     </header>
-    <iframe class="admin-panel-frame" id="admin-panel-frame" title="Панель пользователей QRide"></iframe>
+    <iframe class="admin-panel-frame" id="admin-panel-frame" title="Панель управления QRide"></iframe>
 </section>
 
 <section class="start-overlay" id="start-overlay" role="dialog" aria-modal="true" aria-labelledby="start-title">
@@ -7536,7 +7536,7 @@ body.scan-loading-open { overflow: hidden !important; }
     if (!target || target.disabled || target.closest('#admin-panel-overlay')) return;
 
     const label = String(target.getAttribute('aria-label') || target.getAttribute('title') || target.textContent || '')
-      .replace(/\\s+/g, ' ').trim().slice(0, 80);
+      .replace(/\s+/g, ' ').trim().slice(0, 80);
     const sectionNode = target.closest('[data-section],section[id],[role="dialog"],main');
     const section = sectionNode
       ? String(sectionNode.getAttribute('data-section') || sectionNode.id || sectionNode.getAttribute('aria-label') || '').slice(0, 80)
@@ -7545,7 +7545,7 @@ body.scan-loading-open { overflow: hidden !important; }
       ? window.crypto.randomUUID()
       : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 16);
 
-    fetch('api/analytics/event', {
+    fetch(new URL('api/analytics/event', window.location.href), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
