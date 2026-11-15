@@ -126,6 +126,10 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 .promo-offer-check{display:flex;align-items:flex-start;gap:8px;min-height:42px;padding:9px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:12px;line-height:1.35}
 .promo-offer-check input{width:18px;min-height:18px;height:18px;flex:0 0 18px;margin:1px 0 0;accent-color:var(--accent)}
 .promo-create-button{width:100%;min-height:46px}
+.promo-create .action-status{grid-column:1/-1;min-height:17px;margin-top:0;overflow-wrap:anywhere}
+.promo-create .promo-field{min-width:0}
+.promo-create input,.promo-create select{min-width:0;max-width:100%}
+
 .promo-list-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:18px 0 8px}.promo-list-heading strong{font-size:15px}.promo-list-heading button{min-height:38px;padding:7px 10px;font-size:12px}
 .promo-list{display:grid;gap:8px}.promo-card{padding:12px;border:1px solid var(--line);border-radius:13px;background:#fff}.promo-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.promo-code-name{font-size:16px;font-weight:800;letter-spacing:.3px;overflow-wrap:anywhere}.promo-badge{flex:0 0 auto;padding:4px 7px;border-radius:7px;background:#eaf3ff;color:#1766bc;font-size:11px;font-weight:800}.promo-badge.expired{background:#fff1f0;color:#b42318}.promo-badge.scheduled{background:#fff7e5;color:#8b5b00}.promo-meta{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.5}.promo-card-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}.promo-card-actions button{min-height:38px;padding:7px 10px;border-color:#ffd4d1;background:#fff5f4;color:#b42318;font-size:12px}.promo-empty{padding:24px 12px;text-align:center;color:var(--muted);font-size:13px}
 @media(max-width:520px){.promo-create{grid-template-columns:minmax(0,1fr)}.promo-offers{grid-template-columns:minmax(0,1fr)}.promo-offers-field,.promo-create-button{grid-column:auto}.promo-card-top{align-items:flex-start}}
@@ -356,18 +360,6 @@ body.user-detail-open{overflow:hidden}
     </header>
     <div class="user-detail-body">
      <div id="user-detail-summary"></div>
-     <section class="activity-section">
-      <div class="activity-header"><h2 class="user-detail-subtitle">История активности</h2><span class="activity-total" id="user-activity-count">Загрузка…</span></div>
-      <div class="activity-filters" id="activity-filters">
-       <button class="activity-filter active" type="button" data-activity-filter="all">Всё</button>
-       <button class="activity-filter" type="button" data-activity-filter="balance">Баланс</button>
-       <button class="activity-filter" type="button" data-activity-filter="rides">Поездки</button>
-       <button class="activity-filter" type="button" data-activity-filter="app">Приложение</button>
-       <button class="activity-filter" type="button" data-activity-filter="games">Игры</button>
-       <button class="activity-filter" type="button" data-activity-filter="purchases">Покупки</button>
-      </div>
-      <div class="activity-list" id="user-activity-list"><div class="user-detail-loading">Выбери пользователя в списке.</div></div>
-     </section>
      <details class="user-management" id="user-management">
       <summary>Управление пользователем</summary>
       <div class="manage-body">
@@ -383,6 +375,18 @@ body.user-detail-open{overflow:hidden}
        <div class="action-status" id="user-action-status" aria-live="polite"></div>
       </div>
      </details>
+<section class="activity-section">
+      <div class="activity-header"><h2 class="user-detail-subtitle">История активности</h2><span class="activity-total" id="user-activity-count">Загрузка…</span></div>
+      <div class="activity-filters" id="activity-filters">
+       <button class="activity-filter active" type="button" data-activity-filter="all">Всё</button>
+       <button class="activity-filter" type="button" data-activity-filter="balance">Баланс</button>
+       <button class="activity-filter" type="button" data-activity-filter="rides">Поездки</button>
+       <button class="activity-filter" type="button" data-activity-filter="app">Приложение</button>
+       <button class="activity-filter" type="button" data-activity-filter="games">Игры</button>
+       <button class="activity-filter" type="button" data-activity-filter="purchases">Покупки</button>
+      </div>
+      <div class="activity-list" id="user-activity-list"><div class="user-detail-loading">Выбери пользователя в списке.</div></div>
+     </section>
     </div>
    </aside>
   </div>
