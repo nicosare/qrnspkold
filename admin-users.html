@@ -93,7 +93,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 .lucky-prize-enabled{display:flex;align-items:center;gap:5px;min-height:40px;color:#566171;font-size:11px;font-weight:700;white-space:nowrap}
 .lucky-prize-enabled input{width:17px;height:17px;min-height:17px;accent-color:var(--accent)}
 .lucky-prize-remove{min-height:40px;padding:6px 9px;border-color:#ffd4d1;background:#fff5f4;color:#b42318;font-size:11px}
-.lucky-probability-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0;padding:10px 12px;border-radius:10px;background:#f4f7fb;color:#536171;font-size:12px;font-weight:750}
+.lucky-probability-summary{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 10px;margin:10px 0;padding:10px 12px;border-radius:10px;background:#f4f7fb;color:#536171;font-size:12px;font-weight:750}
 .lucky-probability-summary strong{font-size:14px;font-variant-numeric:tabular-nums}
 .lucky-probability-summary.is-valid{background:#edf8f1;color:#176b3a}
 .lucky-probability-summary.is-invalid{background:#fff3f1;color:#b42318}
@@ -102,13 +102,13 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 .lucky-admin-stat span{display:block;color:var(--muted);font-size:10px;line-height:1.3}
 .lucky-admin-stat strong{display:block;margin-top:5px;color:#26384c;font-size:19px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .lucky-admin-subtitle{margin:18px 0 8px;font-size:14px;font-weight:800}
-.lucky-admin-table{width:100%;border-collapse:collapse;font-size:12px}
+.lucky-admin-table{width:100%;min-width:560px;border-collapse:collapse;font-size:12px}
 .lucky-admin-table th,.lucky-admin-table td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 .lucky-admin-table th{color:var(--muted);font-size:10px;font-weight:750}
 .lucky-admin-table-wrap{overflow:auto;border:1px solid var(--line);border-radius:11px}
 .lucky-admin-empty{padding:18px;color:var(--muted);text-align:center;font-size:12px}
 .lucky-admin-hint{margin:7px 0 0;color:var(--muted);font-size:11px;line-height:1.45}
-@media(max-width:700px){
+@media(max-width:740px){
  .lucky-setting-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
  .lucky-setting-grid .lucky-setting:first-child{grid-column:1/-1}
  .lucky-prize-row{grid-template-columns:minmax(0,1fr) minmax(110px,.8fr)}
@@ -165,7 +165,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 .paytag-danger{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;padding:12px;border:1px solid #f1cccc;border-radius:12px;background:#fffafa}
 .paytag-danger-copy{min-width:0}.paytag-danger-copy strong{display:block;font-size:13px;color:#9f2722}.paytag-danger-copy span{display:block;font-size:11px;line-height:1.45;color:var(--muted);margin-top:3px}
 .paytag-reset{flex:0 0 auto;min-height:40px;padding:8px 11px;border-color:#ffd4d1;background:#fff1f0;color:#b42318;font-size:12px}
-@media(max-width:600px){
+@media(max-width:720px){
  .paytag-global-form{grid-template-columns:minmax(0,1fr) minmax(110px,.65fr)}.paytag-global-copy{grid-column:1/-1}.paytag-global-form>button{grid-column:1/-1}
  .paytag-toolbar{grid-template-columns:minmax(0,1fr) auto}.paytag-toolbar input{grid-column:1/-1;grid-row:1}.paytag-toolbar select:nth-of-type(1){grid-column:1;grid-row:2}.paytag-toolbar select:nth-of-type(2){grid-column:2;grid-row:2}.paytag-toolbar button{grid-column:1/-1;grid-row:3}
  .paytag-card{padding:10px}.paytag-danger{align-items:stretch;flex-direction:column}.paytag-reset{width:100%}
@@ -204,7 +204,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 .analytics-metric strong{font-size:13px;color:#2e3c4e;font-variant-numeric:tabular-nums;text-align:right}
 .analytics-note{margin:9px 0 0;color:#8792a0;font-size:10px;line-height:1.45}
 .analytics-empty{padding:17px 10px;text-align:center;color:var(--muted);font-size:12px}
-@media(max-width:700px){.analytics-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-grid{grid-template-columns:minmax(0,1fr)}.analytics-card.wide{grid-column:auto}.analytics-date input{width:132px}}
+@media(max-width:740px){.analytics-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-grid{grid-template-columns:minmax(0,1fr)}.analytics-card.wide{grid-column:auto}.analytics-date input{width:132px}}
 
 
 
@@ -293,7 +293,7 @@ body.user-detail-open{overflow:hidden}
 .user-management .grant-grid{grid-template-columns:minmax(0,1fr) minmax(76px,.55fr) auto}
 .user-management .unlimited-toggle,.user-management .reset-account{min-height:40px;font-size:12px}
 .user-detail-loading{padding:22px 12px;text-align:center;color:var(--muted);font-size:12px}
-@media(max-width:700px){
+@media(max-width:740px){
  .users-overview{gap:6px}.users-overview-item{padding:9px}.users-overview-item strong{font-size:18px}
  .users-toolbar{grid-template-columns:minmax(0,1fr) auto}.users-toolbar input{grid-column:1/-1}.users-toolbar select{grid-column:1}
  .users-list-head{display:none}
