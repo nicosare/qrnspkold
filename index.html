@@ -2403,7 +2403,7 @@ body.scan-loading-open { overflow: hidden !important; }
 <section class="admin-panel-overlay" id="admin-panel-overlay" role="dialog" aria-modal="true" aria-labelledby="admin-panel-title" hidden>
     <header class="admin-panel-header">
         <button class="admin-panel-back" id="admin-panel-back" type="button" aria-label="Вернуться в QRide">‹</button>
-        <div class="admin-panel-title" id="admin-panel-title">Пользователи QRide</div>
+        <div class="admin-panel-title" id="admin-panel-title">Панель управления QRide</div>
     </header>
     <iframe class="admin-panel-frame" id="admin-panel-frame" title="Панель пользователей QRide"></iframe>
 </section>
@@ -2788,7 +2788,7 @@ body.scan-loading-open { overflow: hidden !important; }
         </div>
         <div class="start-admin-actions">
             <button class="start-button start-button-secondary" id="start-admin-users-button" type="button" hidden>
-                Пользователи
+                Панель управления
             </button>
         </div>
 
@@ -4993,7 +4993,7 @@ body.scan-loading-open { overflow: hidden !important; }
         document.body.classList.add('start-overlay-open');
       });
     }
-    bindAdminButton('start-admin-users-button', 'users', 'Пользователи');
+    bindAdminButton('start-admin-users-button', 'users', 'Панель управления');
     const panelBack = document.getElementById('admin-panel-back');
     if (panelBack && panelBack.dataset.bound !== '1') {
       panelBack.dataset.bound = '1';
@@ -7521,5 +7521,47 @@ body.scan-loading-open { overflow: hidden !important; }
 <script src="qride-lucky.js?v=20261112-4"></script>
 
 
+<script>
+(function () {
+  if (window.__qrideInteractionTrackingBound) return;
+  const launchParams = window.location.search.slice(1);
+  if (!launchParams) return;
+  window.__qrideInteractionTrackingBound = true;
+
+  document.addEventListener('click', function (event) {
+    const origin = event.target;
+    const target = origin && origin.closest
+      ? origin.closest('button,a,[role="button"],[data-action],[data-tab]')
+      : null;
+    if (!target || target.disabled || target.closest('#admin-panel-overlay')) return;
+
+    const label = String(target.getAttribute('aria-label') || target.getAttribute('title') || target.textContent || '')
+      .replace(/\\s+/g, ' ').trim().slice(0, 80);
+    const sectionNode = target.closest('[data-section],section[id],[role="dialog"],main');
+    const section = sectionNode
+      ? String(sectionNode.getAttribute('data-section') || sectionNode.id || sectionNode.getAttribute('aria-label') || '').slice(0, 80)
+      : '';
+    const eventId = window.crypto && typeof window.crypto.randomUUID === 'function'
+      ? window.crypto.randomUUID()
+      : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 16);
+
+    fetch('api/analytics/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        launchParams: launchParams,
+        eventName: 'ui_interaction',
+        eventId: eventId,
+        properties: {
+          controlId: String(target.id || target.getAttribute('data-action') || target.tagName).slice(0, 80),
+          label: label,
+          section: section
+        }
+      }),
+      keepalive: true
+    }).catch(function () {});
+  }, true);
+})();
+</script>
 </body>
 </html>
