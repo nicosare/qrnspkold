@@ -4049,8 +4049,12 @@ body.scan-loading-open { overflow: hidden !important; }
                 try {
                     code = await window.roadnoteScanQr();
                 } catch (error) {
-                    // Closing/cancelling the native scanner is not an error to show in the UI.
-                    console.info('VK QR scanning ended:', error);
+                    if (error && error.code === 'SCAN_CANCELLED') {
+                        console.info('QR scanning cancelled by user.');
+                    } else {
+                        console.warn('QR scanning failed:', error);
+                        setScannerStatus(error && error.message ? error.message : 'Не удалось открыть сканер QR-кодов.');
+                    }
                     break;
                 }
                 const success = await handleScannedText(code);
@@ -6412,15 +6416,7 @@ body.scan-loading-open { overflow: hidden !important; }
   }
   function showOverlay(title,text) { overlayTitle.textContent=title;overlayText.textContent=text;overlay.hidden=false; }
   function taptic(style) {
-    try {
-      if (window.vkBridge && typeof window.vkBridge.send === 'function') {
-        Promise.resolve(window.vkBridge.send('VKWebAppTapticImpactOccurred', { style: style })).catch(function () {
-          if (typeof navigator.vibrate === 'function') navigator.vibrate(style === 'medium' ? 28 : 10);
-        });
-        return;
-      }
-    } catch (_) {}
-    if (typeof navigator.vibrate === 'function') navigator.vibrate(style === 'medium' ? 28 : 10);
+    if (typeof window.qrideTaptic === 'function') window.qrideTaptic(style);
   }
   async function start() {
     if (startingGame || running) return;
@@ -6792,15 +6788,7 @@ body.scan-loading-open { overflow: hidden !important; }
   }
 
   function taptic(style) {
-    try {
-      if (window.vkBridge && typeof window.vkBridge.send === 'function') {
-        Promise.resolve(window.vkBridge.send('VKWebAppTapticImpactOccurred', { style })).catch(() => {
-          if (navigator.vibrate) navigator.vibrate(style === 'medium' ? 28 : 10);
-        });
-        return;
-      }
-    } catch (_) {}
-    if (navigator.vibrate) navigator.vibrate(style === 'medium' ? 28 : 10);
+    if (typeof window.qrideTaptic === 'function') window.qrideTaptic(style);
   }
 
   function movePaddle(clientX) {
@@ -7141,15 +7129,7 @@ body.scan-loading-open { overflow: hidden !important; }
   }
 
   function taptic(style) {
-    try {
-      if (window.vkBridge && typeof window.vkBridge.send === 'function') {
-        Promise.resolve(window.vkBridge.send('VKWebAppTapticImpactOccurred', { style })).catch(() => {
-          if (navigator.vibrate) navigator.vibrate(style === 'medium' ? 28 : 10);
-        });
-        return;
-      }
-    } catch (_) {}
-    if (navigator.vibrate) navigator.vibrate(style === 'medium' ? 28 : 10);
+    if (typeof window.qrideTaptic === 'function') window.qrideTaptic(style);
   }
 
   function showToast(title, message, award) {
