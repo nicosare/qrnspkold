@@ -538,6 +538,13 @@ const updateNewUserProfile = db.prepare(`
     last_seen = @now
   WHERE vk_id = @vk_id
 `);
+const updateUserProfile = db.prepare(`
+  UPDATE users SET
+    first_name = CASE WHEN @first_name <> '' THEN @first_name ELSE first_name END,
+    last_name = CASE WHEN @last_name <> '' THEN @last_name ELSE last_name END,
+    photo_url = CASE WHEN @photo_url <> '' THEN @photo_url ELSE photo_url END
+  WHERE vk_id = @vk_id
+`);
 const getAnyScanForUser = db.prepare(`
   SELECT 1
   FROM users u
@@ -3216,6 +3223,18 @@ app.post('/api/session', (req, res) => {
           insertReferral.run(userId, referralCode, now);
         }
       })();
+    } else {
+      // A delayed VK Bridge profile retry may arrive after the normal session
+      // is established. Save non-empty metadata without changing visit stats.
+      const profileData = {
+        vk_id: userId,
+        first_name: cleanText(profile.first_name),
+        last_name: cleanText(profile.last_name),
+        photo_url: cleanText(profile.photo_url, 1000)
+      };
+      if (profileData.first_name || profileData.last_name || profileData.photo_url) {
+        updateUserProfile.run(profileData);
+      }
     }
     if (req.body?.refreshOnly !== true) {
       recordAnalyticsEvent(userId, 'app_open', {}, 'app-open:' + userId + ':' + crypto.randomBytes(12).toString('hex'));
