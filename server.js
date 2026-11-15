@@ -178,9 +178,15 @@ db.exec(`
 db.exec(`
   CREATE TABLE IF NOT EXISTS user_onboarding (
     vk_id TEXT PRIMARY KEY,
-    main_completed_at TEXT DEFAULT NULL
+    main_completed_at TEXT DEFAULT NULL,
+    lucky_completed_at TEXT DEFAULT NULL
   );
 `);
+
+const onboardingColumns = db.pragma('table_info(user_onboarding)');
+if (!onboardingColumns.some(column => column.name === 'lucky_completed_at')) {
+  db.exec('ALTER TABLE user_onboarding ADD COLUMN lucky_completed_at TEXT DEFAULT NULL');
+}
 
 // Persistent transport metadata cache. Price rules remain separate so admins can
 // change the default fare without invalidating the transport lookup cache.
@@ -3261,9 +3267,9 @@ app.post('/api/referral-prompt/disable', (req, res) => {
 app.post('/api/onboarding/state', (req, res) => {
   try {
     const { userId } = parseLaunchParams(req.body?.launchParams);
-    const row = db.prepare('SELECT main_completed_at FROM user_onboarding WHERE vk_id = ?').get(userId);
+    const row = db.prepare('SELECT main_completed_at, lucky_completed_at FROM user_onboarding WHERE vk_id = ?').get(userId);
     res.setHeader('Cache-Control', 'no-store');
-    return res.json({ ok: true, completed: Boolean(row?.main_completed_at) });
+    return res.json({ ok: true, completed: Boolean(row?.main_completed_at), luckyCompleted: Boolean(row?.lucky_completed_at) });
   } catch {
     return res.status(401).json({ error: 'VK authentication failed' });
   }
@@ -3272,14 +3278,14 @@ app.post('/api/onboarding/state', (req, res) => {
 app.post('/api/onboarding/complete', (req, res) => {
   try {
     const { userId } = parseLaunchParams(req.body?.launchParams);
+    const kind = req.body?.kind === 'lucky' ? 'lucky' : 'main';
     const completedAt = new Date().toISOString();
-    db.prepare(`
-      INSERT INTO user_onboarding (vk_id, main_completed_at)
-      VALUES (?, ?)
-      ON CONFLICT(vk_id) DO UPDATE SET
-        main_completed_at = COALESCE(user_onboarding.main_completed_at, excluded.main_completed_at)
-    `).run(userId, completedAt);
-    return res.json({ ok: true, completed: true });
+    if (kind === 'lucky') {
+      db.prepare('INSERT INTO user_onboarding (vk_id, lucky_completed_at) VALUES (?, ?) ON CONFLICT(vk_id) DO UPDATE SET lucky_completed_at = COALESCE(user_onboarding.lucky_completed_at, excluded.lucky_completed_at)').run(userId, completedAt);
+    } else {
+      db.prepare('INSERT INTO user_onboarding (vk_id, main_completed_at) VALUES (?, ?) ON CONFLICT(vk_id) DO UPDATE SET main_completed_at = COALESCE(user_onboarding.main_completed_at, excluded.main_completed_at)').run(userId, completedAt);
+    }
+    return res.json({ ok: true, completed: true, kind });
   } catch {
     return res.status(401).json({ error: 'VK authentication failed' });
   }
