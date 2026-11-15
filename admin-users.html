@@ -203,6 +203,101 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 @media(max-width:700px){.analytics-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-grid{grid-template-columns:minmax(0,1fr)}.analytics-card.wide{grid-column:auto}.analytics-date input{width:132px}}
 
 
+
+/* QRide control room — compact registry and focused user detail. */
+.users-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:0 0 12px}
+.users-overview-item{min-width:0;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:#fafbfd}
+.users-overview-item span{display:block;color:var(--muted);font-size:11px}
+.users-overview-item strong{display:block;margin-top:4px;font-size:20px;line-height:1.2;font-variant-numeric:tabular-nums}
+.users-toolbar{display:grid;grid-template-columns:minmax(220px,1fr) minmax(165px,.35fr) auto;gap:8px;margin:0 0 12px}
+.users-toolbar input,.users-toolbar select{width:100%;min-width:0}
+.users-list{display:grid;gap:6px}
+.users-list-head,.user-row{display:grid;grid-template-columns:minmax(210px,1.5fr) minmax(90px,.48fr) minmax(90px,.48fr) minmax(85px,.42fr) minmax(145px,.75fr);align-items:center;gap:12px}
+.users-list-head{padding:0 14px 6px;color:#8a929e;font-size:10px;font-weight:750;text-transform:uppercase;letter-spacing:.045em}
+.user-row{width:100%;min-height:72px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;text-align:left;color:var(--text);transition:border-color .15s,background .15s,box-shadow .15s}
+.user-row:hover{border-color:#c5dafa;background:#fcfdff;box-shadow:0 3px 12px #15243b08}
+.user-row:active{transform:translateY(1px)}
+.user-row-person{display:flex;align-items:center;gap:10px;min-width:0}
+.user-row-person .avatar{width:42px;height:42px;flex-basis:42px}
+.user-row-name{display:block;min-width:0;font-size:14px;font-weight:800;line-height:1.3;overflow-wrap:anywhere}
+.user-row-meta{display:block;margin-top:3px;color:var(--muted);font-size:11px;line-height:1.35;overflow-wrap:anywhere}
+.user-row-cell{min-width:0}
+.user-row-cell span{display:block;color:var(--muted);font-size:10px;line-height:1.25}
+.user-row-cell strong{display:block;margin-top:3px;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.user-row-last strong{font-size:11px;font-weight:650;line-height:1.4}
+.user-detail{position:fixed;inset:0;z-index:1000;display:flex;justify-content:flex-end}
+.user-detail[hidden]{display:none!important}
+.user-detail-backdrop{position:absolute;inset:0;min-height:100%;border:0;border-radius:0;background:rgba(16,27,42,.42);backdrop-filter:blur(2px)}
+.user-detail-panel{position:relative;z-index:1;width:min(780px,100%);height:100%;max-height:100dvh;display:flex;flex-direction:column;background:#f7f8fa;border-left:1px solid #dce1e8;box-shadow:-16px 0 50px #101b2a24;overflow:hidden}
+.user-detail-header{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(14px + env(safe-area-inset-top)) 20px 13px;background:#fff;border-bottom:1px solid var(--line)}
+.user-detail-heading{display:flex;align-items:center;gap:11px;min-width:0}
+.user-detail-heading .avatar{width:44px;height:44px;flex-basis:44px}
+.user-detail-heading strong{display:block;font-size:16px;line-height:1.25;overflow-wrap:anywhere}
+.user-detail-heading small{display:block;margin-top:4px;color:var(--muted);font-size:11px}
+.user-detail-tools{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.user-detail-tools a,.user-detail-tools button{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:7px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;color:#344255;text-decoration:none;font-size:12px;font-weight:750}
+.user-detail-tools button{width:38px;padding:0;font-size:20px}
+.user-detail-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:16px 20px calc(28px + env(safe-area-inset-bottom))}
+.user-detail-id{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;color:var(--muted);font-size:11px}
+.user-detail-id a{color:#1766bc;font-weight:750;text-decoration:none}
+.user-detail-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.user-detail-stat{min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#fff}
+.user-detail-stat span{display:block;color:var(--muted);font-size:10px;line-height:1.35}
+.user-detail-stat strong{display:block;margin-top:5px;font-size:14px;line-height:1.3;font-weight:800;overflow-wrap:anywhere}
+.user-detail-stat small{display:block;margin-top:4px;color:var(--muted);font-size:10px;line-height:1.35}
+.user-detail-subtitle{margin:19px 0 8px;font-size:14px;font-weight:850;letter-spacing:-.1px}
+.user-detail-records{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.user-detail-record{padding:9px 11px;border-radius:10px;background:#eef4fb}
+.user-detail-record span{display:block;color:#718096;font-size:10px}
+.user-detail-record strong{display:block;margin-top:3px;color:#2d4158;font-size:13px;font-weight:800}
+.activity-section{margin-top:20px}
+.activity-header{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.activity-header .user-detail-subtitle{margin:0}
+.activity-total{color:var(--muted);font-size:11px}
+.activity-filters{display:flex;gap:6px;overflow:auto;padding:10px 0 8px;scrollbar-width:none}
+.activity-filters::-webkit-scrollbar{display:none}
+.activity-filter{min-height:34px;flex:0 0 auto;padding:6px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:#536171;font-size:11px;font-weight:750}
+.activity-filter.active{background:#eaf3ff;border-color:#c8def8;color:#1766bc}
+.activity-list{display:grid;gap:6px}
+.activity-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.activity-item-main{min-width:0}
+.activity-item-title{display:block;font-size:12px;font-weight:800;line-height:1.4;overflow-wrap:anywhere}
+.activity-item-description{display:block;margin-top:3px;color:#737d8b;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+.activity-item-time{grid-column:1/-1;color:#8993a0;font-size:10px;font-variant-numeric:tabular-nums}
+.activity-amount{align-self:start;max-width:150px;padding:4px 7px;border-radius:7px;background:#f2f5f8;color:#46566a;font-size:10px;font-weight:850;text-align:right;white-space:nowrap}
+.activity-delete{grid-column:1/-1;justify-self:end;min-height:30px;padding:5px 8px;border-color:#f0d1d0;background:#fff8f7;color:#ad3831;font-size:10px}
+.activity-empty{padding:22px 12px;border:1px dashed #d9dee6;border-radius:10px;color:var(--muted);font-size:12px;text-align:center;background:#fff}
+.user-management{margin-top:16px;padding:0 12px 12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.user-management summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 0;cursor:pointer;list-style:none;font-size:13px;font-weight:800}
+.user-management summary::-webkit-details-marker{display:none}
+.user-management summary::after{content:'＋';color:#7d8998;font-size:16px}
+.user-management[open] summary::after{content:'−'}
+.user-management .manage-body{padding-top:2px}
+.user-management .grant-grid{grid-template-columns:minmax(0,1fr) minmax(76px,.55fr) auto}
+.user-management .unlimited-toggle,.user-management .reset-account{min-height:40px;font-size:12px}
+.user-detail-loading{padding:22px 12px;text-align:center;color:var(--muted);font-size:12px}
+@media(max-width:700px){
+ .users-overview{gap:6px}.users-overview-item{padding:9px}.users-overview-item strong{font-size:18px}
+ .users-toolbar{grid-template-columns:minmax(0,1fr) auto}.users-toolbar input{grid-column:1/-1}.users-toolbar select{grid-column:1}
+ .users-list-head{display:none}
+ .user-row{grid-template-columns:minmax(0,1fr) auto auto;gap:8px;padding:10px;min-height:68px}
+ .user-row-person{grid-column:1;grid-row:1}.user-row-person .avatar{width:38px;height:38px;flex-basis:38px}
+ .user-row-cell{grid-row:1}.user-row-cell span{font-size:9px}.user-row-cell strong{font-size:12px}
+ .user-row-visits{display:none}.user-row-last{grid-column:1/-1;grid-row:2;padding-left:47px}
+ .user-row-last strong{display:inline;font-size:10px}
+ .user-detail-panel{width:100%;border:0}.user-detail-header{padding-left:14px;padding-right:12px}
+ .user-detail-body{padding:13px 12px calc(24px + env(safe-area-inset-bottom))}
+ .user-detail-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ .user-detail-records{gap:6px}.user-detail-record{padding:8px}.user-detail-record strong{font-size:12px}
+}
+@media(max-width:380px){
+ .users-overview-item strong{font-size:16px}.user-row-name{font-size:13px}
+ .user-detail-heading strong{font-size:14px}.user-detail-tools a{display:none}
+ .user-management .grant-grid{grid-template-columns:minmax(0,1fr) minmax(72px,.5fr)}
+ .user-management .grant-grid button{grid-column:1/-1}
+}
+@media(prefers-reduced-motion:reduce){.user-row{transition:none}}
+
 </style>
 </head>
 <body>
@@ -222,18 +317,62 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 </nav>
 <section class="panel">
  <div id="users-view">
- <div class="toolbar">
-  <input id="search" type="search" placeholder="Имя, VK ID или транспорт №" autocomplete="off" aria-label="Поиск пользователей">
-  <select id="sort" aria-label="Сортировка">
-   <option value="date">Последний заход</option>
-   <option value="scans">Сканы на балансе</option>
-   <option value="subscription">Подписка</option>
+  <div class="users-overview">
+   <div class="users-overview-item"><span>Пользователей</span><strong id="users-total">—</strong></div>
+   <div class="users-overview-item"><span>Заходили за 7 дней</span><strong id="users-active-week">—</strong></div>
+   <div class="users-overview-item"><span>Успешных поездок</span><strong id="users-total-scans">—</strong></div>
+  </div>
+  <div class="users-toolbar">
+   <input id="search" type="search" placeholder="Поиск по имени, VK ID или маршруту" autocomplete="off" aria-label="Поиск пользователей">
+   <select id="sort" aria-label="Сортировка пользователей">
+    <option value="date">Последний заход</option><option value="scans">Баланс сканов</option>
+    <option value="energy">Баланс энергии</option><option value="visits">Количество визитов</option><option value="subscription">Подписка</option>
    </select>
-  <button class="primary" id="refresh" type="button">Обновить</button>
- </div>
- <div id="status" class="status" role="status">Проверяем доступ…</div>
- <div class="cards" id="cards" hidden></div>
- <div class="foot">Доступ к списку защищён серверной проверкой подписи VK и разрешённым VK ID. Имена и аватары загружаются из профиля; идентификатор пользователя подтверждается сервером.</div>
+   <button class="primary" id="refresh" type="button">Обновить</button>
+  </div>
+  <div class="users-list-head"><span>Пользователь</span><span>Сканы</span><span>Энергия</span><span>Визиты</span><span>Последний заход</span></div>
+  <div id="status" class="status" role="status">Проверяем доступ…</div>
+  <div class="users-list" id="cards" hidden></div>
+  <div class="foot">Открой профиль, чтобы посмотреть доступную историю поездок, начислений, списаний, покупок, игр и действий в приложении. Сбор новых действий начинается после включения журнала.</div>
+  <div id="user-detail" class="user-detail" hidden>
+   <button type="button" class="user-detail-backdrop" data-close-user-detail aria-label="Закрыть карточку пользователя"></button>
+   <aside class="user-detail-panel" role="dialog" aria-modal="true" aria-label="Профиль пользователя">
+    <header class="user-detail-header">
+     <div id="user-detail-heading" class="user-detail-heading"></div>
+     <div class="user-detail-tools"><a id="user-profile-link" href="#" target="_blank" rel="noopener noreferrer">Профиль VK</a><button type="button" data-close-user-detail aria-label="Закрыть">×</button></div>
+    </header>
+    <div class="user-detail-body">
+     <div id="user-detail-summary"></div>
+     <section class="activity-section">
+      <div class="activity-header"><h2 class="user-detail-subtitle">История активности</h2><span class="activity-total" id="user-activity-count">Загрузка…</span></div>
+      <div class="activity-filters" id="activity-filters">
+       <button class="activity-filter active" type="button" data-activity-filter="all">Всё</button>
+       <button class="activity-filter" type="button" data-activity-filter="balance">Баланс</button>
+       <button class="activity-filter" type="button" data-activity-filter="rides">Поездки</button>
+       <button class="activity-filter" type="button" data-activity-filter="app">Приложение</button>
+       <button class="activity-filter" type="button" data-activity-filter="games">Игры</button>
+       <button class="activity-filter" type="button" data-activity-filter="purchases">Покупки</button>
+      </div>
+      <div class="activity-list" id="user-activity-list"><div class="user-detail-loading">Выбери пользователя в списке.</div></div>
+     </section>
+     <details class="user-management" id="user-management">
+      <summary>Управление пользователем</summary>
+      <div class="manage-body">
+       <div class="grant-section"><div class="grant-section-title">НАЧИСЛЕНИЕ</div>
+        <div class="grant-grid">
+         <select aria-label="Что начислить" data-grant-type><option value="scans">Сканы</option><option value="days">Дни подписки</option><option value="months">Месяцы подписки</option><option value="energy">Энергия</option></select>
+         <input type="number" min="1" max="100000" step="1" value="9" aria-label="Количество для начисления" data-grant-amount>
+         <button class="primary" type="button" data-action="grant-custom">Начислить</button>
+        </div>
+       </div>
+       <button class="unlimited-toggle" type="button" data-action="toggle-unlimited">Включить безлимит</button>
+       <button class="reset-account" type="button" data-action="reset-account">Обнулить аккаунт</button>
+       <div class="action-status" id="user-action-status" aria-live="polite"></div>
+      </div>
+     </details>
+    </div>
+   </aside>
+  </div>
  </div>
  <div id="promos-view" hidden>
    <div class="promo-intro">Создавай коды со скидкой на тарифы или с пополнением баланса сканов и игровой энергии.</div>
@@ -403,6 +542,18 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
  let promoOfferOptions = [];
  let users = [];
  let adminUserId = '';
+ let selectedUserId = '';
+ let activityItems = [];
+ let activityFilter = 'all';
+ const userDetail = document.getElementById('user-detail');
+ const userDetailHeading = document.getElementById('user-detail-heading');
+ const userDetailSummary = document.getElementById('user-detail-summary');
+ const userProfileLink = document.getElementById('user-profile-link');
+ const userActivityList = document.getElementById('user-activity-list');
+ const userActivityCount = document.getElementById('user-activity-count');
+ const activityFilters = document.getElementById('activity-filters');
+ const userActionStatus = document.getElementById('user-action-status');
+ const preciseDate = value => value ? new Date(value).toLocaleString('ru-RU',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '—';
  const date = value => value ? new Date(value).toLocaleString('ru-RU',{day:'numeric',month:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}) : '—';
  const remaining = value => {
    const ms=Date.parse(value)-Date.now();
@@ -1018,8 +1169,8 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
    event.preventDefault();const view=link.dataset.adminView;
    document.querySelectorAll('[data-admin-view]').forEach(item=>item.classList.toggle('active',item===link));
    usersView.hidden=view!=='users';promosView.hidden=view!=='promos';paytagsView.hidden=view!=='paytags';gamesView.hidden=view!=='games';economyView.hidden=view!=='economy';luckyView.hidden=view!=='lucky';
-   document.querySelector('h1').textContent=view==='promos'?'Промокоды QRide':view==='paytags'?'Paytag QRide':view==='games'?'Настройки игр QRide':view==='economy'?'Экономика QRide':view==='lucky'?'Билет удачи QRide':'Пользователи QRide';
-   document.querySelector('.top .sub').textContent=view==='promos'?'Коды скидок и пополнения баланса':view==='paytags'?'Кеш транспортных QR-кодов и управление ценами':view==='games'?'Пороги бесплатных сканов за игровые рекорды':view==='economy'?'Курс обмена игровой энергии на сканы':view==='lucky'?'Призовой фонд, вероятности и статистика':'Нажми на карточку, чтобы открыть профиль VK';
+   document.querySelector('h1').textContent=view==='promos'?'Промокоды QRide':view==='paytags'?'Paytag QRide':view==='games'?'Настройки игр QRide':view==='economy'?'Экономика QRide':view==='lucky'?'Билет удачи QRide':'Панель управления QRide';
+   document.querySelector('.top .sub').textContent=view==='promos'?'Коды скидок и пополнения баланса':view==='paytags'?'Кеш транспортных QR-кодов и управление ценами':view==='games'?'Пороги бесплатных сканов за игровые рекорды':view==='economy'?'Курс обмена игровой энергии на сканы':view==='lucky'?'Призовой фонд, вероятности и статистика':'Пользователи, балансы и полная история активности';
    count.textContent=view==='users'?(users.length?'Всего: '+users.length:'Загрузка…'):view==='paytags'?'Загрузка…':view==='games'?'Настройки':view==='economy'?'Курс обмена':view==='lucky'?'Награды':'Промокоды';
    if(view==='promos')loadPromos();
    if(view==='paytags')loadPaytags();
