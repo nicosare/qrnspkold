@@ -714,6 +714,10 @@
       nextButton.textContent = 'Понятно';
     }
 
+    // Skipping the main onboarding counts as completion for this VK account.
+    // Save immediately so a reload during the farewell cannot reopen the tour.
+    if (!completed && state.mode !== 'lucky') markOnboardingCompleted();
+
     // Skipping the whole tour should not immediately trigger a second hint
     // for a roulette that was already available during the skipped tour.
     if (!completed && state.mode !== 'lucky' && luckyAvailable) storageSet(luckySeenKey);
