@@ -127,6 +127,17 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_scan_credit_history_user_time
     ON scan_credit_history(vk_id, credited_at DESC, id DESC);
+  CREATE TABLE IF NOT EXISTS energy_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vk_id TEXT NOT NULL,
+    changed_at TEXT NOT NULL,
+    amount INTEGER NOT NULL CHECK(amount <> 0),
+    source TEXT NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    source_ref TEXT DEFAULT NULL UNIQUE
+  );
+  CREATE INDEX IF NOT EXISTS idx_energy_history_user_time
+    ON energy_history(vk_id, changed_at DESC, id DESC);
   CREATE TABLE IF NOT EXISTS referrals (
     invitee_vk_id TEXT PRIMARY KEY,
     inviter_vk_id TEXT NOT NULL,
@@ -152,6 +163,16 @@ db.exec(`
     ON analytics_events(event_name, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_analytics_events_user_time
     ON analytics_events(vk_id, created_at DESC);
+  CREATE TABLE IF NOT EXISTS admin_user_actions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vk_id TEXT NOT NULL,
+    actor_vk_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    details_json TEXT NOT NULL DEFAULT '{}'
+  );
+  CREATE INDEX IF NOT EXISTS idx_admin_user_actions_user_time
+    ON admin_user_actions(vk_id, created_at DESC, id DESC);
 `);
 // Persistent transport metadata cache. Price rules remain separate so admins can
 // change the default fare without invalidating the transport lookup cache.
@@ -449,6 +470,43 @@ if (!db.prepare('SELECT 1 FROM app_settings WHERE setting_key = ?').get(scanEner
   })();
 }
 
+// Backfill only energy changes whose historical source is unambiguous. Older
+// manual grants and login-streak bonuses were not persisted and are not guessed.
+const energyHistoryMigrationMarker = 'energy_history_backfill_v1';
+if (!db.prepare('SELECT 1 FROM app_settings WHERE setting_key = ?').get(energyHistoryMigrationMarker)) {
+  const insertLegacyEnergy = db.prepare(
+    'INSERT OR IGNORE INTO energy_history (vk_id, changed_at, amount, source, note, source_ref) VALUES (?, ?, ?, ?, ?, ?)'
+  );
+  db.transaction(() => {
+    for (const row of db.prepare('SELECT id, vk_id, rewarded_at FROM scan_energy_rewards ORDER BY id').all()) {
+      insertLegacyEnergy.run(row.vk_id, row.rewarded_at, 3, 'scan_reward', 'Награда за успешный скан', 'scan-reward:' + row.id);
+    }
+    for (const row of db.prepare('SELECT id, vk_id, started_at, game_id FROM game_sessions ORDER BY started_at, id').all()) {
+      const startedAt = new Date(Number(row.started_at)).toISOString();
+      const gameName = row.game_id === 'breaker' ? 'Q Break' : row.game_id === 'stack' ? 'Q Stack' : 'Q Run';
+      insertLegacyEnergy.run(row.vk_id, startedAt, -1, 'game_session', 'Игровая попытка: ' + gameName, 'game-session:' + row.id);
+    }
+    for (const row of db.prepare(
+      "SELECT id, vk_id, reward_credited_at, reward_amount, reward_title FROM lucky_spins WHERE reward_type = 'energy' AND reward_credited_at IS NOT NULL"
+    ).all()) {
+      insertLegacyEnergy.run(row.vk_id, row.reward_credited_at, Number(row.reward_amount), 'lucky_reward', 'Билет удачи: ' + row.reward_title, 'lucky-spin:' + row.id);
+    }
+    for (const row of db.prepare(
+      "SELECT promo_code_id, vk_id, reward_amount, code, redeemed_at FROM promo_code_redemptions WHERE reward_type = 'energy'"
+    ).all()) {
+      insertLegacyEnergy.run(row.vk_id, row.redeemed_at, Number(row.reward_amount), 'promo_code', 'Промокод ' + row.code, 'promo-redemption:' + row.promo_code_id + ':' + row.vk_id);
+    }
+    for (const row of db.prepare(
+      "SELECT id, vk_id, credited_at, note FROM scan_credit_history WHERE source = 'energy_exchange'"
+    ).all()) {
+      const match = String(row.note || '').match(/^Обмен\\s+(\\d+)\\s+энергии/);
+      if (match) insertLegacyEnergy.run(row.vk_id, row.credited_at, -Number(match[1]), 'energy_exchange', row.note, 'energy-exchange:' + row.id);
+    }
+    db.prepare('INSERT OR IGNORE INTO app_settings (setting_key, setting_value, updated_at) VALUES (?, ?, ?)')
+      .run(energyHistoryMigrationMarker, 'complete', new Date().toISOString());
+  })();
+}
+
 const upsertUser = db.prepare(`
   UPDATE users SET
     first_name = CASE WHEN @first_name <> '' THEN @first_name ELSE first_name END,
@@ -506,6 +564,14 @@ const listUserCredits = db.prepare(`
 `);
 const recordScanCredit = db.prepare(`
   INSERT INTO scan_credit_history (vk_id, credited_at, amount, source, note)
+  VALUES (?, ?, ?, ?, ?)
+`);
+const recordEnergyHistory = db.prepare(`
+  INSERT OR IGNORE INTO energy_history (vk_id, changed_at, amount, source, note, source_ref)
+  VALUES (?, ?, ?, ?, ?, ?)
+`);
+const recordAdminUserAction = db.prepare(`
+  INSERT INTO admin_user_actions (vk_id, actor_vk_id, action, created_at, details_json)
   VALUES (?, ?, ?, ?, ?)
 `);
 const recordScan = db.prepare(`
@@ -1401,6 +1467,13 @@ function decideTariffRequest(requestId, decision) {
         'UPDATE users SET game_attempts = COALESCE(game_attempts, 0) + ? WHERE vk_id = ?'
       ).run(energyBonus, String(request.vk_id));
       if (energyGrant.changes !== 1) throw new Error('Не удалось начислить бонус энергии.');
+      if (energyBonus > 0) {
+        recordEnergyHistory.run(
+          String(request.vk_id), nowIso, energyBonus, 'purchase',
+          'Бонус энергии за покупку: ' + String(request.offer_name || 'тарифа'),
+          'purchase:' + request.id
+        );
+      }
       recordAnalyticsEvent(String(request.vk_id), 'payment_confirmed', {
         offerId: String(request.offer_id || ''),
         offerName: String(request.offer_name || ''),
@@ -1673,6 +1746,13 @@ app.post('/api/game/state', (req, res) => {
       awarded = GAME_DAILY_REWARDS[streak - 1] || 5;
       db.prepare('UPDATE users SET game_attempts = COALESCE(game_attempts, 0) + ?, game_streak = ?, game_last_login_day = ? WHERE vk_id = ?')
         .run(awarded, streak, today, userId);
+      if (awarded > 0) {
+        recordEnergyHistory.run(
+          userId, nowIso, awarded, 'daily_streak',
+          'Ежедневная награда за серию входов: ' + streak + ' дн.',
+          'daily-streak:' + userId + ':' + today
+        );
+      }
     }
   })();
   return res.json({ ok: true, ...gamePublicState(userId), awarded, streak });
@@ -1708,6 +1788,11 @@ app.post('/api/energy/exchange', (req, res) => {
       `).run(energyCost, scans, userId, energyCost);
 
       if (updated.changes !== 1) return;
+      recordEnergyHistory.run(
+        userId, nowIso, -energyCost, 'energy_exchange',
+        'Обмен ' + energyCost + ' энергии на ' + scans + ' сканов',
+        'energy-exchange:' + userId + ':' + nowIso
+      );
       recordScanCredit.run(
         userId,
         nowIso,
@@ -1795,6 +1880,8 @@ app.post('/api/game/start', (req, res) => {
     const spend = db.prepare('UPDATE users SET game_attempts = game_attempts - 1 WHERE vk_id = ? AND game_attempts > 0').run(userId);
     if (spend.changes !== 1) return;
     db.prepare('INSERT INTO game_sessions (id, vk_id, started_at, game_id, activity_at) VALUES (?, ?, ?, ?, ?)').run(sessionId, userId, now, gameId, now);
+    const gameName = gameId === 'breaker' ? 'Q Break' : gameId === 'stack' ? 'Q Stack' : 'Q Run';
+    recordEnergyHistory.run(userId, new Date(now).toISOString(), -1, 'game_session', 'Игровая попытка: ' + gameName, 'game-session:' + sessionId);
     started = true;
   })();
   if (alreadyPlaying) return res.status(409).json({ error: 'Сначала заверши уже начатую игру.', ...gamePublicState(userId) });
@@ -2024,6 +2111,11 @@ app.post('/api/lucky/reveal', (req, res) => {
         const result = db.prepare('UPDATE users SET game_attempts = COALESCE(game_attempts, 0) + ? WHERE vk_id = ?')
           .run(Number(spin.reward_amount), userId);
         if (result.changes !== 1) throw new Error('Не удалось начислить энергию.');
+        recordEnergyHistory.run(
+          userId, nowIso, Number(spin.reward_amount), 'lucky_reward',
+          'Билет удачи: ' + String(spin.reward_title || 'энергия'),
+          'lucky-spin:' + spin.id
+        );
       } else if (spin.reward_type === 'scans') {
         const result = db.prepare('UPDATE users SET scan_balance = COALESCE(scan_balance, 0) + ? WHERE vk_id = ?')
           .run(Number(spin.reward_amount), userId);
@@ -2174,6 +2266,10 @@ app.post('/api/promocodes/apply', (req, res) => {
         } else {
           const updated = db.prepare('UPDATE users SET game_attempts = COALESCE(game_attempts, 0) + ? WHERE vk_id = ?').run(rewardAmount, String(userId));
           if (updated.changes !== 1) throw new Error('Не удалось пополнить энергию.');
+          recordEnergyHistory.run(
+            String(userId), nowIso, rewardAmount, 'promo_code', 'Промокод ' + code,
+            'promo-redemption:' + promo.id + ':' + String(userId)
+          );
         }
         db.prepare('INSERT INTO promo_code_redemptions (promo_code_id, code, vk_id, reward_type, reward_amount, redeemed_at) VALUES (?, ?, ?, ?, ?, ?)')
           .run(Number(promo.id), code, String(userId), promoType, rewardAmount, nowIso);
@@ -2988,6 +3084,11 @@ app.post('/api/paytag', async (req, res) => {
       if (energyRewardGranted) {
         recordScanEnergyReward.run(recordedScan.lastInsertRowid, userId, paytagid, scannedAt, rewardDayKey);
         grantScanEnergy.run(userId);
+        recordEnergyHistory.run(
+          userId, scannedAt, 3, 'scan_reward',
+          'Награда за поездку: ' + String(data.transportType || 'транспорт') + (data.routeNumber ? ' №' + String(data.routeNumber) : ''),
+          'scan-reward:' + recordedScan.lastInsertRowid
+        );
       }
 
       const referral = getReferralForInvitee.get(userId);
