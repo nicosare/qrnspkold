@@ -7528,15 +7528,21 @@ body.scan-loading-open { overflow: hidden !important; }
   if (!launchParams) return;
   window.__qrideInteractionTrackingBound = true;
 
-  document.addEventListener('click', function (event) {
-    const origin = event.target;
-    const target = origin && origin.closest
-      ? origin.closest('button,a,[role="button"],[data-action],[data-tab]')
-      : null;
+  function logInteraction(target, interaction) {
     if (!target || target.disabled || target.closest('#admin-panel-overlay')) return;
-
-    const label = String(target.getAttribute('aria-label') || target.getAttribute('title') || target.textContent || '')
-      .replace(/\s+/g, ' ').trim().slice(0, 80);
+    const labelNode = target.labels && target.labels.length
+      ? target.labels[0]
+      : target.closest('label');
+    const fallbackLabel = target.tagName === 'FORM'
+      ? target.getAttribute('aria-label') || target.id || 'форма'
+      : target.id || target.getAttribute('data-action') || target.tagName;
+    const label = String(
+      target.getAttribute('aria-label') ||
+      target.getAttribute('title') ||
+      (interaction === 'change' && labelNode ? labelNode.textContent : '') ||
+      (interaction === 'submit' ? fallbackLabel : target.textContent) ||
+      fallbackLabel
+    ).replace(/\s+/g, ' ').trim().slice(0, 80);
     const sectionNode = target.closest('[data-section],section[id],[role="dialog"],main');
     const section = sectionNode
       ? String(sectionNode.getAttribute('data-section') || sectionNode.id || sectionNode.getAttribute('aria-label') || '').slice(0, 80)
@@ -7555,11 +7561,31 @@ body.scan-loading-open { overflow: hidden !important; }
         properties: {
           controlId: String(target.id || target.getAttribute('data-action') || target.tagName).slice(0, 80),
           label: label,
-          section: section
+          section: section,
+          interaction: interaction
         }
       }),
       keepalive: true
     }).catch(function () {});
+  }
+
+  document.addEventListener('click', function (event) {
+    const origin = event.target;
+    const target = origin && origin.closest
+      ? origin.closest('button,a,[role="button"],[data-action],[data-tab],summary')
+      : null;
+    if (target) logInteraction(target, 'click');
+  }, true);
+
+  document.addEventListener('change', function (event) {
+    const target = event.target;
+    if (target && target.matches && target.matches('select,input[type="checkbox"],input[type="radio"],input[type="range"],input[type="number"],input[type="date"],input[type="datetime-local"]')) {
+      logInteraction(target, 'change');
+    }
+  }, true);
+
+  document.addEventListener('submit', function (event) {
+    if (event.target && event.target.tagName === 'FORM') logInteraction(event.target, 'submit');
   }, true);
 })();
 </script>
