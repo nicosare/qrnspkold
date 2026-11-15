@@ -288,7 +288,7 @@
     } else {
       content += '<p>Оплата проходит через ЮMoney. После подтверждения платежа тариф начислится автоматически.</p>' +
         '<p class="tariff-payment-warning">Закрытие этой шторки ничего не отменяет. Если платёж уже отправлен, сервер обработает его после подтверждения ЮMoney.</p>' +
-        '<form class="tariff-payment-button" method="POST" action="https://yoomoney.ru/quickpay/confirm" ${(window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)) ? 'target="_blank" rel="noopener"' : ''} style="margin:12px auto;max-width:330px;display:grid;gap:10px;">' +
+        '<form class="tariff-payment-button" method="POST" action="https://yoomoney.ru/quickpay/confirm" ' + ((window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)) ? 'target="_blank" rel="noopener" ' : '') + 'style="margin:12px auto;max-width:330px;display:grid;gap:10px;">' +
         '<input type="hidden" name="receiver" value="4100119368734043">' +
         '<input type="hidden" name="quickpay-form" value="button">' +
         '<input type="hidden" name="sum" value="' + esc(Number(purchase.priceRub).toFixed(2)) + '" data-type="number">' +
