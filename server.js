@@ -3904,7 +3904,8 @@ app.get('/api/admin/users/:vkId/activity', requireAdmin, (req, res) => {
     } else if (event.event_name === 'ui_interaction') {
       const label = String(props.label || props.controlId || 'элемент интерфейса');
       const section = props.section ? 'Раздел: ' + props.section : 'Действие в интерфейсе QRide';
-      add('event:' + event.event_key, 'app', 'Нажал «' + label + '»', section, event.created_at);
+      const verb = props.interaction === 'submit' ? 'Отправил' : props.interaction === 'change' ? 'Изменил' : 'Нажал';
+      add('event:' + event.event_key, 'app', verb + ' «' + label + '»', section, event.created_at);
     }
   }
 
