@@ -18,6 +18,7 @@
   const storageRoot = 'qride:onboarding:v2:' + viewerId + ':';
   const seenKey = storageRoot + 'main-seen';
   const luckySeenKey = storageRoot + 'lucky-seen';
+  const launchParams = window.location.search.slice(1);
   const reduceMotion = Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const svgNs = 'http://www.w3.org/2000/svg';
 
@@ -26,6 +27,8 @@
   let luckyReady = false;
   let luckyAvailable = Boolean(luckySection && !luckySection.hidden);
   let luckyHintTimer = 0;
+  let onboardingStatusReady = false;
+  let onboardingCompleted = false;
 
   function storageHas(key) {
     try { if (window.localStorage.getItem(key) === '1') return true; } catch (_) {}
@@ -36,6 +39,47 @@
   function storageSet(key) {
     try { window.localStorage.setItem(key, '1'); } catch (_) {}
     try { window.sessionStorage.setItem(key, '1'); } catch (_) {}
+  }
+
+  function postOnboardingRequest(endpoint) {
+    if (!launchParams) return Promise.reject(new Error('VK launch parameters are missing'));
+    return fetch(new URL('api/onboarding/' + endpoint, window.location.href), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ launchParams: launchParams }),
+      cache: 'no-store'
+    }).then(function (response) {
+      if (!response.ok) throw new Error('Onboarding request failed: ' + response.status);
+      return response.json();
+    });
+  }
+
+  function markOnboardingCompleted() {
+    if (onboardingCompleted) return;
+    onboardingCompleted = true;
+    storageSet(seenKey);
+    postOnboardingRequest('complete').catch(function (error) {
+      console.warn('[QRide onboarding] Could not save completion:', error);
+    });
+  }
+
+  function loadOnboardingStatus() {
+    postOnboardingRequest('state').then(function (result) {
+      onboardingCompleted = Boolean(result && result.completed);
+      // Migrate a previously saved local completion to the account record.
+      if (!onboardingCompleted && storageHas(seenKey)) {
+        markOnboardingCompleted();
+      } else if (onboardingCompleted) {
+        storageSet(seenKey);
+      }
+    }).catch(function (error) {
+      console.warn('[QRide onboarding] Could not load server status:', error);
+      // Keep the existing local behavior as a temporary fallback if the API is unavailable.
+      onboardingCompleted = storageHas(seenKey);
+    }).finally(function () {
+      onboardingStatusReady = true;
+      scheduleFirstRun();
+    });
   }
 
   function isVisible(element) {
@@ -631,7 +675,7 @@
     window.qrideOnboardingActive = false;
     tour = null;
 
-    if (state.mode === 'auto' || state.mode === 'replay') storageSet(seenKey);
+    if (state.mode === 'auto' || state.mode === 'replay') markOnboardingCompleted();
     if (state.sawLucky) storageSet(luckySeenKey);
     startOverlay.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
     maybeShowLuckyHint();
@@ -783,10 +827,10 @@
   }
 
   function scheduleFirstRun() {
-    if (firstRunTimer || tour || !luckyReady || storageHas(seenKey)) return;
+    if (firstRunTimer || tour || !onboardingStatusReady || !luckyReady || onboardingCompleted) return;
     firstRunTimer = window.setTimeout(function () {
       firstRunTimer = 0;
-      if (tour || storageHas(seenKey) || !luckyReady) return;
+      if (tour || !onboardingStatusReady || onboardingCompleted || !luckyReady) return;
       if (!isVisible(startOverlay) || !document.body.classList.contains('app-ready') || document.visibilityState === 'hidden') return;
       if (hasOtherDialogOpen()) {
         scheduleFirstRun();
@@ -797,10 +841,10 @@
   }
 
   function maybeShowLuckyHint() {
-    if (luckyHintTimer || tour || !luckyReady || !luckyAvailable || !storageHas(seenKey) || storageHas(luckySeenKey)) return;
+    if (luckyHintTimer || tour || !onboardingStatusReady || !onboardingCompleted || !luckyReady || !luckyAvailable || storageHas(luckySeenKey)) return;
     luckyHintTimer = window.setTimeout(function () {
       luckyHintTimer = 0;
-      if (tour || !luckyAvailable || !storageHas(seenKey) || storageHas(luckySeenKey)) return;
+      if (tour || !onboardingStatusReady || !onboardingCompleted || !luckyAvailable || storageHas(luckySeenKey)) return;
       if (!isVisible(startOverlay) || document.visibilityState === 'hidden') return;
       if (hasOtherDialogOpen()) {
         maybeShowLuckyHint();
@@ -894,4 +938,5 @@
   });
 
   installFaqReplay();
+  loadOnboardingStatus();
 })();
