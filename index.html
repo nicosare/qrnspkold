@@ -7533,8 +7533,11 @@ body.scan-loading-open { overflow: hidden !important; }
     const labelNode = target.labels && target.labels.length
       ? target.labels[0]
       : target.closest('label');
+    const submitButton = target.tagName === 'FORM'
+      ? target.querySelector('button[type="submit"],input[type="submit"]')
+      : null;
     const fallbackLabel = target.tagName === 'FORM'
-      ? target.getAttribute('aria-label') || target.id || 'форма'
+      ? target.getAttribute('aria-label') || (submitButton && (submitButton.textContent || submitButton.value)) || target.id || 'форма'
       : target.id || target.getAttribute('data-action') || target.tagName;
     const label = String(
       target.getAttribute('aria-label') ||
