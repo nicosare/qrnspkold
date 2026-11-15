@@ -111,6 +111,7 @@
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
+            min-height: 100dvh;
         }
 
         /* HEADER - как на оригинале */
@@ -390,9 +391,11 @@
             transition: color 0.2s;
         }
 
-        .readme-link:hover {
-            color: #003d7a;
-            text-decoration: underline;
+        @media (hover: hover) and (pointer: fine) {
+            .readme-link:hover {
+                color: #003d7a;
+                text-decoration: underline;
+            }
         }
 
         .admin-panel-overlay {
@@ -1348,7 +1351,9 @@
         .info-sheet-title { margin:0; font-size:24px; line-height:1.15; font-weight:850; letter-spacing:-.65px; color:#1f2d40; }
         .info-sheet-subtitle { max-width:440px; margin:8px 0 0; color:#778392; font-size:13px; line-height:1.5; }
         .info-sheet-close { position:relative; z-index:2; display:grid; place-items:center; flex:0 0 42px; width:42px; height:42px; min-height:42px; padding:0 0 3px; border:1px solid #dfe8f4; border-radius:50%; background:#fff; color:#53647a; font-family:Arial,sans-serif; font-size:27px; font-weight:400; line-height:1; cursor:pointer; pointer-events:auto; touch-action:manipulation; box-shadow:0 3px 10px #193b6010; transition:background .15s ease,color .15s ease,transform .15s ease; }
-        .info-sheet-close:hover { background:#eaf3ff; color:#176fd0; }
+        @media (hover: hover) and (pointer: fine) {
+            .info-sheet-close:hover { background:#eaf3ff; color:#176fd0; }
+        }
         .info-sheet-close:active { transform:scale(.94); }
         @media (max-width:480px) {
             .info-overlay { padding:10px; }
@@ -2251,6 +2256,7 @@ body.scan-loading-open { overflow: hidden !important; }
     35%,65% { opacity: .85; transform: translate3d(0,-3px,0) scale(1); }
 }
 </style>
+<link rel="stylesheet" href="qride-ui-foundation.css?v=20261115-1">
 
 </head>
 <body>
