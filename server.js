@@ -537,7 +537,7 @@ const getAnyScanForUser = db.prepare(`
 const listUsers = db.prepare(`
   SELECT u.vk_id, u.first_name, u.last_name, u.photo_url, u.first_seen, u.last_seen, u.visit_count,
          u.scan_balance, u.subscription_until, u.unlimited, u.last_scan_at, u.last_transport_number,
-         u.game_attempts, u.welcome_bonus_granted, u.daily_scan_date, u.daily_scan_available,
+         u.game_attempts, u.game_streak, u.game_total_score, u.welcome_bonus_granted, u.daily_scan_date, u.daily_scan_available,
          u.game_best_score AS runner_best_score,
          (SELECT COALESCE(MAX(gs.score), 0) FROM game_sessions gs WHERE gs.vk_id = u.vk_id AND gs.game_id = 'breaker') AS breaker_best_score,
          (SELECT COALESCE(MAX(gs.score), 0) FROM game_sessions gs WHERE gs.vk_id = u.vk_id AND gs.game_id = 'stack') AS stack_best_score,
@@ -665,7 +665,7 @@ function getReferralPromptState(userId, successfulScanCount) {
 }
 const analyticsEventNames = new Set([
   'app_open', 'tariffs_viewed', 'tariff_buy_click', 'tariff_request_created',
-  'payment_confirmed', 'scan_completed', 'lucky_spin_created'
+  'payment_confirmed', 'scan_completed', 'lucky_spin_created', 'ui_interaction'
 ]);
 const insertAnalyticsEvent = db.prepare(
   'INSERT OR IGNORE INTO analytics_events (event_key, vk_id, event_name, created_at, properties_json) VALUES (?, ?, ?, ?, ?)'
@@ -3254,7 +3254,7 @@ app.post('/api/analytics/event', (req, res) => {
   try {
     const { userId } = parseLaunchParams(req.body?.launchParams);
     const eventName = String(req.body?.eventName || '');
-    const allowedClientEvents = new Set(['tariffs_viewed', 'tariff_buy_click']);
+    const allowedClientEvents = new Set(['tariffs_viewed', 'tariff_buy_click', 'ui_interaction']);
     if (!allowedClientEvents.has(eventName)) {
       return res.status(400).json({ error: 'Unsupported analytics event.' });
     }
@@ -3266,6 +3266,11 @@ app.post('/api/analytics/event', (req, res) => {
     const properties = {};
     if (typeof input.offerId === 'string' && /^[a-z0-9_]{2,40}$/i.test(input.offerId)) properties.offerId = input.offerId;
     if (typeof input.entryPoint === 'string') properties.entryPoint = input.entryPoint.slice(0, 32);
+    if (eventName === 'ui_interaction') {
+      if (typeof input.controlId === 'string') properties.controlId = input.controlId.slice(0, 80);
+      if (typeof input.label === 'string') properties.label = input.label.replace(/\\s+/g, ' ').trim().slice(0, 80);
+      if (typeof input.section === 'string') properties.section = input.section.slice(0, 80);
+    }
     recordAnalyticsEvent(userId, eventName, properties, userId + ':client:' + eventId);
     return res.json({ ok: true });
   } catch (error) {
@@ -3800,6 +3805,168 @@ app.get('/api/admin/users', requireAdmin, (req, res) => {
   res.json({ users, total: userCount.get().count, adminUserId: req.vkUserId });
 });
 
+app.get('/api/admin/users/:vkId/activity', requireAdmin, (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const vkId = String(req.params.vkId || '');
+  if (!/^[0-9]+$/.test(vkId)) return res.status(400).json({ error: 'Некорректный VK ID.' });
+  if (!db.prepare('SELECT 1 FROM users WHERE vk_id = ?').get(vkId)) {
+    return res.status(404).json({ error: 'Пользователь не найден.' });
+  }
+
+  const activity = [];
+  const add = (id, category, title, description, value, amountLabel = '') => {
+    const timestamp = typeof value === 'number' ? new Date(value).toISOString() : String(value || '');
+    if (!Number.isFinite(Date.parse(timestamp))) return;
+    activity.push({ id: String(id), category, title: String(title || ''), description: String(description || ''), at: timestamp, amountLabel: String(amountLabel || '') });
+  };
+  const parseJson = value => { try { return JSON.parse(value || '{}') || {}; } catch (_) { return {}; } };
+  const pluralScans = amount => amount === 1 ? 'скан' : amount >= 2 && amount <= 4 ? 'скана' : 'сканов';
+  const scanSources = { subscription: 'по подписке', unlimited: 'по безлимиту', package: 'из пакета', daily: 'ежедневный скан', unknown: 'источник не определён' };
+  const creditSources = {
+    welcome: 'Приветственный бонус', daily: 'Ежедневный бонус', referral: 'Реферальный бонус',
+    game_reward: 'Награда за игру', lucky_reward: 'Билет удачи', purchase: 'Покупка тарифа',
+    admin: 'Ручное начисление', promo_code: 'Промокод', energy_exchange: 'Обмен энергии'
+  };
+  const energySources = {
+    scan_reward: 'Награда за поездку', daily_streak: 'Ежедневный бонус за серию входов',
+    purchase: 'Бонус за покупку', energy_exchange: 'Обмен энергии',
+    game_session: 'Игровая попытка', lucky_reward: 'Билет удачи',
+    promo_code: 'Промокод', admin: 'Ручное начисление администратором'
+  };
+  const gameNames = { runner: 'Q Run', breaker: 'Q Break', stack: 'Q Stack' };
+
+  const scans = db.prepare(
+    "SELECT sh.*, ae.properties_json FROM scan_history sh " +
+    "LEFT JOIN analytics_events ae ON ae.event_key = sh.vk_id || ':scan:' || sh.idempotency_key " +
+    "WHERE sh.vk_id = ? ORDER BY sh.scanned_at DESC, sh.id DESC"
+  ).all(vkId);
+  for (const scan of scans) {
+    const props = parseJson(scan.properties_json);
+    const route = [scan.transport_type, scan.route_number ? '№ ' + scan.route_number : ''].filter(Boolean).join(' ');
+    const vehicle = scan.vehicle_number ? 'Т/С № ' + scan.vehicle_number : 'Номер Т/С не указан';
+    const price = scan.price === null || scan.price === undefined ? '' : ' · ' + Number(scan.price).toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + ' ₽';
+    add('scan:' + scan.id, 'rides', 'Успешная поездка' + (route ? ' · ' + route : ''), vehicle + ' · ' + (scanSources[props.scanSource] || scanSources.unknown) + price, scan.scanned_at);
+  }
+
+  const credits = db.prepare(
+    'SELECT id, credited_at, amount, source, note FROM scan_credit_history WHERE vk_id = ? ORDER BY credited_at DESC, id DESC'
+  ).all(vkId);
+  for (const item of credits) {
+    const amount = Number(item.amount) || 0;
+    const source = creditSources[item.source] || 'Начисление сканов';
+    const detail = [source, item.note].filter(Boolean).join(' · ');
+    add('scan-credit:' + item.id, 'balance', '+' + amount + ' ' + pluralScans(amount), detail, item.credited_at, '+' + amount + ' скан' + (amount === 1 ? '' : 'ов'));
+  }
+
+  const energyRows = db.prepare(
+    'SELECT id, changed_at, amount, source, note FROM energy_history WHERE vk_id = ? ORDER BY changed_at DESC, id DESC'
+  ).all(vkId);
+  for (const item of energyRows) {
+    const amount = Number(item.amount) || 0;
+    const label = (amount > 0 ? '+' : '−') + Math.abs(amount) + ' энергии';
+    add('energy:' + item.id, 'balance', label, [energySources[item.source] || 'Изменение энергии', item.note].filter(Boolean).join(' · '), item.changed_at, label);
+  }
+
+  const spins = db.prepare(
+    'SELECT id, created_at, scan_cost, reward_title, reward_type, reward_amount, reward_credited_at FROM lucky_spins WHERE vk_id = ? ORDER BY created_at DESC, id DESC'
+  ).all(vkId);
+  for (const spin of spins) {
+    const cost = Number(spin.scan_cost) > 0 ? 'Потрачено: ' + spin.scan_cost + ' скан.' : 'Бесплатная попытка';
+    const credited = spin.reward_credited_at ? 'Награда начислена' : 'Ожидает подтверждения';
+    add('lucky:' + spin.id, 'balance', 'Билет удачи · ' + String(spin.reward_title || 'Награда'), cost + ' · ' + credited + ' · ' + Number(spin.reward_amount || 0) + ' ' + String(spin.reward_type || ''), spin.created_at);
+  }
+
+  const events = db.prepare(
+    'SELECT event_key, event_name, created_at, properties_json FROM analytics_events WHERE vk_id = ? ORDER BY created_at DESC'
+  ).all(vkId);
+  for (const event of events) {
+    const props = parseJson(event.properties_json);
+    if (['scan_completed', 'lucky_spin_created', 'tariff_request_created'].includes(event.event_name)) continue;
+    if (event.event_name === 'app_open') {
+      add('event:' + event.event_key, 'app', 'Открыл QRide', 'Запуск приложения', event.created_at);
+    } else if (event.event_name === 'tariffs_viewed') {
+      add('event:' + event.event_key, 'app', 'Открыл тарифы', props.entryPoint ? 'Точка входа: ' + props.entryPoint : 'Просмотр раздела тарифов', event.created_at);
+    } else if (event.event_name === 'tariff_buy_click') {
+      add('event:' + event.event_key, 'purchases', 'Выбрал тариф', props.offerId ? 'Тариф: ' + props.offerId : 'Нажатие на предложение', event.created_at);
+    } else if (event.event_name === 'payment_confirmed') {
+      const details = [props.offerName || props.offerId, props.priceRub ? Number(props.priceRub).toLocaleString('ru-RU') + ' ₽' : '', props.paymentMethod ? 'Способ: ' + props.paymentMethod : ''].filter(Boolean).join(' · ');
+      add('event:' + event.event_key, 'purchases', 'Покупка подтверждена', details || 'Оплата подтверждена', event.created_at);
+    } else if (event.event_name === 'ui_interaction') {
+      const label = String(props.label || props.controlId || 'элемент интерфейса');
+      const section = props.section ? 'Раздел: ' + props.section : 'Действие в интерфейсе QRide';
+      add('event:' + event.event_key, 'app', 'Нажал «' + label + '»', section, event.created_at);
+    }
+  }
+
+  const requests = db.prepare(
+    'SELECT id, offer_name, price_rub, status, created_at, updated_at FROM tariff_requests WHERE vk_id = ? ORDER BY created_at DESC, id DESC'
+  ).all(vkId);
+  const requestStatuses = { rejected: 'Заявка отклонена', replaced: 'Заявка заменена новой', delivery_failed: 'Не удалось выдать покупку' };
+  for (const request of requests) {
+    add('tariff-request:' + request.id, 'purchases', 'Создал заявку на тариф', String(request.offer_name || 'Тариф') + ' · ' + Number(request.price_rub || 0).toLocaleString('ru-RU') + ' ₽', request.created_at);
+    if (requestStatuses[request.status] && request.updated_at !== request.created_at) {
+      add('tariff-status:' + request.id, 'purchases', requestStatuses[request.status], String(request.offer_name || 'Тариф'), request.updated_at);
+    }
+  }
+
+  const promoApplications = db.prepare(
+    'SELECT id, promo_code, discount_percent, selected_at, used_at FROM promo_code_applications WHERE vk_id = ? ORDER BY selected_at DESC, id DESC'
+  ).all(vkId);
+  for (const item of promoApplications) {
+    add('promo-selected:' + item.id, 'purchases', 'Выбрал промокод', String(item.promo_code || '') + ' · скидка ' + Number(item.discount_percent || 0) + '%', item.selected_at);
+    if (item.used_at) add('promo-used:' + item.id, 'purchases', 'Применил промокод', String(item.promo_code || '') + ' · скидка ' + Number(item.discount_percent || 0) + '%', item.used_at);
+  }
+
+  const sessions = db.prepare(
+    'SELECT id, game_id, started_at, finished_at, score FROM game_sessions WHERE vk_id = ? ORDER BY started_at DESC'
+  ).all(vkId);
+  for (const session of sessions) {
+    const gameName = gameNames[session.game_id] || 'QRide Arcade';
+    add('game-start:' + session.id, 'games', 'Запустил ' + gameName, 'Начало игровой сессии', Number(session.started_at));
+    if (session.finished_at) {
+      const duration = Math.max(0, Math.round((Number(session.finished_at) - Number(session.started_at)) / 1000));
+      add('game-finish:' + session.id, 'games', 'Завершил ' + gameName, 'Результат: ' + Number(session.score || 0) + ' · Время: ' + duration + ' сек.', Number(session.finished_at));
+    }
+  }
+
+  const referrals = db.prepare(
+    'SELECT invitee_vk_id, inviter_vk_id, created_at, rewarded_at FROM referrals WHERE inviter_vk_id = ? OR invitee_vk_id = ? ORDER BY created_at DESC'
+  ).all(vkId, vkId);
+  for (const referral of referrals) {
+    if (referral.invitee_vk_id === vkId) {
+      add('referral-in:' + referral.invitee_vk_id, 'app', 'Перешёл по приглашению', 'Пригласил пользователь VK ID ' + referral.inviter_vk_id, referral.created_at);
+    } else {
+      add('referral-out:' + referral.invitee_vk_id, 'app', 'Пригласил пользователя', 'VK ID ' + referral.invitee_vk_id, referral.created_at);
+      if (referral.rewarded_at) add('referral-reward:' + referral.invitee_vk_id, 'balance', 'Получен реферальный бонус', 'Начислено 3 скана за первую поездку приглашённого пользователя', referral.rewarded_at, '+3 скана');
+    }
+  }
+
+  const adminActions = db.prepare(
+    'SELECT id, actor_vk_id, action, created_at, details_json FROM admin_user_actions WHERE vk_id = ? ORDER BY created_at DESC, id DESC'
+  ).all(vkId);
+  for (const item of adminActions) {
+    const details = parseJson(item.details_json);
+    let title = 'Изменение администратором';
+    let description = 'Администратор VK ID ' + item.actor_vk_id;
+    if (item.action === 'grant_days') {
+      title = 'Продлил подписку';
+      description = 'Добавлено ' + Number(details.days || 0) + ' дн. · до ' + String(details.subscriptionUntil || '');
+    } else if (item.action === 'grant_months') {
+      title = 'Продлил подписку';
+      description = 'Добавлено ' + Number(details.months || 0) + ' мес. · до ' + String(details.subscriptionUntil || '');
+    } else if (item.action === 'set_unlimited') {
+      title = details.enabled ? 'Включил безлимит' : 'Отключил безлимит';
+    } else if (item.action === 'reset_account') {
+      title = 'Сбросил баланс и подписку';
+      description = details.note || description;
+    }
+    add('admin-action:' + item.id, 'balance', title, description, item.created_at);
+  }
+
+  activity.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  return res.json({ activity, total: activity.length });
+});
+
 app.get('/api/admin/users/:vkId/scans', requireAdmin, (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const vkId = String(req.params.vkId || '');
@@ -3894,6 +4061,7 @@ app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
         ).run(vkId);
         db.prepare("DELETE FROM scan_credit_history WHERE vk_id = ? AND source = 'purchase'").run(vkId);
         db.prepare('DELETE FROM tariff_requests WHERE vk_id = ?').run(vkId);
+        recordAdminUserAction.run(vkId, req.vkUserId, action, now.toISOString(), JSON.stringify({ note: 'Баланс сканов и подписка сброшены' }));
       });
       resetAccount();
       sendLiveTariffState(vkId);
@@ -3918,6 +4086,7 @@ app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
         : now;
       const expiry = new Date(currentExpiry.getTime() + days * 86400000);
       updateSubscription.run(expiry.toISOString(), vkId);
+      recordAdminUserAction.run(vkId, req.vkUserId, action, now.toISOString(), JSON.stringify({ days, subscriptionUntil: expiry.toISOString() }));
     } else if (action === 'grant_months') {
       const months = Number(req.body?.months);
       if (!Number.isSafeInteger(months) || months < 1 || months > 120) {
@@ -3933,6 +4102,7 @@ app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
       const lastDayOfMonth = new Date(Date.UTC(expiry.getUTCFullYear(), expiry.getUTCMonth() + 1, 0)).getUTCDate();
       expiry.setUTCDate(Math.min(originalDay, lastDayOfMonth));
       updateSubscription.run(expiry.toISOString(), vkId);
+      recordAdminUserAction.run(vkId, req.vkUserId, action, now.toISOString(), JSON.stringify({ months, subscriptionUntil: expiry.toISOString() }));
     } else if (action === 'grant_energy') {
       const amount = Number(req.body?.amount);
       if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100000) {
@@ -3940,12 +4110,15 @@ app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
       }
       const updated = db.prepare('UPDATE users SET game_attempts = COALESCE(game_attempts, 0) + ? WHERE vk_id = ?').run(amount, vkId);
       if (updated.changes !== 1) throw new Error('Не удалось начислить энергию.');
+      const grantedAt = now.toISOString();
+      recordEnergyHistory.run(vkId, grantedAt, amount, 'admin', 'Ручное начисление администратором', 'admin-energy:' + req.vkUserId + ':' + vkId + ':' + grantedAt);
     } else if (action === 'set_unlimited') {
       if (typeof req.body?.enabled !== 'boolean') {
         return res.status(400).json({ error: 'Не задано состояние безлимита.' });
       }
       const enabled = req.body.enabled ? 1 : 0;
       setUnlimited.run(enabled, enabled, vkId);
+      recordAdminUserAction.run(vkId, req.vkUserId, action, now.toISOString(), JSON.stringify({ enabled: Boolean(enabled) }));
     } else {
       return res.status(400).json({ error: 'Неизвестное действие.' });
     }
