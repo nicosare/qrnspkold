@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#f2f3f4">
-<title>QRide — Пользователи</title>
+<title>QRide — Панель управления</title>
 <style>
 :root{color-scheme:light;--bg:#f2f3f4;--card:#fff;--text:#24262b;--muted:#777d87;--line:#e4e7eb;--accent:#2787f5;--soft:#eaf3ff}
 *{box-sizing:border-box}
@@ -205,6 +205,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 
 
 /* QRide control room — compact registry and focused user detail. */
+body.user-detail-open{overflow:hidden}
 .users-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:0 0 12px}
 .users-overview-item{min-width:0;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:#fafbfd}
 .users-overview-item span{display:block;color:var(--muted);font-size:11px}
@@ -303,7 +304,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 <body>
 <main>
 <header class="top">
- <div><h1>Админ-панель QRide</h1><div class="sub">Пользователи и управление промокодами</div></div>
+ <div><h1>Панель управления QRide</h1><div class="sub">Пользователи, балансы и полная история активности</div></div>
  <div class="count" id="count">Загрузка…</div>
 </header>
 <nav class="admin-nav" aria-label="Разделы админ-панели">
@@ -1075,7 +1076,7 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
     const deleteButton=event.target.closest('[data-delete-scan]');
     if(deleteButton){
       const scanId=String(deleteButton.dataset.deleteScan||'');
-      if(String(selectedUserId)!==String(adminUserId)||!/^\\d+$/.test(scanId))return;
+      if(String(selectedUserId)!==String(adminUserId)||!/^\d+$/.test(scanId))return;
       if(!window.confirm('Удалить эту запись из истории сканирований? Она исчезнет из истории и коллекции маршрутов. Баланс сканов не изменится. Это действие нельзя отменить.'))return;
       deleteButton.disabled=true;deleteButton.textContent='Удаляем…';
       try{
