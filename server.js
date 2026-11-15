@@ -3270,6 +3270,7 @@ app.post('/api/analytics/event', (req, res) => {
       if (typeof input.controlId === 'string') properties.controlId = input.controlId.slice(0, 80);
       if (typeof input.label === 'string') properties.label = input.label.replace(/\s+/g, ' ').trim().slice(0, 80);
       if (typeof input.section === 'string') properties.section = input.section.slice(0, 80);
+      if (['click', 'change', 'submit'].includes(input.interaction)) properties.interaction = input.interaction;
     }
     recordAnalyticsEvent(userId, eventName, properties, userId + ':client:' + eventId);
     return res.json({ ok: true });
