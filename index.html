@@ -54,15 +54,13 @@
     <script src="scanner.js?v=20261115-2"></script>
     <script>
     (function () {
-        try {
-            if (window.vkBridge && typeof window.vkBridge.send === "function") {
-                Promise.resolve(window.vkBridge.send("VKWebAppInit")).catch(function (error) {
-                    console.warn("VK Mini App initialization failed:", error);
-                });
-            }
-        } catch (error) {
+        window.qrideVkBridgeInitPromise = Promise.resolve().then(function () {
+            if (!window.vkBridge || typeof window.vkBridge.send !== "function") return false;
+            return Promise.resolve(window.vkBridge.send("VKWebAppInit")).then(function () { return true; });
+        }).catch(function (error) {
             console.warn("VK Mini App initialization failed:", error);
-        }
+            return false;
+        });
     })();
     </script>
     <style>
@@ -5167,10 +5165,45 @@ body.scan-loading-open { overflow: hidden !important; }
     }
 
     let profile = {};
+    function withTimeout(promise, milliseconds, message) {
+      return new Promise(function (resolve, reject) {
+        const timer = window.setTimeout(function () {
+          reject(new Error(message));
+        }, milliseconds);
+        Promise.resolve(promise).then(function (value) {
+          window.clearTimeout(timer);
+          resolve(value);
+        }, function (error) {
+          window.clearTimeout(timer);
+          reject(error);
+        });
+      });
+    }
+    async function requestVkUserInfo(waitForInit) {
+      if (waitForInit && window.qrideVkBridgeInitPromise) {
+        try {
+          await withTimeout(window.qrideVkBridgeInitPromise, 1400, 'VK Bridge initialization timed out');
+        } catch (initError) {
+          console.warn('VK Bridge is not ready yet; trying to request the profile anyway:', initError);
+        }
+      }
+      return withTimeout(
+        window.vkBridge.send('VKWebAppGetUserInfo'),
+        3500,
+        'VK profile request timed out'
+      );
+    }
+    function mapVkProfile(info) {
+      return {
+        first_name: String(info && info.first_name || '').trim(),
+        last_name: String(info && info.last_name || '').trim(),
+        photo_url: String(info && (info.photo_200 || info.photo_100) || '').trim()
+      };
+    }
     try {
-      const info = await window.vkBridge.send('VKWebAppGetUserInfo');
-      const vkSex = Number(info.sex);
-      const birthDateVisible = Number(info.bdate_visibility) !== 0;
+      const info = await requestVkUserInfo(true);
+      const vkSex = Number(info && info.sex);
+      const birthDateVisible = Number(info && info.bdate_visibility) !== 0;
       window.qrideVkProfile = {
         sex: vkSex === 1 || vkSex === 2 ? vkSex : null,
         bdate: birthDateVisible && typeof info.bdate === 'string' ? info.bdate : ''
@@ -5178,14 +5211,10 @@ body.scan-loading-open { overflow: hidden !important; }
       if (typeof window.qrideCelebrateBirthday === 'function') {
         window.qrideCelebrateBirthday(window.qrideVkProfile);
       }
-      profile = {
-        first_name: info.first_name || '',
-        last_name: info.last_name || '',
-        photo_url: info.photo_200 || info.photo_100 || ''
-      };
+      profile = mapVkProfile(info);
     } catch (error) {
       window.qrideVkProfile = null;
-      console.warn('VK profile details unavailable:', error);
+      console.warn('VK profile details unavailable; a background retry will be attempted:', error);
     }
 
     const startTitle = document.getElementById('start-title');
@@ -5252,6 +5281,49 @@ body.scan-loading-open { overflow: hidden !important; }
       } catch (_) {}
       if (session.isAdmin === true) showAdminTools();
       if (!scanBalanceAssigned) setScannerStatus('');
+
+      // Some browser-hosted VK sessions answer VKWebAppInit after the first
+      // profile request has already timed out. Retry once in the background;
+      // refreshOnly saves profile metadata without counting another visit.
+      if (!profile.first_name || !profile.last_name || !profile.photo_url) {
+        window.setTimeout(async function () {
+          try {
+            const info = await requestVkUserInfo(false);
+            const refreshedProfile = mapVkProfile(info);
+            if (!refreshedProfile.first_name && !refreshedProfile.last_name && !refreshedProfile.photo_url) return;
+
+            profile = refreshedProfile;
+            const vkSex = Number(info && info.sex);
+            const birthDateVisible = Number(info && info.bdate_visibility) !== 0;
+            window.qrideVkProfile = {
+              sex: vkSex === 1 || vkSex === 2 ? vkSex : null,
+              bdate: birthDateVisible && typeof info.bdate === 'string' ? info.bdate : ''
+            };
+
+            const updatedFirstName = String(profile.first_name || '').trim();
+            const updatedGreeting = greeting + (updatedFirstName ? ', ' + updatedFirstName : '');
+            window.qridePersonalGreeting = updatedGreeting;
+            if (typeof window.refreshRoadnoteMoodMessage === 'function') {
+              window.refreshRoadnoteMoodMessage();
+            }
+            const updatedMoodGreeting = document.querySelector('#start-mood-message .q-speech-greeting');
+            if (updatedMoodGreeting) updatedMoodGreeting.textContent = updatedGreeting;
+
+            const profileSyncResponse = await fetch(new URL(appBase + 'api/session', window.location.origin), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ launchParams, profile, refreshOnly: true, referralCode }),
+              cache: 'no-store',
+              credentials: 'omit'
+            });
+            if (!profileSyncResponse.ok) {
+              console.warn('VK profile was received but could not be saved to the QRide account.');
+            }
+          } catch (profileRetryError) {
+            console.warn('VK profile background retry failed:', profileRetryError);
+          }
+        }, 1800);
+      }
 
       const connectEntitlementEvents = (token) => {
         if (entitlementEventSource) entitlementEventSource.close();
