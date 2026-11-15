@@ -499,7 +499,7 @@ if (!db.prepare('SELECT 1 FROM app_settings WHERE setting_key = ?').get(energyHi
     for (const row of db.prepare(
       "SELECT id, vk_id, credited_at, note FROM scan_credit_history WHERE source = 'energy_exchange'"
     ).all()) {
-      const match = String(row.note || '').match(/^Обмен\\s+(\\d+)\\s+энергии/);
+      const match = String(row.note || '').match(/^Обмен\s+(\d+)\s+энергии/);
       if (match) insertLegacyEnergy.run(row.vk_id, row.credited_at, -Number(match[1]), 'energy_exchange', row.note, 'energy-exchange:' + row.id);
     }
     db.prepare('INSERT OR IGNORE INTO app_settings (setting_key, setting_value, updated_at) VALUES (?, ?, ?)')
@@ -3268,7 +3268,7 @@ app.post('/api/analytics/event', (req, res) => {
     if (typeof input.entryPoint === 'string') properties.entryPoint = input.entryPoint.slice(0, 32);
     if (eventName === 'ui_interaction') {
       if (typeof input.controlId === 'string') properties.controlId = input.controlId.slice(0, 80);
-      if (typeof input.label === 'string') properties.label = input.label.replace(/\\s+/g, ' ').trim().slice(0, 80);
+      if (typeof input.label === 'string') properties.label = input.label.replace(/\s+/g, ' ').trim().slice(0, 80);
       if (typeof input.section === 'string') properties.section = input.section.slice(0, 80);
     }
     recordAnalyticsEvent(userId, eventName, properties, userId + ':client:' + eventId);
