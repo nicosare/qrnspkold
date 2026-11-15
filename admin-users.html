@@ -782,13 +782,14 @@ body.user-detail-open{overflow:hidden}
  function renderLuckyPrizes(prizes){
    luckyPrizeList.innerHTML=(prizes||[]).map((p,index)=>{
      const type=['energy','scans','subscription'].includes(p.rewardType)?p.rewardType:'energy';
+     const amountLabel=type==='subscription'?'Количество дней':'Количество';
      return '<div class="lucky-prize-row" data-lucky-row data-prize-id="'+esc(p.id||('prize_'+index))+'">'+
        '<label class="lucky-prize-field"><span>Название награды</span><input data-prize-title type="text" maxlength="60" value="'+esc(p.title||'')+'" required></label>'+
        '<label class="lucky-prize-field"><span>Тип</span><select data-prize-type>'+
         '<option value="energy"'+(type==='energy'?' selected':'')+'>Энергия</option>'+
         '<option value="scans"'+(type==='scans'?' selected':'')+'>Сканы</option>'+
         '<option value="subscription"'+(type==='subscription'?' selected':'')+'>Безлимит</option></select></label>'+
-       '<label class="lucky-prize-field"><span>Количество / дней</span><input data-prize-amount type="number" min="1" max="'+(type==='subscription'?'3650':'100000')+'" step="1" value="'+esc(p.amount||1)+'" required></label>'+
+       '<label class="lucky-prize-field"><span>'+amountLabel+'</span><input data-prize-amount type="number" min="1" max="'+(type==='subscription'?'3650':'100000')+'" step="1" value="'+esc(p.amount||1)+'" required></label>'+
        '<label class="lucky-prize-field"><span>Вероятность, %</span><input data-prize-probability type="number" min="0" max="100" step="0.01" value="'+Number(p.probability||0).toFixed(2)+'" required></label>'+
        '<label class="lucky-prize-enabled"><input data-prize-enabled type="checkbox"'+(p.enabled===false?'':' checked')+'><span>Активна</span></label>'+
        '<button class="lucky-prize-remove" type="button" data-prize-remove>Удалить</button>'+
