@@ -1791,7 +1791,7 @@ app.post('/api/energy/exchange', (req, res) => {
       recordEnergyHistory.run(
         userId, nowIso, -energyCost, 'energy_exchange',
         'Обмен ' + energyCost + ' энергии на ' + scans + ' сканов',
-        'energy-exchange:' + userId + ':' + nowIso
+        'energy-exchange:' + userId + ':' + crypto.randomBytes(12).toString('hex')
       );
       recordScanCredit.run(
         userId,
@@ -3853,7 +3853,8 @@ app.get('/api/admin/users/:vkId/activity', requireAdmin, (req, res) => {
     const route = [scan.transport_type, scan.route_number ? '№ ' + scan.route_number : ''].filter(Boolean).join(' ');
     const vehicle = scan.vehicle_number ? 'Т/С № ' + scan.vehicle_number : 'Номер Т/С не указан';
     const price = scan.price === null || scan.price === undefined ? '' : ' · ' + Number(scan.price).toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + ' ₽';
-    add('scan:' + scan.id, 'rides', 'Успешная поездка' + (route ? ' · ' + route : ''), vehicle + ' · ' + (scanSources[props.scanSource] || scanSources.unknown) + price, scan.scanned_at);
+    const scanUsage = props.scanSource === 'package' ? '−1 скан' : props.scanSource === 'daily' ? 'Ежедневный скан' : '';
+    add('scan:' + scan.id, 'rides', 'Успешная поездка' + (route ? ' · ' + route : ''), vehicle + ' · ' + (scanSources[props.scanSource] || scanSources.unknown) + price, scan.scanned_at, scanUsage);
   }
 
   const credits = db.prepare(
@@ -4134,7 +4135,7 @@ app.post('/api/admin/users/:vkId/entitlement', requireAdmin, (req, res) => {
       const updated = db.prepare('UPDATE users SET game_attempts = COALESCE(game_attempts, 0) + ? WHERE vk_id = ?').run(amount, vkId);
       if (updated.changes !== 1) throw new Error('Не удалось начислить энергию.');
       const grantedAt = now.toISOString();
-      recordEnergyHistory.run(vkId, grantedAt, amount, 'admin', 'Ручное начисление администратором', 'admin-energy:' + req.vkUserId + ':' + vkId + ':' + grantedAt);
+      recordEnergyHistory.run(vkId, grantedAt, amount, 'admin', 'Ручное начисление администратором', 'admin-energy:' + req.vkUserId + ':' + vkId + ':' + crypto.randomBytes(12).toString('hex'));
     } else if (action === 'set_unlimited') {
       if (typeof req.body?.enabled !== 'boolean') {
         return res.status(400).json({ error: 'Не задано состояние безлимита.' });
