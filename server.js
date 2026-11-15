@@ -174,6 +174,14 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_admin_user_actions_user_time
     ON admin_user_actions(vk_id, created_at DESC, id DESC);
 `);
+// Onboarding completion is stored per VK account, independently of browser storage.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS user_onboarding (
+    vk_id TEXT PRIMARY KEY,
+    main_completed_at TEXT DEFAULT NULL
+  );
+`);
+
 // Persistent transport metadata cache. Price rules remain separate so admins can
 // change the default fare without invalidating the transport lookup cache.
 db.exec(`
@@ -3246,6 +3254,33 @@ app.post('/api/referral-prompt/disable', (req, res) => {
     disableReferralPrompts.run(userId, new Date().toISOString());
     return res.json({ ok: true });
   } catch (error) {
+    return res.status(401).json({ error: 'VK authentication failed' });
+  }
+});
+
+app.post('/api/onboarding/state', (req, res) => {
+  try {
+    const { userId } = parseLaunchParams(req.body?.launchParams);
+    const row = db.prepare('SELECT main_completed_at FROM user_onboarding WHERE vk_id = ?').get(userId);
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ ok: true, completed: Boolean(row?.main_completed_at) });
+  } catch {
+    return res.status(401).json({ error: 'VK authentication failed' });
+  }
+});
+
+app.post('/api/onboarding/complete', (req, res) => {
+  try {
+    const { userId } = parseLaunchParams(req.body?.launchParams);
+    const completedAt = new Date().toISOString();
+    db.prepare(`
+      INSERT INTO user_onboarding (vk_id, main_completed_at)
+      VALUES (?, ?)
+      ON CONFLICT(vk_id) DO UPDATE SET
+        main_completed_at = COALESCE(user_onboarding.main_completed_at, excluded.main_completed_at)
+    `).run(userId, completedAt);
+    return res.json({ ok: true, completed: true });
+  } catch {
     return res.status(401).json({ error: 'VK authentication failed' });
   }
 });
