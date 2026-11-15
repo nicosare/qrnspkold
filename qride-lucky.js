@@ -435,13 +435,7 @@
     return getPrizes().find(function (item) { return item.id === nearest.dataset.luckyPrize; }) || sortedAttractive(getPrizes())[0];
   }
   function triggerHaptic(style) {
-    try {
-      if (window.vkBridge && typeof window.vkBridge.send === 'function') {
-        Promise.resolve(window.vkBridge.send('VKWebAppTapticImpactOccurred', { style: style || 'light' })).catch(function () {
-          if (navigator.vibrate) navigator.vibrate(style === 'medium' ? 24 : 8);
-        });
-      } else if (navigator.vibrate) navigator.vibrate(style === 'medium' ? 24 : 8);
-    } catch (_) {}
+    if (typeof window.qrideTaptic === 'function') window.qrideTaptic(style || 'light');
   }
   function centerOffset(index) {
     const card = rail.children[index];
