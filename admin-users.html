@@ -204,6 +204,18 @@ button{cursor:pointer;font-weight:650}.primary{background:var(--accent);border-c
 
 
 
+/* Shared control-room shell. */
+main{width:100%;max-width:1320px;margin:0 auto;padding:clamp(14px,2vw,28px) clamp(10px,1.8vw,22px) calc(28px + env(safe-area-inset-bottom))}
+.top{align-items:center;margin-bottom:16px}
+.panel{padding:clamp(13px,1.6vw,20px);border-radius:16px;box-shadow:0 4px 18px #15243b07}
+.admin-nav{gap:6px;margin-bottom:12px}
+.admin-nav a{text-decoration:none;transition:background .15s,border-color .15s,color .15s}
+.admin-nav a:hover{background:#f5f8fc;border-color:#d2dce8}
+.admin-nav a.active:hover{background:#eaf3ff;border-color:#bfdaff}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid #2787f5;outline-offset:2px}
+button:disabled{opacity:.58;cursor:not-allowed}
+@media(max-width:600px){main{padding:12px 10px calc(22px + env(safe-area-inset-bottom))}.panel{padding:12px;border-radius:14px}.admin-nav{gap:6px}}
+ 
 /* QRide control room — compact registry and focused user detail. */
 body.user-detail-open{overflow:hidden}
 .users-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:0 0 12px}
