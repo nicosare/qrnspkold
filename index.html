@@ -5187,11 +5187,16 @@ body.scan-loading-open { overflow: hidden !important; }
           console.warn('VK Bridge is not ready yet; trying to request the profile anyway:', initError);
         }
       }
-      return withTimeout(
+      const info = await withTimeout(
         window.vkBridge.send('VKWebAppGetUserInfo'),
         3500,
         'VK profile request timed out'
       );
+      const expectedVkUserId = new URLSearchParams(launchParams).get('vk_user_id');
+      if (info && info.id != null && expectedVkUserId && String(info.id) !== String(expectedVkUserId)) {
+        throw new Error('VK returned profile data for a different account');
+      }
+      return info || {};
     }
     function mapVkProfile(info) {
       return {
@@ -5206,7 +5211,7 @@ body.scan-loading-open { overflow: hidden !important; }
       const birthDateVisible = Number(info && info.bdate_visibility) !== 0;
       window.qrideVkProfile = {
         sex: vkSex === 1 || vkSex === 2 ? vkSex : null,
-        bdate: birthDateVisible && typeof info.bdate === 'string' ? info.bdate : ''
+        bdate: birthDateVisible && info && typeof info.bdate === 'string' ? info.bdate : ''
       };
       if (typeof window.qrideCelebrateBirthday === 'function') {
         window.qrideCelebrateBirthday(window.qrideVkProfile);
@@ -5297,7 +5302,7 @@ body.scan-loading-open { overflow: hidden !important; }
             const birthDateVisible = Number(info && info.bdate_visibility) !== 0;
             window.qrideVkProfile = {
               sex: vkSex === 1 || vkSex === 2 ? vkSex : null,
-              bdate: birthDateVisible && typeof info.bdate === 'string' ? info.bdate : ''
+              bdate: birthDateVisible && info && typeof info.bdate === 'string' ? info.bdate : ''
             };
 
             const updatedFirstName = String(profile.first_name || '').trim();
