@@ -200,6 +200,10 @@
         }
         rafId = requestAnimationFrame(tick);
       } catch (error) {
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+          stream = null;
+        }
         let message = normalizeError(error);
         if (error && error.name === 'NotAllowedError') {
           message = 'VK не разрешил прямой доступ к камере.';
