@@ -3820,7 +3820,15 @@ app.get('/api/admin/users/:vkId/activity', requireAdmin, (req, res) => {
     activity.push({ id: String(id), category, title: String(title || ''), description: String(description || ''), at: timestamp, amountLabel: String(amountLabel || '') });
   };
   const parseJson = value => { try { return JSON.parse(value || '{}') || {}; } catch (_) { return {}; } };
-  const pluralScans = amount => amount === 1 ? 'скан' : amount >= 2 && amount <= 4 ? 'скана' : 'сканов';
+  const pluralScans = amount => {
+    const value = Math.abs(Number(amount) || 0);
+    const lastTwo = value % 100;
+    const last = value % 10;
+    if (lastTwo >= 11 && lastTwo <= 14) return 'сканов';
+    if (last === 1) return 'скан';
+    if (last >= 2 && last <= 4) return 'скана';
+    return 'сканов';
+  };
   const scanSources = { subscription: 'по подписке', unlimited: 'по безлимиту', package: 'из пакета', daily: 'ежедневный скан', unknown: 'источник не определён' };
   const creditSources = {
     welcome: 'Приветственный бонус', daily: 'Ежедневный бонус', referral: 'Реферальный бонус',
@@ -3855,7 +3863,7 @@ app.get('/api/admin/users/:vkId/activity', requireAdmin, (req, res) => {
     const amount = Number(item.amount) || 0;
     const source = creditSources[item.source] || 'Начисление сканов';
     const detail = [source, item.note].filter(Boolean).join(' · ');
-    add('scan-credit:' + item.id, 'balance', '+' + amount + ' ' + pluralScans(amount), detail, item.credited_at, '+' + amount + ' скан' + (amount === 1 ? '' : 'ов'));
+    add('scan-credit:' + item.id, 'balance', '+' + amount + ' ' + pluralScans(amount), detail, item.credited_at, '+' + amount + ' ' + pluralScans(amount));
   }
 
   const energyRows = db.prepare(
