@@ -29,6 +29,7 @@
   let luckyHintTimer = 0;
   let onboardingStatusReady = false;
   let onboardingCompleted = false;
+  let luckyOnboardingCompleted = false;
 
   function storageHas(key) {
     try { if (window.localStorage.getItem(key) === '1') return true; } catch (_) {}
@@ -41,12 +42,12 @@
     try { window.sessionStorage.setItem(key, '1'); } catch (_) {}
   }
 
-  function postOnboardingRequest(endpoint) {
+  function postOnboardingRequest(endpoint, extra) {
     if (!launchParams) return Promise.reject(new Error('VK launch parameters are missing'));
     return fetch(new URL('api/onboarding/' + endpoint, window.location.href), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ launchParams: launchParams }),
+      body: JSON.stringify(Object.assign({ launchParams: launchParams }, extra || {})),
       cache: 'no-store'
     }).then(function (response) {
       if (!response.ok) throw new Error('Onboarding request failed: ' + response.status);
@@ -63,9 +64,21 @@
     });
   }
 
+  function markLuckyOnboardingCompleted() {
+    if (luckyOnboardingCompleted) return;
+    luckyOnboardingCompleted = true;
+    storageSet(luckySeenKey);
+    postOnboardingRequest('complete', { kind: 'lucky' }).catch(function (error) {
+      console.warn('[QRide onboarding] Could not save roulette completion:', error);
+    });
+  }
+
   function loadOnboardingStatus() {
     postOnboardingRequest('state').then(function (result) {
       onboardingCompleted = Boolean(result && result.completed);
+      luckyOnboardingCompleted = Boolean(result && result.luckyCompleted);
+      if (!luckyOnboardingCompleted && storageHas(luckySeenKey)) markLuckyOnboardingCompleted();
+      else if (luckyOnboardingCompleted) storageSet(luckySeenKey);
       // Migrate a previously saved local completion to the account record.
       if (!onboardingCompleted && storageHas(seenKey)) {
         markOnboardingCompleted();
@@ -76,6 +89,7 @@
       console.warn('[QRide onboarding] Could not load server status:', error);
       // Keep the existing local behavior as a temporary fallback if the API is unavailable.
       onboardingCompleted = storageHas(seenKey);
+      luckyOnboardingCompleted = storageHas(luckySeenKey);
     }).finally(function () {
       onboardingStatusReady = true;
       scheduleFirstRun();
@@ -611,7 +625,7 @@
 
     if (step.id === 'lucky') {
       state.sawLucky = true;
-      storageSet(luckySeenKey);
+      markLuckyOnboardingCompleted();
     }
     if (typeof window.qrideMascotReact === 'function') window.qrideMascotReact(step.reaction || 'wink');
 
@@ -676,7 +690,7 @@
     tour = null;
 
     if (state.mode === 'auto' || state.mode === 'replay') markOnboardingCompleted();
-    if (state.sawLucky) storageSet(luckySeenKey);
+    if (state.sawLucky) markLuckyOnboardingCompleted();
     startOverlay.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
     maybeShowLuckyHint();
   }
@@ -720,7 +734,8 @@
 
     // Skipping the whole tour should not immediately trigger a second hint
     // for a roulette that was already available during the skipped tour.
-    if (!completed && state.mode !== 'lucky' && luckyAvailable) storageSet(luckySeenKey);
+    if (!completed && state.mode !== 'lucky' && luckyAvailable) markLuckyOnboardingCompleted();
+    if (!completed && state.mode === 'lucky') markLuckyOnboardingCompleted();
 
     const title = completed ? 'На этом всё!' : 'Хорошего дня!';
     const copy = completed
