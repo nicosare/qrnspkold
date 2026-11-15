@@ -1,0 +1,57 @@
+/* QRide UI foundation.
+   Shared mobile-native safeguards; keep component-specific behavior in its own stylesheet. */
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+body {
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+/* Avoid delayed double-tap handling on controls without changing scrollable gestures. */
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+summary,
+[role="button"] {
+    touch-action: manipulation;
+}
+
+/* Keyboard users retain a consistent focus indicator. Component-specific focus rules may refine it. */
+:where(button, a[href], input, select, textarea, summary, [role="button"], [tabindex]):focus-visible {
+    outline: 2px solid #0052EE;
+    outline-offset: 2px;
+}
+
+/* Prevent iOS/WebView input focus from unexpectedly zooming the page on narrow touch screens. */
+@media (max-width: 600px) and (hover: none) and (pointer: coarse) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+    select,
+    textarea {
+        font-size: 16px;
+    }
+}
+
+/* Respect the operating system's reduced-motion preference across shared and component UI. */
+@media (prefers-reduced-motion: reduce) {
+    html:focus-within {
+        scroll-behavior: auto !important;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* The tariffs sheet uses the dynamic viewport when supported; the fallback remains in its component CSS. */
+.qride-scan-tariffs-sheet {
+    max-height: min(88dvh, 820px);
+}
