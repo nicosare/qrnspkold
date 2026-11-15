@@ -124,17 +124,44 @@
             .qride-camera-scanner__frame:after{content:"";position:absolute;inset:12%;border:2px solid #55a5ff;border-radius:12px;pointer-events:none}
             .qride-camera-scanner__hint{max-width:320px;text-align:center;color:#d5dfeb;font-size:14px;line-height:1.45}
             .qride-camera-scanner__status{min-height:20px;color:#b8d8ff;font-size:13px;text-align:center}
+            .qride-camera-scanner__photo{display:none;align-items:center;justify-content:center;min-height:46px;padding:0 20px;border:0;border-radius:14px;background:#0052ee;color:#fff;font:inherit;font-size:15px;font-weight:700}
+            .qride-camera-scanner__photo.is-visible{display:flex}
           </style>
           <div class="qride-camera-scanner__top"><div class="qride-camera-scanner__title">Сканирование QR-кода</div><button class="qride-camera-scanner__close" type="button" aria-label="Закрыть">×</button></div>
           <div class="qride-camera-scanner__frame"><video autoplay muted playsinline></video></div>
           <div class="qride-camera-scanner__hint">Наведите камеру на QR-код транспорта. Держите его внутри рамки.</div>
           <div class="qride-camera-scanner__status" role="status">Запускаем камеру…</div>
+          <button class="qride-camera-scanner__photo" type="button">Сфотографировать QR-код</button>
+          <input class="qride-camera-scanner__file" type="file" accept="image/*" capture="environment" hidden>
         `;
         document.body.appendChild(overlay);
         video = overlay.querySelector('video');
         canvas = document.createElement('canvas');
         const context = canvas.getContext('2d', { willReadFrequently: true });
         const status = overlay.querySelector('.qride-camera-scanner__status');
+        const photoButton = overlay.querySelector('.qride-camera-scanner__photo');
+        const photoInput = overlay.querySelector('.qride-camera-scanner__file');
+        photoButton.addEventListener('click', () => photoInput.click());
+        photoInput.addEventListener('change', () => {
+          const file = photoInput.files && photoInput.files[0];
+          if (!file) return;
+          const imageUrl = URL.createObjectURL(file);
+          const image = new Image();
+          image.onload = () => {
+            canvas.width = image.naturalWidth;
+            canvas.height = image.naturalHeight;
+            context.drawImage(image, 0, 0);
+            URL.revokeObjectURL(imageUrl);
+            const result = jsQR(context.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height, { inversionAttempts: 'attemptBoth' });
+            if (result && result.data) finish(null, result.data);
+            else status.textContent = 'QR-код на фото не найден. Попробуйте ещё раз.';
+          };
+          image.onerror = () => {
+            URL.revokeObjectURL(imageUrl);
+            status.textContent = 'Не удалось открыть изображение. Попробуйте другое фото.';
+          };
+          image.src = imageUrl;
+        });
         overlay.querySelector('.qride-camera-scanner__close').addEventListener('click', () => {
           const error = new Error('Сканирование отменено.');
           error.code = 'SCAN_CANCELLED';
@@ -175,13 +202,19 @@
       } catch (error) {
         let message = normalizeError(error);
         if (error && error.name === 'NotAllowedError') {
-          message = 'VK не разрешил доступ к камере. Проверьте разрешение камеры для сайта VK в настройках iPhone.';
+          message = 'VK не разрешил прямой доступ к камере.';
         } else if (error && error.name === 'NotFoundError') {
           message = 'Камера на устройстве не найдена.';
         } else if (error && error.name === 'NotReadableError') {
           message = 'Камера уже используется другим приложением. Закройте его и попробуйте снова.';
         } else if (error && error.name === 'OverconstrainedError') {
           message = 'Не удалось выбрать камеру устройства. Попробуйте ещё раз.';
+        }
+        if (overlay && !settled && photoButton) {
+          status.textContent = message + ' Можно сделать фото QR-кода:';
+          overlay.querySelector('.qride-camera-scanner__hint').textContent = 'Нажмите кнопку ниже, сфотографируйте QR-код и подтвердите снимок.';
+          photoButton.classList.add('is-visible');
+          return;
         }
         finish(new Error(message));
       }
