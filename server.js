@@ -3959,6 +3959,9 @@ app.get('/api/admin/users/:vkId/activity', requireAdmin, (req, res) => {
     } else if (item.action === 'reset_account') {
       title = 'Сбросил баланс и подписку';
       description = details.note || description;
+    } else if (item.action === 'delete_scan') {
+      title = 'Удалил запись поездки';
+      description = [details.transportType, details.routeNumber ? 'маршрут № ' + details.routeNumber : '', details.vehicleNumber ? 'Т/С № ' + details.vehicleNumber : '', details.scannedAt ? 'Дата поездки: ' + details.scannedAt : ''].filter(Boolean).join(' · ') || description;
     }
     add('admin-action:' + item.id, 'balance', title, description, item.created_at);
   }
@@ -3992,13 +3995,25 @@ app.delete('/api/admin/users/:vkId/scans/:scanId', requireAdmin, (req, res) => {
   if (!Number.isSafeInteger(scanId) || scanId < 1) {
     return res.status(400).json({ error: 'Некорректный ID записи истории.' });
   }
-  const existing = db.prepare('SELECT id FROM scan_history WHERE id = ? AND vk_id = ?').get(scanId, vkId);
+  const existing = db.prepare(
+    'SELECT id, scanned_at, transport_type, route_number, vehicle_number FROM scan_history WHERE id = ? AND vk_id = ?'
+  ).get(scanId, vkId);
   if (!existing) return res.status(404).json({ error: 'Запись истории не найдена.' });
 
   try {
     const result = db.transaction(() => {
       const deleted = db.prepare('DELETE FROM scan_history WHERE id = ? AND vk_id = ?').run(scanId, vkId);
       if (deleted.changes !== 1) return null;
+      recordAdminUserAction.run(
+        vkId, req.vkUserId, 'delete_scan', new Date().toISOString(),
+        JSON.stringify({
+          scanId,
+          scannedAt: existing.scanned_at,
+          transportType: existing.transport_type,
+          routeNumber: existing.route_number,
+          vehicleNumber: existing.vehicle_number
+        })
+      );
       const latest = db.prepare(
         'SELECT scanned_at, vehicle_number, transport_type, route_number FROM scan_history WHERE vk_id = ? ORDER BY scanned_at DESC, id DESC LIMIT 1'
       ).get(vkId) || null;
