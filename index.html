@@ -41,6 +41,16 @@
 .roadnote-game-overlay .roadnote-game-reward-title{display:block!important;margin:0!important;color:#0052EE!important;font-size:10px!important;line-height:1.1!important;font-weight:900!important}
 .roadnote-game-overlay .roadnote-game-reward-caption{display:block!important;margin-top:2px!important;color:#526a84!important;font-size:8px!important;line-height:1.1!important}
 .roadnote-game-overlay .roadnote-game-start{position:relative!important;z-index:1!important;flex:0 0 auto!important;min-height:34px!important;margin:0!important;padding:7px 20px!important;font-size:13px!important;line-height:1.1!important}
+        .manual-ticket-shortcut{width:100%;min-height:38px;margin-top:8px;padding:8px 12px;border:1px solid #dce6f7;border-radius:11px;background:#f7faff;color:#31517f;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+        .manual-ticket-shortcut:active{background:#edf4ff}
+        .manual-ticket-sheet{padding-bottom:max(22px,env(safe-area-inset-bottom))}
+        .manual-ticket-fields{display:grid;gap:13px;margin:18px 0}
+        .manual-ticket-field{display:grid;gap:6px;color:#52627a;font-size:13px;font-weight:700}
+        .manual-ticket-field select,.manual-ticket-field input{width:100%;min-height:48px;border:1px solid #d9e2f0;border-radius:12px;padding:0 13px;background:#fff;color:#172b49;font:inherit;font-size:16px;outline:none;-webkit-user-select:text;user-select:text}
+        .manual-ticket-field select:focus,.manual-ticket-field input:focus{border-color:#0052ee;box-shadow:0 0 0 3px rgba(0,82,238,.10)}
+        .manual-ticket-submit{width:100%;min-height:50px;border:0;border-radius:13px;background:#0052ee;color:#fff;font:inherit;font-weight:700}
+        .manual-ticket-submit:disabled{opacity:.55}
+        .manual-ticket-status{min-height:18px;margin-top:9px;color:#c13b43;font-size:13px}
 </style>
 
 </head><body>Откройте QRide через VK Mini App.</body></html>`);
@@ -2515,6 +2525,7 @@ body.scan-loading-open { overflow: hidden !important; }
                     <span class="quickbar-button-label">К текущему билету</span>
                 </button>
             </div>
+            <button class="manual-ticket-shortcut" id="manual-ticket-open" type="button" aria-haspopup="dialog" aria-controls="manual-ticket-modal">Ввести маршрут вручную</button>
         </div>
         <div id="scan-status" class="start-status" role="status" aria-live="polite"></div>
 
@@ -2802,6 +2813,24 @@ body.scan-loading-open { overflow: hidden !important; }
 </section>
 
 
+
+<section class="qride-collect-info" id="manual-ticket-modal" role="dialog" aria-modal="true" aria-labelledby="manual-ticket-title" hidden>
+    <button class="qride-collect-info-backdrop" type="button" data-manual-ticket-close aria-label="Закрыть"></button>
+    <div class="qride-collect-info-sheet manual-ticket-sheet">
+        <div class="qride-collect-info-grabber" aria-hidden="true"></div>
+        <div class="qride-collect-info-top"><div><div class="qride-lucky-kicker">QRIDE · РУЧНОЙ ВВОД</div><h4 id="manual-ticket-title">Данные транспорта</h4></div><button class="qride-collect-info-close" type="button" data-manual-ticket-close aria-label="Закрыть">×</button></div>
+        <p class="qride-collect-info-copy">Укажи тип транспорта, маршрут и бортовой номер. За билет спишется 1 скан.</p>
+        <form id="manual-ticket-form" novalidate>
+            <div class="manual-ticket-fields">
+                <label class="manual-ticket-field">Вид транспорта<select id="manual-ticket-type" required><option>Автобус</option><option>Трамвай</option><option>Троллейбус</option></select></label>
+                <label class="manual-ticket-field">Номер маршрута<input id="manual-ticket-route" type="text" maxlength="24" autocomplete="off" placeholder="Например, 18" required></label>
+                <label class="manual-ticket-field">Номер Т/С<input id="manual-ticket-vehicle" type="text" maxlength="32" autocomplete="off" placeholder="Бортовой номер" required></label>
+            </div>
+            <button class="manual-ticket-submit" id="manual-ticket-submit" type="submit">Получить билет · 1 скан</button>
+            <p class="manual-ticket-status" id="manual-ticket-status" role="status" aria-live="polite"></p>
+        </form>
+    </div>
+</section>
 
 <section class="scan-loading-overlay" id="scan-loading-overlay" role="status" aria-live="polite" aria-busy="true" hidden>
     <div class="scan-loading-content">
@@ -3965,6 +3994,51 @@ body.scan-loading-open { overflow: hidden !important; }
             return false;
         }
     }
+
+    const manualModal=document.getElementById('manual-ticket-modal');
+    const manualForm=document.getElementById('manual-ticket-form');
+    const manualOpen=document.getElementById('manual-ticket-open');
+    const manualSubmit=document.getElementById('manual-ticket-submit');
+    const manualStatus=document.getElementById('manual-ticket-status');
+    let manualBusy=false, manualRequestId='';
+    function closeManualModal(){if(!manualModal||manualModal.hidden||manualBusy)return;manualModal.hidden=true;document.body.style.overflow='';}
+    function openManualModal(){if(!manualModal||manualBusy)return;manualStatus.textContent='';manualModal.hidden=false;document.body.style.overflow='hidden';}
+    manualOpen?.addEventListener('click',openManualModal);
+    manualModal?.querySelectorAll('[data-manual-ticket-close]').forEach(b=>b.addEventListener('click',closeManualModal));
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')closeManualModal();});
+    if(manualModal){
+      const sheet=manualModal.querySelector('.manual-ticket-sheet');let sy=0,sx=0;
+      sheet.addEventListener('touchstart',e=>{if(e.touches.length===1){sy=e.touches[0].clientY;sx=e.touches[0].clientX;}},{passive:true});
+      sheet.addEventListener('touchend',e=>{if(e.changedTouches.length!==1||manualBusy)return;const dy=e.changedTouches[0].clientY-sy,dx=e.changedTouches[0].clientX-sx;if(dy>90&&Math.abs(dx)<70&&sheet.scrollTop<=0)closeManualModal();},{passive:true});
+    }
+    manualForm?.addEventListener('submit',async e=>{
+      e.preventDefault();if(manualBusy||scanProcessing)return;
+      const transportType=document.getElementById('manual-ticket-type').value;
+      const routeNumber=document.getElementById('manual-ticket-route').value.trim();
+      const vehicleNumber=document.getElementById('manual-ticket-vehicle').value.trim();
+      if(!routeNumber||!vehicleNumber){manualStatus.textContent='Заполни номер маршрута и номер Т/С.';return;}
+      if(!manualRequestId)manualRequestId=crypto.randomUUID();
+      manualBusy=true;scanProcessing=true;manualSubmit.disabled=true;manualSubmit.textContent='Готовим билет…';manualStatus.textContent='';
+      let loading=false;
+      try{
+        const p=window.location.pathname,base=p.endsWith('/')?p:(p.slice(p.lastIndexOf('/')+1).includes('.')?p.slice(0,p.lastIndexOf('/')+1):p+'/');
+        beginScanLoading();loading=Boolean(scanLoadingOverlayElement);updateScanLoadingStage(0,'Проверяем введённые данные…');
+        await waitForScanLoading(400);updateScanLoadingStage(1,'Подготавливаем билет…');
+        const response=await fetch(new URL(base+'api/manual-ticket',window.location.origin).toString(),{method:'POST',headers:{'Content-Type':'application/json','Authorization':getVkAuthorizationHeader()},body:JSON.stringify({transportType,routeNumber,vehicleNumber,scanRequestId:manualRequestId}),cache:'no-store',credentials:'omit'});
+        const payload=await response.json().catch(()=>({}));
+        if(!response.ok){if(payload.code==='SCAN_BALANCE_EMPTY')updateScanBalance(payload.scanBalance??0);if(response.status>=400&&response.status<500)manualRequestId='';throw new Error(payload.error||'Не удалось оформить билет.');}
+        manualRequestId='';
+        const src=payload.data||{};
+        const data={vehicleType:normalizeTransportType(src.transportType||transportType),routeNumber:cleanCapturedValue(String(src.routeNumber||routeNumber)),vehicleNumber:cleanCapturedValue(String(src.vehicleNumber||vehicleNumber)),price:Number(src.price),scannedAt:payload.scannedAt,scanBalance:payload.scanBalance,subscriptionUntil:payload.subscriptionUntil,unlimited:payload.unlimited===true,subscriptionActive:payload.subscriptionActive===true};
+        const details=data.vehicleType+' №'+data.routeNumber+' · Т/С '+data.vehicleNumber;
+        setScanLoadingStepDetail(1,details);if(scanLoadingTransportChipElement)scanLoadingTransportChipElement.textContent=data.vehicleType+' №'+data.routeNumber;
+        updateScanLoadingStage(2,'Данные приняты · '+details);await waitForScanLoading(400);
+        updateScanBalance(data.scanBalance,data.subscriptionUntil,data.unlimited,data.subscriptionActive);updateScanLoadingStage(3,'Кью собирает QR-билет…');
+        applyTransportData(data);updateContinueTicketButton(Math.max(currentScanCount,1));completeScanLoading(details);await waitForScanLoading(650);
+        manualModal.hidden=true;document.body.style.overflow='';closeStartOverlay();await hideScanLoading();manualForm.reset();
+      }catch(err){if(loading)await hideScanLoading();manualStatus.textContent=err.message||'Не удалось оформить билет.';}
+      finally{manualBusy=false;scanProcessing=false;manualSubmit.disabled=false;manualSubmit.textContent='Получить билет · 1 скан';refreshScanButton();}
+    });
 
     async function processScannedCode(code) {
         if (scanProcessing) return;
