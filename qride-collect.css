@@ -535,3 +535,101 @@
     .qride-collect-info,
     .qride-collect-info-sheet { transition:none !important; }
 }
+
+
+/* QRide — manual ticket entry */
+.manual-ticket-shortcut {
+    box-sizing:border-box;
+    display:block;
+    width:100%;
+    min-height:38px;
+    margin:8px 0 0;
+    padding:8px 12px;
+    border:1px solid #dce6f7;
+    border-radius:11px;
+    background:#f7faff;
+    color:#31517f;
+    font-family:inherit;
+    font-size:13px;
+    line-height:1.25;
+    font-weight:700;
+    text-align:center;
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+}
+.manual-ticket-shortcut:active { background:#edf4ff; }
+.manual-ticket-shortcut:focus-visible { outline:3px solid #91baff; outline-offset:2px; }
+.manual-ticket-sheet { padding-bottom:max(22px,env(safe-area-inset-bottom)); }
+.manual-ticket-fields {
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    gap:13px;
+    margin:18px 0;
+}
+.manual-ticket-field {
+    display:grid;
+    gap:6px;
+    min-width:0;
+    color:#52627a;
+    font-size:13px;
+    line-height:1.3;
+    font-weight:750;
+}
+.manual-ticket-field select,
+.manual-ticket-field input {
+    box-sizing:border-box;
+    display:block;
+    width:100%;
+    min-width:0;
+    min-height:48px;
+    margin:0;
+    padding:0 13px;
+    border:1px solid #d9e2f0;
+    border-radius:12px;
+    background:#fff;
+    color:#172b49;
+    font-family:inherit;
+    font-size:16px;
+    line-height:1.2;
+    font-weight:500;
+    outline:none;
+    -webkit-user-select:text;
+    user-select:text;
+}
+.manual-ticket-field select:focus,
+.manual-ticket-field input:focus {
+    border-color:#0052ee;
+    box-shadow:0 0 0 3px rgba(0,82,238,.10);
+}
+.manual-ticket-submit {
+    box-sizing:border-box;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    min-height:50px;
+    margin:0;
+    padding:12px 18px;
+    border:0;
+    border-radius:13px;
+    background:#0052ee;
+    color:#fff;
+    font-family:inherit;
+    font-size:14px;
+    line-height:1.2;
+    font-weight:800;
+    -webkit-tap-highlight-color:transparent;
+}
+.manual-ticket-submit:active:not(:disabled) { background:#0046d4; }
+.manual-ticket-submit:disabled { opacity:.55; }
+.manual-ticket-status {
+    min-height:18px;
+    margin:9px 0 0;
+    color:#c13b43;
+    font-size:13px;
+    line-height:1.35;
+}
+.manual-ticket-status:empty { display:none; }
+@media(max-width:360px) {
+    .manual-ticket-fields { gap:11px; }
+}
