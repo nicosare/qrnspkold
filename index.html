@@ -4019,10 +4019,14 @@ body.scan-loading-open { overflow: hidden !important; }
       if(!routeNumber||!vehicleNumber){manualStatus.textContent='Заполни номер маршрута и номер Т/С.';return;}
       if(!manualRequestId)manualRequestId=crypto.randomUUID();
       manualBusy=true;scanProcessing=true;manualSubmit.disabled=true;manualSubmit.textContent='Готовим билет…';manualStatus.textContent='';
-      let loading=false;
+      let loading=false, manualLoadingLabels=[];
       try{
         const p=window.location.pathname,base=p.endsWith('/')?p:(p.slice(p.lastIndexOf('/')+1).includes('.')?p.slice(0,p.lastIndexOf('/')+1):p+'/');
-        beginScanLoading();loading=Boolean(scanLoadingOverlayElement);updateScanLoadingStage(0,'Проверяем введённые данные…');
+        beginScanLoading();loading=Boolean(scanLoadingOverlayElement);
+        const stepNodes=scanLoadingOverlayElement?.querySelectorAll('.scan-loading-step-copy strong')||[];
+        manualLoadingLabels=Array.from(stepNodes,node=>node.textContent);
+        ['Проверяем данные транспорта','Подготавливаем параметры билета','Проверяем стоимость','Формируем QR-билет'].forEach((label,index)=>{if(stepNodes[index])stepNodes[index].textContent=label;});
+        updateScanLoadingStage(0,'Проверяем введённые данные…');
         await waitForScanLoading(400);updateScanLoadingStage(1,'Подготавливаем билет…');
         const response=await fetch(new URL(base+'api/manual-ticket',window.location.origin).toString(),{method:'POST',headers:{'Content-Type':'application/json','Authorization':getVkAuthorizationHeader()},body:JSON.stringify({transportType,routeNumber,vehicleNumber,scanRequestId:manualRequestId}),cache:'no-store',credentials:'omit'});
         const payload=await response.json().catch(()=>({}));
@@ -4030,6 +4034,7 @@ body.scan-loading-open { overflow: hidden !important; }
         manualRequestId='';
         const src=payload.data||{};
         const data={vehicleType:normalizeTransportType(src.transportType||transportType),routeNumber:cleanCapturedValue(String(src.routeNumber||routeNumber)),vehicleNumber:cleanCapturedValue(String(src.vehicleNumber||vehicleNumber)),price:Number(src.price),scannedAt:payload.scannedAt,scanBalance:payload.scanBalance,subscriptionUntil:payload.subscriptionUntil,unlimited:payload.unlimited===true,subscriptionActive:payload.subscriptionActive===true};
+        rememberReferralPrompt(data);
         const details=data.vehicleType+' №'+data.routeNumber+' · Т/С '+data.vehicleNumber;
         setScanLoadingStepDetail(1,details);if(scanLoadingTransportChipElement)scanLoadingTransportChipElement.textContent=data.vehicleType+' №'+data.routeNumber;
         updateScanLoadingStage(2,'Данные приняты · '+details);await waitForScanLoading(400);
@@ -4037,7 +4042,10 @@ body.scan-loading-open { overflow: hidden !important; }
         applyTransportData(data);updateContinueTicketButton(Math.max(currentScanCount,1));completeScanLoading(details);await waitForScanLoading(650);
         manualModal.hidden=true;document.body.style.overflow='';closeStartOverlay();await hideScanLoading();manualForm.reset();
       }catch(err){if(loading)await hideScanLoading();manualStatus.textContent=err.message||'Не удалось оформить билет.';}
-      finally{manualBusy=false;scanProcessing=false;manualSubmit.disabled=false;manualSubmit.textContent='Получить билет · 1 скан';refreshScanButton();}
+      finally{
+        if(manualLoadingLabels.length){const nodes=scanLoadingOverlayElement?.querySelectorAll('.scan-loading-step-copy strong')||[];manualLoadingLabels.forEach((label,index)=>{if(nodes[index])nodes[index].textContent=label;});}
+        manualBusy=false;scanProcessing=false;manualSubmit.disabled=false;manualSubmit.textContent='Получить билет · 1 скан';refreshScanButton();
+      }
     });
 
     async function processScannedCode(code) {
