@@ -1073,7 +1073,14 @@ function normalizeCollectRouteNumber(value=''){return String(value==null?'':valu
 function collectImageUrl(fileName){return '/roadnote/collect-images/'+encodeURIComponent(String(fileName||''));}
 function pickCollectImageId(transportType){
  const rows=db.prepare('SELECT image.id,COUNT(route.id) AS assigned_count FROM collect_images image LEFT JOIN collect_routes route ON route.image_id=image.id WHERE image.transport_type=? GROUP BY image.id ORDER BY assigned_count ASC,image.id ASC').all(transportType);
- if(!rows.length)return null;const least=Number(rows[0].assigned_count||0);const candidates=rows.filter(row=>Number(row.assigned_count||0)===least);return Number(candidates[crypto.randomInt(candidates.length)].id);
+ if(!rows.length)return null;
+ const recentLimit=Math.max(0,rows.length-1);
+ const recent=recentLimit?new Set(db.prepare('SELECT image_id FROM collect_routes WHERE transport_type=? ORDER BY updated_at DESC,id DESC LIMIT ?').all(transportType,recentLimit).map(row=>Number(row.image_id))):new Set();
+ const available=rows.filter(row=>!recent.has(Number(row.id)));
+ const pool=available.length?available:rows;
+ const least=Math.min(...pool.map(row=>Number(row.assigned_count||0)));
+ const candidates=pool.filter(row=>Number(row.assigned_count||0)===least);
+ return Number(candidates[crypto.randomInt(candidates.length)].id);
 }
 function ensureCollectRoute(typeValue,routeValue,options={}){
  const type=normalizeTransportType(typeValue),number=normalizeCollectRouteNumber(routeValue);if(!collectTransportTypeSet.has(type)||!number)return null;
