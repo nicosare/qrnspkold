@@ -2814,9 +2814,17 @@ body.scan-loading-open { overflow: hidden !important; }
         <p class="qride-collect-info-copy">Укажи тип транспорта, маршрут и бортовой номер. За билет спишется 1 скан.</p>
         <form id="manual-ticket-form" novalidate>
             <div class="manual-ticket-fields">
-                <label class="manual-ticket-field">Вид транспорта<select id="manual-ticket-type" required><option>Автобус</option><option>Трамвай</option><option>Троллейбус</option></select></label>
-                <label class="manual-ticket-field">Номер маршрута<input id="manual-ticket-route" type="text" maxlength="24" autocomplete="off" placeholder="Например, 18" required></label>
-                <label class="manual-ticket-field">Номер Т/С<input id="manual-ticket-vehicle" type="text" maxlength="32" autocomplete="off" placeholder="Бортовой номер" required></label>
+                <div class="manual-ticket-field">
+                    <span id="manual-ticket-type-label">Вид транспорта</span>
+                    <input id="manual-ticket-type" type="hidden" value="Автобус">
+                    <div class="manual-ticket-transport-options" role="group" aria-labelledby="manual-ticket-type-label">
+                        <button class="manual-ticket-transport-option is-selected" type="button" data-manual-transport="Автобус" aria-pressed="true">Автобус</button>
+                        <button class="manual-ticket-transport-option" type="button" data-manual-transport="Трамвай" aria-pressed="false">Трамвай</button>
+                        <button class="manual-ticket-transport-option" type="button" data-manual-transport="Троллейбус" aria-pressed="false">Троллейбус</button>
+                    </div>
+                </div>
+                <label class="manual-ticket-field">Номер маршрута<input id="manual-ticket-route" type="text" inputmode="numeric" pattern="[0-9A-Za-zА-Яа-яЁё/-]*" maxlength="24" autocomplete="off" placeholder="Например, 18" required></label>
+                <label class="manual-ticket-field">Номер Т/С<input id="manual-ticket-vehicle" type="text" inputmode="numeric" pattern="[0-9A-Za-zА-Яа-яЁё/-]*" maxlength="32" autocomplete="off" placeholder="Бортовой номер" required></label>
             </div>
             <button class="manual-ticket-submit" id="manual-ticket-submit" type="submit">Получить билет · 1 скан</button>
             <p class="manual-ticket-status" id="manual-ticket-status" role="status" aria-live="polite"></p>
@@ -3895,9 +3903,8 @@ body.scan-loading-open { overflow: hidden !important; }
         }
 
         clearPaytagScanRequestId(paytagid);
-        if (payload.energyRewardGranted === true) {
-            window.dispatchEvent(new CustomEvent('roadnote:scan-success'));
-        }
+        // Collection is based on every successful scan, not on energy rewards.
+        window.dispatchEvent(new CustomEvent('roadnote:scan-success'));
         const source = payload?.data || {};
         return {
             vehicleType: normalizeTransportType(source.transportType || source.vehicleType || ''),
@@ -3992,6 +3999,18 @@ body.scan-loading-open { overflow: hidden !important; }
     const manualOpen=document.getElementById('manual-ticket-open');
     const manualSubmit=document.getElementById('manual-ticket-submit');
     const manualStatus=document.getElementById('manual-ticket-status');
+    const manualTransportInput=document.getElementById('manual-ticket-type');
+    const manualTransportButtons=manualModal?.querySelectorAll('[data-manual-transport]')||[];
+    manualTransportButtons.forEach(button=>button.addEventListener('click',()=>{
+      if(manualBusy)return;
+      const selected=button.dataset.manualTransport||'Автобус';
+      manualTransportInput.value=selected;
+      manualTransportButtons.forEach(option=>{
+        const active=option===button;
+        option.classList.toggle('is-selected',active);
+        option.setAttribute('aria-pressed',active?'true':'false');
+      });
+    }));
     let manualBusy=false, manualRequestId='', manualPreviousOverflow='';
     function closeManualModal(){if(!manualModal||manualModal.hidden||manualBusy)return;manualModal.hidden=true;document.body.style.overflow=manualPreviousOverflow;}
     function openManualModal(){if(!manualModal||manualBusy)return;manualStatus.textContent='';manualPreviousOverflow=document.body.style.overflow;manualModal.hidden=false;document.body.style.overflow='hidden';}
@@ -4024,6 +4043,8 @@ body.scan-loading-open { overflow: hidden !important; }
         const payload=await response.json().catch(()=>({}));
         if(!response.ok){if(payload.code==='SCAN_BALANCE_EMPTY')updateScanBalance(payload.scanBalance??0);if(response.status>=400&&response.status<500)manualRequestId='';throw new Error(payload.error||'Не удалось оформить билет.');}
         manualRequestId='';
+        // The manual scan is already persisted in scan_history; refresh Collect immediately.
+        window.dispatchEvent(new CustomEvent('roadnote:scan-success'));
         const src=payload.data||{};
         const data={vehicleType:normalizeTransportType(src.transportType||transportType),routeNumber:cleanCapturedValue(String(src.routeNumber||routeNumber)),vehicleNumber:cleanCapturedValue(String(src.vehicleNumber||vehicleNumber)),price:Number(src.price),scannedAt:payload.scannedAt,scanBalance:payload.scanBalance,subscriptionUntil:payload.subscriptionUntil,unlimited:payload.unlimited===true,subscriptionActive:payload.subscriptionActive===true};
         rememberReferralPrompt(data);
