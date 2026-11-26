@@ -2,28 +2,7 @@
    Component styles only. Shared bottom-sheet primitives remain in qride-collect.css. */
 
 .manual-ticket-shortcut {
-    box-sizing: border-box;
-    display: block;
-    width: 100%;
-    min-height: 38px;
     margin: 8px 0 0;
-    padding: 8px 12px;
-    border: 1px solid #dce6f7;
-    border-radius: 11px;
-    background: #f7faff;
-    color: #31517f;
-    font: inherit;
-    font-size: 13px;
-    line-height: 1.25;
-    font-weight: 700;
-    text-align: center;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-}
-.manual-ticket-shortcut:active { background: #edf4ff; }
-.manual-ticket-shortcut:focus-visible {
-    outline: 3px solid #91baff;
-    outline-offset: 2px;
 }
 
 .manual-ticket-sheet {
