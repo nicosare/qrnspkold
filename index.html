@@ -2823,8 +2823,8 @@ body.scan-loading-open { overflow: hidden !important; }
                         <button class="manual-ticket-transport-option" type="button" data-manual-transport="Троллейбус" aria-pressed="false">Троллейбус</button>
                     </div>
                 </div>
-                <label class="manual-ticket-field">Номер маршрута<input id="manual-ticket-route" type="text" inputmode="numeric" pattern="[0-9A-Za-zА-Яа-яЁё/-]*" maxlength="24" autocomplete="off" placeholder="Например, 18" required></label>
-                <label class="manual-ticket-field">Номер Т/С<input id="manual-ticket-vehicle" type="text" inputmode="numeric" pattern="[0-9A-Za-zА-Яа-яЁё/-]*" maxlength="32" autocomplete="off" placeholder="Бортовой номер" required></label>
+                <label class="manual-ticket-field">Номер маршрута<input id="manual-ticket-route" type="text" inputmode="numeric" pattern="[0-9]{1,5}" maxlength="5" autocomplete="off" placeholder="Например, 18" required></label>
+                <label class="manual-ticket-field">Номер Т/С<input id="manual-ticket-vehicle" type="text" inputmode="numeric" pattern="[0-9]{1,5}" maxlength="5" autocomplete="off" placeholder="Бортовой номер" required></label>
             </div>
             <button class="manual-ticket-submit" id="manual-ticket-submit" type="submit">Получить билет · 1 скан</button>
             <p class="manual-ticket-status" id="manual-ticket-status" role="status" aria-live="polite"></p>
@@ -4012,6 +4012,11 @@ body.scan-loading-open { overflow: hidden !important; }
       });
     }));
     let manualBusy=false, manualRequestId='', manualPreviousOverflow='';
+    const manualNumberInputs=[document.getElementById('manual-ticket-route'),document.getElementById('manual-ticket-vehicle')];
+    manualNumberInputs.forEach(input=>input.addEventListener('input',()=>{
+      const digits=input.value.replace(/\\D/g,'').slice(0,5);
+      if(input.value!==digits)input.value=digits;
+    }));
     function closeManualModal(){if(!manualModal||manualModal.hidden||manualBusy)return;manualModal.hidden=true;document.body.style.overflow=manualPreviousOverflow;}
     function openManualModal(){if(!manualModal||manualBusy)return;manualStatus.textContent='';manualPreviousOverflow=document.body.style.overflow;manualModal.hidden=false;document.body.style.overflow='hidden';}
     manualOpen?.addEventListener('click',openManualModal);
@@ -4027,7 +4032,10 @@ body.scan-loading-open { overflow: hidden !important; }
       const transportType=document.getElementById('manual-ticket-type').value;
       const routeNumber=document.getElementById('manual-ticket-route').value.trim();
       const vehicleNumber=document.getElementById('manual-ticket-vehicle').value.trim();
-      if(!routeNumber||!vehicleNumber){manualStatus.textContent='Заполни номер маршрута и номер Т/С.';return;}
+      if(!/^[0-9]{1,5}$/.test(routeNumber)||!/^[0-9]{1,5}$/.test(vehicleNumber)){
+         manualStatus.textContent='Номера маршрута и Т/С должны содержать от 1 до 5 цифр.';
+         return;
+       }
       if(!manualRequestId)manualRequestId=crypto.randomUUID();
       manualBusy=true;scanProcessing=true;manualSubmit.disabled=true;manualSubmit.textContent='Готовим билет…';manualStatus.textContent='';
       let loading=false, manualLoadingLabels=[];
@@ -4041,7 +4049,16 @@ body.scan-loading-open { overflow: hidden !important; }
         await waitForScanLoading(400);updateScanLoadingStage(1,'Подготавливаем билет…');
         const response=await fetch(new URL(base+'api/manual-ticket',window.location.origin).toString(),{method:'POST',headers:{'Content-Type':'application/json','Authorization':getVkAuthorizationHeader()},body:JSON.stringify({transportType,routeNumber,vehicleNumber,scanRequestId:manualRequestId}),cache:'no-store',credentials:'omit'});
         const payload=await response.json().catch(()=>({}));
-        if(!response.ok){if(payload.code==='SCAN_BALANCE_EMPTY')updateScanBalance(payload.scanBalance??0);if(response.status>=400&&response.status<500)manualRequestId='';throw new Error(payload.error||'Не удалось оформить билет.');}
+        if(!response.ok){
+          if(payload.code==='SCAN_BALANCE_EMPTY'){
+            updateScanBalance(payload.scanBalance??0);
+            const balanceError=new Error(payload.error||'Для оформления билета нужны сканы.');
+            balanceError.code='SCAN_BALANCE_EMPTY';
+            throw balanceError;
+          }
+          if(response.status>=400&&response.status<500)manualRequestId='';
+          throw new Error(payload.error||'Не удалось оформить билет.');
+        }
         manualRequestId='';
         // The manual scan is already persisted in scan_history; refresh Collect immediately.
         window.dispatchEvent(new CustomEvent('roadnote:scan-success'));
@@ -4054,7 +4071,17 @@ body.scan-loading-open { overflow: hidden !important; }
         updateScanBalance(data.scanBalance,data.subscriptionUntil,data.unlimited,data.subscriptionActive);updateScanLoadingStage(3,'Кью собирает QR-билет…');
         applyTransportData(data);updateContinueTicketButton(Math.max(currentScanCount,1));completeScanLoading(details);await waitForScanLoading(650);
         manualModal.hidden=true;document.body.style.overflow=manualPreviousOverflow;closeStartOverlay();await hideScanLoading();manualForm.reset();
-      }catch(err){if(loading)await hideScanLoading();manualStatus.textContent=err.message||'Не удалось оформить билет.';}
+       }catch(err){
+        if(loading)await hideScanLoading();
+        if(err&&err.code==='SCAN_BALANCE_EMPTY'){
+          manualModal.hidden=true;
+          document.body.style.overflow=manualPreviousOverflow;
+          openScanTariffsModal();
+          manualStatus.textContent='';
+        }else{
+          manualStatus.textContent=err.message||'Не удалось оформить билет.';
+        }
+      }
       finally{
         if(manualLoadingLabels.length){const nodes=scanLoadingOverlayElement?.querySelectorAll('.scan-loading-step-copy strong')||[];manualLoadingLabels.forEach((label,index)=>{if(nodes[index])nodes[index].textContent=label;});}
         manualBusy=false;scanProcessing=false;manualSubmit.disabled=false;manualSubmit.textContent='Получить билет · 1 скан';refreshScanButton();
