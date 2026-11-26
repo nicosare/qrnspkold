@@ -4014,7 +4014,7 @@ body.scan-loading-open { overflow: hidden !important; }
     let manualBusy=false, manualRequestId='', manualPreviousOverflow='';
     const manualNumberInputs=[document.getElementById('manual-ticket-route'),document.getElementById('manual-ticket-vehicle')];
     manualNumberInputs.forEach(input=>input.addEventListener('input',()=>{
-      const digits=input.value.replace(/\\D/g,'').slice(0,5);
+      const digits=input.value.replace(/\D/g,'').slice(0,5);
       if(input.value!==digits)input.value=digits;
     }));
     function closeManualModal(){if(!manualModal||manualModal.hidden||manualBusy)return;manualModal.hidden=true;document.body.style.overflow=manualPreviousOverflow;}
