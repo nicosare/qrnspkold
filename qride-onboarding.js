@@ -860,10 +860,10 @@
   }
 
   function maybeShowLuckyHint() {
-    if (luckyHintTimer || tour || !onboardingStatusReady || !onboardingCompleted || !luckyReady || !luckyAvailable || storageHas(luckySeenKey)) return;
+    if (luckyHintTimer || tour || !onboardingStatusReady || !onboardingCompleted || !luckyReady || !luckyAvailable || luckyOnboardingCompleted || storageHas(luckySeenKey)) return;
     luckyHintTimer = window.setTimeout(function () {
       luckyHintTimer = 0;
-      if (tour || !onboardingStatusReady || !onboardingCompleted || !luckyAvailable || storageHas(luckySeenKey)) return;
+      if (tour || !onboardingStatusReady || !onboardingCompleted || !luckyAvailable || luckyOnboardingCompleted || storageHas(luckySeenKey)) return;
       if (!isVisible(startOverlay) || document.visibilityState === 'hidden') return;
       if (hasOtherDialogOpen()) {
         maybeShowLuckyHint();
