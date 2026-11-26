@@ -2927,8 +2927,8 @@ app.post('/api/manual-ticket', (req, res) => {
   const vehicleNumber = String(req.body?.vehicleNumber || '').trim();
   const requestId = String(req.body?.scanRequestId || '').trim();
   if (!['Автобус', 'Трамвай', 'Троллейбус'].includes(transportType)) return res.status(400).json({ error: 'Выберите автобус, трамвай или троллейбус.' });
-  if (!/^[0-9A-Za-zА-Яа-яЁё/-]{1,24}$/.test(routeNumber)) return res.status(400).json({ error: 'Укажите корректный номер маршрута.' });
-  if (!/^[0-9A-Za-zА-Яа-яЁё/-]{1,32}$/.test(vehicleNumber)) return res.status(400).json({ error: 'Укажите корректный номер Т/С.' });
+  if (!/^[0-9]{1,5}$/.test(routeNumber)) return res.status(400).json({ error: 'Номер маршрута должен содержать от 1 до 5 цифр.' });
+  if (!/^[0-9]{1,5}$/.test(vehicleNumber)) return res.status(400).json({ error: 'Номер Т/С должен содержать от 1 до 5 цифр.' });
   if (!/^[0-9A-Za-z_-]{16,100}$/.test(requestId)) return res.status(400).json({ error: 'Некорректный идентификатор запроса.' });
   let userId;
   try { ({ userId } = launchParamsFromRequest(req)); }
