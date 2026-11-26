@@ -30,6 +30,8 @@ const tariffOffers = Object.freeze({
   subscription_6m: { id: 'subscription_6m', name: 'Безлимит на 6 месяцев', kind: 'subscription', quantity: 6, energyBonus: 99, regularPrice: 1299, promoPrice: 949 }
 });
 const databasePath = process.env.DATABASE_PATH || '/data/roadnote.sqlite';
+const collectImageDirectory = path.join(path.dirname(databasePath), 'collect-images');
+fs.mkdirSync(collectImageDirectory, { recursive: true });
 const paytagDirectTimeoutMs = Math.max(3000, Number(process.env.PAYTAG_DIRECT_TIMEOUT_MS || 12000));
 const paytagFetchesInFlight = new Map();
 let paytagCacheGeneration = 0;
@@ -209,6 +211,30 @@ db.exec(`
     setting_value TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS collect_images (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    transport_type TEXT NOT NULL CHECK(transport_type IN ('Автобус', 'Трамвай', 'Троллейбус')),
+    file_name TEXT NOT NULL UNIQUE,
+    original_name TEXT NOT NULL DEFAULT '',
+    mime_type TEXT NOT NULL,
+    size_bytes INTEGER NOT NULL DEFAULT 0,
+    is_base INTEGER NOT NULL DEFAULT 0 CHECK(is_base IN (0, 1)),
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_collect_images_type ON collect_images(transport_type, created_at);
+  CREATE TABLE IF NOT EXISTS collect_routes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    transport_type TEXT NOT NULL CHECK(transport_type IN ('Автобус', 'Трамвай', 'Троллейбус')),
+    route_number TEXT NOT NULL,
+    route_key TEXT NOT NULL,
+    image_id INTEGER NOT NULL,
+    assignment_source TEXT NOT NULL DEFAULT 'random' CHECK(assignment_source IN ('base', 'random', 'manual')),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(transport_type, route_key)
+  );
+  CREATE INDEX IF NOT EXISTS idx_collect_routes_type_route ON collect_routes(transport_type, route_key);
+  CREATE INDEX IF NOT EXISTS idx_collect_routes_image ON collect_routes(image_id);
 `);
 
 // Keep legacy data untouched and persist tariff requests independently of app restarts.
@@ -319,11 +345,30 @@ const scanHistoryColumns = db.pragma('table_info(scan_history)');
 if (!scanHistoryColumns.some(column => column.name === 'idempotency_key')) {
   db.exec('ALTER TABLE scan_history ADD COLUMN idempotency_key TEXT DEFAULT NULL');
 }
+if (!scanHistoryColumns.some(column => column.name === 'collect_route_id')) {
+  db.exec('ALTER TABLE scan_history ADD COLUMN collect_route_id INTEGER DEFAULT NULL');
+}
+db.exec('CREATE INDEX IF NOT EXISTS idx_scan_history_collect_route ON scan_history(collect_route_id, scanned_at DESC)');
 db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_scan_history_idempotency
     ON scan_history(idempotency_key)
     WHERE idempotency_key IS NOT NULL AND idempotency_key <> '';
 `);
+const baseCollectImageDefinitions = [
+  { transportType: 'Автобус', fileName: '8949-cutout.png', originalName: 'Базовый автобус' },
+  { transportType: 'Трамвай', fileName: '8953-cutout.png', originalName: 'Базовый трамвай' },
+  { transportType: 'Троллейбус', fileName: '8954-cutout.png', originalName: 'Базовый троллейбус' }
+];
+for (const image of baseCollectImageDefinitions) {
+  const targetPath = path.join(collectImageDirectory, image.fileName);
+  const sourcePath = path.join(__dirname, 'assets', 'collect', image.fileName);
+  if (!fs.existsSync(targetPath) && fs.existsSync(sourcePath)) fs.copyFileSync(sourcePath, targetPath);
+  if (fs.existsSync(targetPath)) {
+    const stats = fs.statSync(targetPath);
+    db.prepare('INSERT OR IGNORE INTO collect_images (transport_type, file_name, original_name, mime_type, size_bytes, is_base, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)')
+      .run(image.transportType, image.fileName, image.originalName, 'image/png', stats.size, new Date().toISOString());
+  }
+}
 
 const userColumns = db.pragma('table_info(users)');
 if (!userColumns.some(column => column.name === 'scan_balance')) {
@@ -1019,6 +1064,34 @@ function normalizeTransportType(value = '') {
     'метро': 'Метро'
   };
   return dictionary[cleaned.toLowerCase()] || cleaned;
+}
+const collectTransportTypes=['Автобус','Трамвай','Троллейбус'];
+const collectTransportTypeSet=new Set(collectTransportTypes);
+const collectRouteMigrationMarker='collect_route_registry_v1';
+
+function normalizeCollectRouteNumber(value=''){return String(value==null?'':value).replace(/^\s*№\s*/i,'').replace(/[\s\u00a0]+/g,'').trim().slice(0,12);}
+function collectImageUrl(fileName){return '/roadnote/collect-images/'+encodeURIComponent(String(fileName||''));}
+function pickCollectImageId(transportType){
+ const rows=db.prepare('SELECT image.id,COUNT(route.id) AS assigned_count FROM collect_images image LEFT JOIN collect_routes route ON route.image_id=image.id WHERE image.transport_type=? GROUP BY image.id ORDER BY assigned_count ASC,image.id ASC').all(transportType);
+ if(!rows.length)return null;const least=Number(rows[0].assigned_count||0);const candidates=rows.filter(row=>Number(row.assigned_count||0)===least);return Number(candidates[crypto.randomInt(candidates.length)].id);
+}
+function ensureCollectRoute(typeValue,routeValue,options={}){
+ const type=normalizeTransportType(typeValue),number=normalizeCollectRouteNumber(routeValue);if(!collectTransportTypeSet.has(type)||!number)return null;
+ const key=number.toLowerCase(),existing=db.prepare('SELECT id FROM collect_routes WHERE transport_type=? AND route_key=?').get(type,key);if(existing)return Number(existing.id);
+ let imageId=Number(options.imageId);const selected=Number.isSafeInteger(imageId)&&imageId>0?db.prepare('SELECT id FROM collect_images WHERE id=? AND transport_type=?').get(imageId,type):null;
+ if(!selected)imageId=pickCollectImageId(type);if(!imageId){console.warn('[QRide Collect] No images available for',type,number);return null;}
+ const now=new Date().toISOString();
+ db.prepare('INSERT OR IGNORE INTO collect_routes (transport_type,route_number,route_key,image_id,assignment_source,created_at,updated_at) VALUES (?,?,?,?,?,?,?)').run(type,number,key,imageId,options.assignmentSource==='base'?'base':'random',now,now);
+ const created=db.prepare('SELECT id FROM collect_routes WHERE transport_type=? AND route_key=?').get(type,key);return created?Number(created.id):null;
+}
+function recordCollectRouteRide(scanId,type,number){const routeId=ensureCollectRoute(type,number);if(routeId)db.prepare('UPDATE scan_history SET collect_route_id=? WHERE id=?').run(routeId,scanId);}
+if(!db.prepare('SELECT 1 FROM app_settings WHERE setting_key=?').get(collectRouteMigrationMarker)){
+ db.transaction(()=>{
+  const pending=db.prepare('SELECT id,transport_type,route_number FROM scan_history WHERE collect_route_id IS NULL ORDER BY id').all();
+  const bases=new Map(db.prepare('SELECT id,transport_type FROM collect_images WHERE is_base=1').all().map(row=>[row.transport_type,Number(row.id)]));
+  for(const scan of pending){const type=normalizeTransportType(scan.transport_type||'');if(!collectTransportTypeSet.has(type))continue;const routeId=ensureCollectRoute(type,scan.route_number,{imageId:bases.get(type),assignmentSource:'base'});if(routeId)db.prepare('UPDATE scan_history SET collect_route_id=? WHERE id=?').run(routeId,scan.id);}
+  db.prepare('INSERT INTO app_settings (setting_key,setting_value,updated_at) VALUES (?,?,?) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=excluded.updated_at').run(collectRouteMigrationMarker,'1',new Date().toISOString());
+ })();
 }
 
 function normalizePaytagPayload(payload = {}) {
@@ -2807,51 +2880,13 @@ app.get('/api/collect', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   try {
     const rows = db.prepare(`
-      SELECT transport_type, route_number, COUNT(*) AS ride_count,
-             MAX(scanned_at) AS last_scanned_at
-      FROM scan_history
-      WHERE vk_id = ?
-      GROUP BY lower(trim(transport_type)), trim(route_number)
-      ORDER BY MAX(scanned_at) DESC
+      SELECT route.transport_type,route.route_number,COUNT(*) AS ride_count,MAX(scan.scanned_at) AS last_scanned_at,image.file_name
+      FROM scan_history scan INNER JOIN collect_routes route ON route.id=scan.collect_route_id
+      INNER JOIN collect_images image ON image.id=route.image_id WHERE scan.vk_id=?
+      GROUP BY route.id ORDER BY MAX(scan.scanned_at) DESC
     `).all(userId);
-
-    const byRoute = new Map();
-    const supportedTypes = new Set(['трамвай', 'автобус', 'троллейбус']);
-
-    for (const row of rows) {
-      const transportType = normalizeTransportType(String(row.transport_type || ''));
-      const typeKey = transportType.toLowerCase();
-      if (!supportedTypes.has(typeKey)) continue;
-
-      const routeNumber = String(row.route_number || '')
-        .replace(/^\s*№\s*/i, '')
-        .replace(/[\s\u00a0]+/g, '')
-        .trim()
-        .slice(0, 12);
-      if (!routeNumber) continue;
-
-      const key = typeKey + '|' + routeNumber.toLowerCase();
-      const existing = byRoute.get(key);
-      const rideCount = Math.max(0, Number(row.ride_count) || 0);
-      const lastScannedAt = String(row.last_scanned_at || '');
-
-      if (existing) {
-        existing.trips += rideCount;
-        if (lastScannedAt > existing.lastScannedAt) existing.lastScannedAt = lastScannedAt;
-      } else {
-        byRoute.set(key, {
-          transportType,
-          routeNumber,
-          trips: rideCount,
-          lastScannedAt
-        });
-      }
-    }
-
-    const cards = Array.from(byRoute.values())
-      .sort((a, b) => b.lastScannedAt.localeCompare(a.lastScannedAt));
-
-    return res.json({ ok: true, cards });
+    const cards=rows.map(row=>({transportType:row.transport_type,routeNumber:row.route_number,trips:Math.max(0,Number(row.ride_count)||0),lastScannedAt:String(row.last_scanned_at||''),imageUrl:collectImageUrl(row.file_name)}));
+    return res.json({ok:true,cards});
   } catch (error) {
     console.warn('[QRide Collect] Could not build collection:', error?.message || error);
     return res.status(500).json({
@@ -2960,7 +2995,8 @@ app.post('/api/manual-ticket', (req, res) => {
       if (spent.changes !== 1) { insufficient = true; return; }
     }
     updateUserAfterScan.run(scannedAt, vehicleNumber, userId);
-    recordScan.run(userId, scannedAt, key, null, transportType, routeNumber, vehicleNumber, globalPrice.price);
+    const recordedManualScan = recordScan.run(userId, scannedAt, key, null, transportType, routeNumber, vehicleNumber, globalPrice.price);
+    recordCollectRouteRide(Number(recordedManualScan.lastInsertRowid), transportType, routeNumber);
     recordAnalyticsEvent(userId, 'scan_completed', { scanSource: 'manual', transportType, routeNumber }, userId + ':scan:' + key, scannedAt);
     clearDailyScanAfterSuccessfulScan.run(userId, dayKey);
     const referral = getReferralForInvitee.get(userId);
@@ -3146,6 +3182,7 @@ app.post('/api/paytag', async (req, res) => {
         String(data.vehicleNumber || ''),
         Number.isFinite(data.price) ? data.price : null
       );
+      recordCollectRouteRide(Number(recordedScan.lastInsertRowid), String(data.transportType || ''), String(data.routeNumber || ''));
       recordAnalyticsEvent(userId, 'scan_completed', {
         scanSource: scanBillingSource,
         transportType: String(data.transportType || '').slice(0, 40),
@@ -3820,6 +3857,47 @@ app.post('/api/admin/lucky', requireAdmin, (req, res) => {
   return res.json({ ok: true, config });
 });
 
+app.get('/api/admin/collect/routes',requireAdmin,(req,res)=>{res.setHeader('Cache-Control','no-store');try{
+ const rows=db.prepare(`SELECT route.id,route.transport_type,route.route_number,route.assignment_source,route.updated_at,image.id AS image_id,image.file_name,image.original_name,image.is_base AS image_is_base,COUNT(scan.id) AS trips,COUNT(DISTINCT scan.vk_id) AS unique_users,MAX(scan.scanned_at) AS last_trip_at FROM collect_routes route LEFT JOIN collect_images image ON image.id=route.image_id LEFT JOIN scan_history scan ON scan.collect_route_id=route.id GROUP BY route.id ORDER BY CASE route.transport_type WHEN 'Автобус' THEN 1 WHEN 'Трамвай' THEN 2 WHEN 'Троллейбус' THEN 3 ELSE 4 END,CAST(route.route_number AS INTEGER),route.route_number COLLATE NOCASE`).all();
+ const routes=rows.map(row=>({id:Number(row.id),transportType:row.transport_type,routeNumber:row.route_number,assignmentSource:row.assignment_source,updatedAt:row.updated_at,imageId:Number(row.image_id),imageName:row.original_name||row.file_name||'',imageUrl:row.file_name?collectImageUrl(row.file_name):'',imageIsBase:Number(row.image_is_base)===1,trips:Number(row.trips||0),uniqueUsers:Number(row.unique_users||0),lastTripAt:row.last_trip_at||null}));
+ const summary=collectTransportTypes.map(transportType=>{const matching=routes.filter(route=>route.transportType===transportType);return{transportType,routes:matching.length,trips:matching.reduce((sum,route)=>sum+route.trips,0)};});
+ return res.json({ok:true,routes,summary,totalRoutes:routes.length,totalTrips:routes.reduce((sum,route)=>sum+route.trips,0)});
+}catch(error){console.error('[admin collect routes]',error?.message||error);return res.status(500).json({error:'Не удалось загрузить список маршрутов.'});}});
+
+app.get('/api/admin/collect/images',requireAdmin,(req,res)=>{res.setHeader('Cache-Control','no-store');try{
+ const images=db.prepare(`SELECT image.id,image.transport_type,image.file_name,image.original_name,image.mime_type,image.size_bytes,image.is_base,image.created_at,COUNT(route.id) AS route_count FROM collect_images image LEFT JOIN collect_routes route ON route.image_id=image.id GROUP BY image.id ORDER BY CASE image.transport_type WHEN 'Автобус' THEN 1 WHEN 'Трамвай' THEN 2 WHEN 'Троллейбус' THEN 3 ELSE 4 END,image.is_base DESC,image.created_at ASC,image.id ASC`).all().map(row=>({id:Number(row.id),transportType:row.transport_type,fileName:row.file_name,originalName:row.original_name||row.file_name,mimeType:row.mime_type,sizeBytes:Number(row.size_bytes||0),isBase:Number(row.is_base)===1,createdAt:row.created_at,routeCount:Number(row.route_count||0),imageUrl:collectImageUrl(row.file_name)}));
+ return res.json({ok:true,images,total:images.length});
+}catch(error){console.error('[admin collect images]',error?.message||error);return res.status(500).json({error:'Не удалось загрузить банк изображений.'});}});
+
+app.post('/api/admin/collect/images',requireAdmin,(req,res)=>{
+ const type=normalizeTransportType(req.body?.transportType||'');if(!collectTransportTypeSet.has(type))return res.status(400).json({error:'Выберите автобус, трамвай или троллейбус.'});
+ const mime=String(req.body?.mimeType||'').toLowerCase(),exts={'image/png':'.png','image/jpeg':'.jpg','image/webp':'.webp'},ext=exts[mime];if(!ext)return res.status(400).json({error:'Поддерживаются только PNG, JPEG и WebP.'});
+ const base64=String(req.body?.base64||''),max=8*1024*1024;if(!base64||base64.length>Math.ceil(max/3)*4||base64.length%4!==0||!/^[A-Za-z0-9+/]+={0,2}$/.test(base64))return res.status(400).json({error:'Файл пустой, повреждён или превышает 8 МБ.'});
+ const buffer=Buffer.from(base64,'base64');if(!buffer.length||buffer.length>max||buffer.toString('base64')!==base64)return res.status(400).json({error:'Файл пустой, повреждён или превышает 8 МБ.'});
+ const png=buffer.length>=8&&buffer.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])),jpeg=buffer.length>=3&&buffer[0]===255&&buffer[1]===216&&buffer[2]===255,webp=buffer.length>=12&&buffer.toString('ascii',0,4)==='RIFF'&&buffer.toString('ascii',8,12)==='WEBP';
+ if(!(mime==='image/png'?png:mime==='image/jpeg'?jpeg:webp))return res.status(400).json({error:'Содержимое файла не соответствует формату изображения.'});
+ const original=Array.from(String(req.body?.originalName||'transport-image').split('/').pop().split(String.fromCharCode(92)).pop()).filter(char=>char.charCodeAt(0)>=32&&char.charCodeAt(0)!==127).join('').trim().slice(0,120)||'transport-image';
+ const fileName=crypto.randomBytes(16).toString('hex')+ext,filePath=path.join(collectImageDirectory,fileName);try{
+  fs.writeFileSync(filePath,buffer,{flag:'wx'});const createdAt=new Date().toISOString();
+  const result=db.prepare('INSERT INTO collect_images (transport_type,file_name,original_name,mime_type,size_bytes,is_base,created_at) VALUES (?,?,?,?,?,0,?)').run(type,fileName,original,mime,buffer.length,createdAt);
+  return res.status(201).json({ok:true,image:{id:Number(result.lastInsertRowid),transportType:type,fileName,originalName:original,mimeType:mime,sizeBytes:buffer.length,isBase:false,createdAt,routeCount:0,imageUrl:collectImageUrl(fileName)}});
+ }catch(error){try{if(fs.existsSync(filePath))fs.unlinkSync(filePath);}catch{}console.error('[admin collect image upload]',error?.message||error);return res.status(500).json({error:'Не удалось сохранить изображение.'});}
+});
+
+app.delete('/api/admin/collect/images/:imageId',requireAdmin,(req,res)=>{
+ const id=Number(req.params.imageId);if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'Некорректный ID изображения.'});
+ const image=db.prepare('SELECT id,file_name,is_base FROM collect_images WHERE id=?').get(id);if(!image)return res.status(404).json({error:'Изображение не найдено.'});
+ if(Number(image.is_base)===1)return res.status(403).json({error:'Базовые изображения нельзя удалить.'});
+ const assigned=Number(db.prepare('SELECT COUNT(*) AS count FROM collect_routes WHERE image_id=?').get(id)?.count||0);if(assigned>0)return res.status(409).json({error:'Сначала переназначьте изображение у всех связанных маршрутов.'});
+ db.prepare('DELETE FROM collect_images WHERE id=?').run(id);try{fs.unlinkSync(path.join(collectImageDirectory,image.file_name));}catch(error){console.warn('[admin collect image cleanup]',error?.message||error);}return res.json({ok:true,deletedId:id});
+});
+
+app.post('/api/admin/collect/routes/:routeId/image',requireAdmin,(req,res)=>{
+ const routeId=Number(req.params.routeId),imageId=Number(req.body?.imageId);if(!Number.isSafeInteger(routeId)||routeId<1||!Number.isSafeInteger(imageId)||imageId<1)return res.status(400).json({error:'Некорректный маршрут или изображение.'});
+ const route=db.prepare('SELECT id,transport_type FROM collect_routes WHERE id=?').get(routeId);if(!route)return res.status(404).json({error:'Маршрут не найден.'});
+ if(!db.prepare('SELECT id FROM collect_images WHERE id=? AND transport_type=?').get(imageId,route.transport_type))return res.status(400).json({error:'Изображение не найдено в банке этого типа транспорта.'});
+ const updatedAt=new Date().toISOString();db.prepare("UPDATE collect_routes SET image_id=?,assignment_source='manual',updated_at=? WHERE id=?").run(imageId,updatedAt,routeId);return res.json({ok:true,routeId,imageId,updatedAt});
+});
 app.get('/api/admin/paytags', requireAdmin, (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const globalPrice = getGlobalPaytagPrice();
@@ -4352,7 +4430,8 @@ function serveRoadnoteEntry(req, res) {
 app.get('/', serveRoadnoteEntry);
 app.get('/index.html', serveRoadnoteEntry);
 
-app.use(express.static(__dirname, { index: 'index.html' }));
+app.use('/collect-images',express.static(collectImageDirectory,{maxAge:'1d',immutable:true,index:false}));
+app.use(express.static(__dirname,{index:'index.html'}));
 app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 app.listen(port, () => console.log(`Roadnote server listening on port ${port}`));

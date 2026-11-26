@@ -110,13 +110,14 @@
     const tripLabel = pluralizeTrips(trips);
     const label = typeKey + ' №' + route + ', ' + trips + ' ' + tripLabel;
     const longCaptionClass = route.length > 5 ? ' qride-collect-card-route--long' : '';
+    const imageUrl = String(card.imageUrl || config.image);
 
     return '<button type="button" class="qride-collect-card qride-collect-card--' + config.className + '" ' +
       'data-collect-history="true" data-transport-type="' + escapeHtml(typeKey) + '" ' +
       'data-route-number="' + escapeHtml(route) + '" ' +
       'aria-label="' + escapeHtml(label) + '" style="animation-delay:' + Math.min(index * 25, 150) + 'ms">' +
         '<span class="qride-collect-card-art">' +
-          '<img class="qride-collect-vehicle" src="' + config.image + '" alt="" loading="lazy" decoding="async">' +
+          '<img class="qride-collect-vehicle" src="' + escapeHtml(imageUrl) + '" alt="" loading="lazy" decoding="async">' +
         '</span>' +
         '<span class="qride-collect-card-footer">' +
           '<strong class="qride-collect-card-route' + longCaptionClass + '">№ ' + escapeHtml(route) + '</strong>' +
