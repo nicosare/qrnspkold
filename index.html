@@ -4040,7 +4040,8 @@ body.scan-loading-open { overflow: hidden !important; }
       if(scanBalanceAssigned && currentScanBalance <= 0 && !scanAccessUnlimited){
         manualModal.hidden=true;
         document.body.style.overflow=manualPreviousOverflow;
-        openScanTariffsModal();
+        if(typeof window.qrideOpenScanTariffsModal==='function')window.qrideOpenScanTariffsModal();
+        else manualStatus.textContent='Не удалось открыть окно тарифов. Обнови приложение и попробуй ещё раз.';
         return;
       }
       if(!manualRequestId)manualRequestId=crypto.randomUUID();
@@ -4083,8 +4084,8 @@ body.scan-loading-open { overflow: hidden !important; }
         if(err&&err.code==='SCAN_BALANCE_EMPTY'){
           manualModal.hidden=true;
           document.body.style.overflow=manualPreviousOverflow;
-          openScanTariffsModal();
-          manualStatus.textContent='';
+          if(typeof window.qrideOpenScanTariffsModal==='function')window.qrideOpenScanTariffsModal();
+          else manualStatus.textContent='Не удалось открыть окно тарифов. Обнови приложение и попробуй ещё раз.';
         }else{
           manualStatus.textContent=err.message||'Не удалось оформить билет.';
         }
@@ -5034,6 +5035,7 @@ body.scan-loading-open { overflow: hidden !important; }
             document.body.classList.add('qride-lucky-open');
             document.body.style.overflow = 'hidden';
         }
+        window.qrideOpenScanTariffsModal = openScanTariffsModal;
         if (topupButton) {
             topupButton.addEventListener('click', function () {
                 openScanTariffsModal();
