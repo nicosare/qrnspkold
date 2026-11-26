@@ -3892,7 +3892,10 @@ app.post('/api/admin/collect/images',requireAdmin,(req,res)=>{
  if(!(mime==='image/png'?png:mime==='image/jpeg'?jpeg:webp))return res.status(400).json({error:'Содержимое файла не соответствует формату изображения.'});
  const filePrefix=type==='Трамвай'?'tram':type==='Автобус'?'bus':'trolleybus';
  const existingNames=db.prepare('SELECT file_name FROM collect_images WHERE transport_type=?').all(type).map(row=>String(row.file_name||''));
- let sequence=existingNames.reduce((max,name)=>{const match=name.match(new RegExp('^'+filePrefix+'_(\\d+)\\.[a-z0-9]+
+ let sequence=0;
+ for(const name of existingNames){const prefix=filePrefix+'_';if(!name.toLowerCase().startsWith(prefix))continue;const number=Number(name.slice(prefix.length).split('.')[0]);if(Number.isSafeInteger(number)&&number>sequence)sequence=number;}
+ let fileName,filePath;do{sequence++;fileName=filePrefix+'_'+sequence+ext;filePath=path.join(collectImageDirectory,fileName);}while(fs.existsSync(filePath));
+ const original=fileName;try{
   fs.writeFileSync(filePath,buffer,{flag:'wx'});const createdAt=new Date().toISOString();
   const result=db.prepare('INSERT INTO collect_images (transport_type,file_name,original_name,mime_type,size_bytes,is_base,created_at) VALUES (?,?,?,?,?,0,?)').run(type,fileName,original,mime,buffer.length,createdAt);
   return res.status(201).json({ok:true,image:{id:Number(result.lastInsertRowid),transportType:type,fileName,originalName:original,mimeType:mime,sizeBytes:buffer.length,isBase:false,createdAt,routeCount:0,imageUrl:collectImageUrl(fileName)}});
