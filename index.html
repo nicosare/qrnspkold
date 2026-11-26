@@ -4000,9 +4000,9 @@ body.scan-loading-open { overflow: hidden !important; }
     const manualOpen=document.getElementById('manual-ticket-open');
     const manualSubmit=document.getElementById('manual-ticket-submit');
     const manualStatus=document.getElementById('manual-ticket-status');
-    let manualBusy=false, manualRequestId='';
-    function closeManualModal(){if(!manualModal||manualModal.hidden||manualBusy)return;manualModal.hidden=true;document.body.style.overflow='';}
-    function openManualModal(){if(!manualModal||manualBusy)return;manualStatus.textContent='';manualModal.hidden=false;document.body.style.overflow='hidden';}
+    let manualBusy=false, manualRequestId='', manualPreviousOverflow='';
+    function closeManualModal(){if(!manualModal||manualModal.hidden||manualBusy)return;manualModal.hidden=true;document.body.style.overflow=manualPreviousOverflow;}
+    function openManualModal(){if(!manualModal||manualBusy)return;manualStatus.textContent='';manualPreviousOverflow=document.body.style.overflow;manualModal.hidden=false;document.body.style.overflow='hidden';}
     manualOpen?.addEventListener('click',openManualModal);
     manualModal?.querySelectorAll('[data-manual-ticket-close]').forEach(b=>b.addEventListener('click',closeManualModal));
     document.addEventListener('keydown',e=>{if(e.key==='Escape')closeManualModal();});
@@ -4040,7 +4040,7 @@ body.scan-loading-open { overflow: hidden !important; }
         updateScanLoadingStage(2,'Данные приняты · '+details);await waitForScanLoading(400);
         updateScanBalance(data.scanBalance,data.subscriptionUntil,data.unlimited,data.subscriptionActive);updateScanLoadingStage(3,'Кью собирает QR-билет…');
         applyTransportData(data);updateContinueTicketButton(Math.max(currentScanCount,1));completeScanLoading(details);await waitForScanLoading(650);
-        manualModal.hidden=true;document.body.style.overflow='';closeStartOverlay();await hideScanLoading();manualForm.reset();
+        manualModal.hidden=true;document.body.style.overflow=manualPreviousOverflow;closeStartOverlay();await hideScanLoading();manualForm.reset();
       }catch(err){if(loading)await hideScanLoading();manualStatus.textContent=err.message||'Не удалось оформить билет.';}
       finally{
         if(manualLoadingLabels.length){const nodes=scanLoadingOverlayElement?.querySelectorAll('.scan-loading-step-copy strong')||[];manualLoadingLabels.forEach((label,index)=>{if(nodes[index])nodes[index].textContent=label;});}
