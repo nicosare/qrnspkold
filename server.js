@@ -2921,6 +2921,69 @@ app.get('/api/collect/history', (req, res) => {
   }
 });
 
+app.post('/api/manual-ticket', (req, res) => {
+  const transportType = String(req.body?.transportType || '').trim();
+  const routeNumber = String(req.body?.routeNumber || '').trim();
+  const vehicleNumber = String(req.body?.vehicleNumber || '').trim();
+  const requestId = String(req.body?.scanRequestId || '').trim();
+  if (!['Автобус', 'Трамвай', 'Троллейбус'].includes(transportType)) return res.status(400).json({ error: 'Выберите автобус, трамвай или троллейбус.' });
+  if (!/^[0-9A-Za-zА-Яа-яЁё/-]{1,24}$/.test(routeNumber)) return res.status(400).json({ error: 'Укажите корректный номер маршрута.' });
+  if (!/^[0-9A-Za-zА-Яа-яЁё/-]{1,32}$/.test(vehicleNumber)) return res.status(400).json({ error: 'Укажите корректный номер Т/С.' });
+  if (!/^[0-9A-Za-z_-]{16,100}$/.test(requestId)) return res.status(400).json({ error: 'Некорректный идентификатор запроса.' });
+  let userId;
+  try { ({ userId } = launchParamsFromRequest(req)); }
+  catch (_) { return res.status(401).json({ code: 'VK_AUTH_REQUIRED', error: 'Откройте QRide внутри VK, чтобы подтвердить пользователя.' }); }
+  const globalPrice = getGlobalPaytagPrice();
+  if (!globalPrice) return res.status(503).json({ error: 'Глобальная цена билета не настроена. Попробуйте позже.' });
+  const key = 'manual:' + requestId;
+  const nowDate = new Date(), now = nowDate.toISOString();
+  ensureUserWithWelcome(userId, now);
+  ensureDailyScan(userId, nowDate);
+  const replay = getScanByIdempotencyKey.get(key);
+  if (replay) {
+    if (replay.vk_id !== userId || replay.paytag_id || replay.transport_type !== transportType || replay.route_number !== routeNumber || replay.vehicle_number !== vehicleNumber) return res.status(409).json({ error: 'Этот запрос уже использован для другого билета.' });
+    const entitlement = getUserScanBalance.get(userId);
+    return res.json({ ok: true, data: { transportType, routeNumber, vehicleNumber, price: Number(replay.price) }, scannedAt: replay.scanned_at, scanBalance: getDisplayedScanBalance(entitlement), subscriptionUntil: entitlement?.subscription_until || null, unlimited: Number(entitlement?.unlimited || 0) === 1, subscriptionActive: Boolean(entitlement?.subscription_until && Date.parse(entitlement.subscription_until) > Date.now()), successfulScanCount: Number(countUserScans.get(userId)?.count || 0), duplicate: true });
+  }
+  const scannedAt = new Date().toISOString(), dayKey = yekaterinburgDayKey(new Date());
+  ensureDailyScan(userId, new Date(scannedAt));
+  let insufficient = false, conflict = false, duplicate = null, referralRewarded = false, inviterId = null;
+  db.transaction(() => {
+    const prior = getScanByIdempotencyKey.get(key);
+    if (prior) { if (prior.vk_id === userId && !prior.paytag_id && prior.transport_type === transportType && prior.route_number === routeNumber && prior.vehicle_number === vehicleNumber) duplicate = prior; else conflict = true; return; }
+    const entitlement = getUserEntitlements.get(userId);
+    const subscription = Boolean(entitlement?.subscription_until && Date.parse(entitlement.subscription_until) > Date.now());
+    const unlimited = Number(entitlement?.unlimited || 0) === 1 || subscription;
+    if (!unlimited) {
+      const paid = Math.max(0, Number(entitlement?.scan_balance || 0));
+      const spent = paid > 0 ? spendUserScan.run(userId) : spendDailyScan.run(userId, dayKey);
+      if (spent.changes !== 1) { insufficient = true; return; }
+    }
+    updateUserAfterScan.run(scannedAt, vehicleNumber, userId);
+    recordScan.run(userId, scannedAt, key, null, transportType, routeNumber, vehicleNumber, globalPrice.price);
+    recordAnalyticsEvent(userId, 'scan_completed', { scanSource: 'manual', transportType, routeNumber }, userId + ':scan:' + key, scannedAt);
+    clearDailyScanAfterSuccessfulScan.run(userId, dayKey);
+    const referral = getReferralForInvitee.get(userId);
+    if (referral && !referral.rewarded_at && getUserExists.get(referral.inviter_vk_id)) {
+      const granted = grantReferralScans.run(referral.inviter_vk_id);
+      if (granted.changes === 1 && rewardReferralOnce.run(scannedAt, userId).changes === 1) {
+        recordScanCredit.run(referral.inviter_vk_id, scannedAt, 3, 'referral', 'Бонус за приглашённого пользователя ' + userId);
+        referralRewarded = true; inviterId = referral.inviter_vk_id;
+      }
+    }
+  }).immediate();
+  if (conflict) return res.status(409).json({ error: 'Этот запрос уже использован.' });
+  if (insufficient) return res.status(402).json({ ok: false, code: 'SCAN_BALANCE_EMPTY', scanBalance: getDisplayedScanBalance(getUserScanBalance.get(userId)), error: 'Бесплатный скан на сегодня уже использован. Пополните баланс или возвращайтесь завтра.' });
+  if (duplicate) {
+    const entitlement = getUserScanBalance.get(userId);
+    return res.json({ ok: true, data: { transportType, routeNumber, vehicleNumber, price: Number(duplicate.price) }, scannedAt: duplicate.scanned_at, scanBalance: getDisplayedScanBalance(entitlement), subscriptionUntil: entitlement?.subscription_until || null, unlimited: Number(entitlement?.unlimited || 0) === 1, subscriptionActive: Boolean(entitlement?.subscription_until && Date.parse(entitlement.subscription_until) > Date.now()), successfulScanCount: Number(countUserScans.get(userId)?.count || 0), duplicate: true });
+  }
+  sendLiveEntitlement(userId);
+  if (referralRewarded && inviterId) sendLiveEntitlement(inviterId);
+  const entitlement = getUserScanBalance.get(userId), count = Number(countUserScans.get(userId)?.count || 0);
+  return res.json({ ok: true, data: { transportType, routeNumber, vehicleNumber, price: globalPrice.price }, scannedAt, source: 'manual', scanBalance: getDisplayedScanBalance(entitlement), subscriptionUntil: entitlement?.subscription_until || null, unlimited: Number(entitlement?.unlimited || 0) === 1, subscriptionActive: Boolean(entitlement?.subscription_until && Date.parse(entitlement.subscription_until) > Date.now()), successfulScanCount: count, ...getReferralPromptState(userId, count) });
+});
+
 app.post('/api/paytag', async (req, res) => {
   const paytagid = String(req.body?.paytagid || '').trim();
   if (!/^[0-9A-Za-z_-]{6,64}$/.test(paytagid)) {
