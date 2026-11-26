@@ -4036,6 +4036,13 @@ body.scan-loading-open { overflow: hidden !important; }
          manualStatus.textContent='Номера маршрута и Т/С должны содержать от 1 до 5 цифр.';
          return;
        }
+      // Match the primary Scan button: do not start the loading flow when no scan is available.
+      if(scanBalanceAssigned && currentScanBalance <= 0 && !scanAccessUnlimited){
+        manualModal.hidden=true;
+        document.body.style.overflow=manualPreviousOverflow;
+        openScanTariffsModal();
+        return;
+      }
       if(!manualRequestId)manualRequestId=crypto.randomUUID();
       manualBusy=true;scanProcessing=true;manualSubmit.disabled=true;manualSubmit.textContent='Готовим билет…';manualStatus.textContent='';
       let loading=false, manualLoadingLabels=[];
