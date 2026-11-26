@@ -47,7 +47,45 @@
     font-weight: 750;
 }
 
-.manual-ticket-field select,
+
+.manual-ticket-transport-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    min-width: 0;
+}
+.manual-ticket-transport-option {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 46px;
+    padding: 8px 5px;
+    border: 1px solid #d9e2f0;
+    border-radius: 11px;
+    background: #fff;
+    color: #52627a;
+    font: inherit;
+    font-size: 12px;
+    line-height: 1.2;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.manual-ticket-transport-option:active { background: #edf4ff; }
+.manual-ticket-transport-option.is-selected {
+    border-color: #0052ee;
+    background: #edf4ff;
+    color: #0052ee;
+    box-shadow: inset 0 0 0 1px #0052ee;
+}
+.manual-ticket-transport-option:focus-visible {
+    outline: 3px solid #91baff;
+    outline-offset: 2px;
+}
+
 .manual-ticket-field input {
     box-sizing: border-box;
     display: block;
@@ -68,7 +106,6 @@
     -webkit-user-select: text;
     user-select: text;
 }
-.manual-ticket-field select:focus,
 .manual-ticket-field input:focus {
     border-color: #0052ee;
     box-shadow: 0 0 0 3px rgba(0, 82, 238, .10);
