@@ -3871,6 +3871,13 @@ app.get('/api/admin/collect/routes',requireAdmin,(req,res)=>{res.setHeader('Cach
  return res.json({ok:true,routes,summary,totalRoutes:routes.length,totalTrips:routes.reduce((sum,route)=>sum+route.trips,0)});
 }catch(error){console.error('[admin collect routes]',error?.message||error);return res.status(500).json({error:'Не удалось загрузить список маршрутов.'});}});
 
+app.get('/api/admin/collect/routes/:routeId/users',requireAdmin,(req,res)=>{res.setHeader('Cache-Control','no-store');try{
+ const routeId=Number(req.params.routeId);if(!Number.isSafeInteger(routeId)||routeId<1)return res.status(400).json({error:'Некорректный маршрут.'});
+ const route=db.prepare('SELECT id FROM collect_routes WHERE id=?').get(routeId);if(!route)return res.status(404).json({error:'Маршрут не найден.'});
+ const users=db.prepare(`SELECT scan.vk_id,COALESCE(user.first_name,'') AS first_name,COALESCE(user.last_name,'') AS last_name,COALESCE(user.photo_url,'') AS photo_url,COUNT(*) AS trips,MAX(scan.scanned_at) AS last_trip_at FROM scan_history scan LEFT JOIN users user ON user.vk_id=scan.vk_id WHERE scan.collect_route_id=? GROUP BY scan.vk_id ORDER BY trips DESC,last_trip_at DESC`).all(routeId).map(row=>({vkId:String(row.vk_id),firstName:row.first_name,lastName:row.last_name,photoUrl:row.photo_url,trips:Number(row.trips||0),lastTripAt:row.last_trip_at||null}));
+ return res.json({ok:true,routeId,users,totalUsers:users.length,totalTrips:users.reduce((sum,user)=>sum+user.trips,0)});
+ }catch(error){console.error('[admin collect route users]',error?.message||error);return res.status(500).json({error:'Не удалось загрузить пользователей маршрута.'});}});
+
 app.get('/api/admin/collect/images',requireAdmin,(req,res)=>{res.setHeader('Cache-Control','no-store');try{
  const images=db.prepare(`SELECT image.id,image.transport_type,image.file_name,image.original_name,image.mime_type,image.size_bytes,image.is_base,image.created_at,COUNT(route.id) AS route_count FROM collect_images image LEFT JOIN collect_routes route ON route.image_id=image.id GROUP BY image.id ORDER BY CASE image.transport_type WHEN 'Автобус' THEN 1 WHEN 'Трамвай' THEN 2 WHEN 'Троллейбус' THEN 3 ELSE 4 END,image.is_base DESC,image.created_at ASC,image.id ASC`).all().map(row=>({id:Number(row.id),transportType:row.transport_type,fileName:row.file_name,originalName:row.original_name||row.file_name,mimeType:row.mime_type,sizeBytes:Number(row.size_bytes||0),isBase:Number(row.is_base)===1,createdAt:row.created_at,routeCount:Number(row.route_count||0),imageUrl:collectImageUrl(row.file_name)}));
  return res.json({ok:true,images,total:images.length});
